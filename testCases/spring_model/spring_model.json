@@ -1,0 +1,69 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+"Data": {
+	"Type": "GenerateSynthetic", 
+	"x": {
+		"Type": "linspace", 
+		"Value": [0.0, 5.0, 101]
+		},
+	"y": {
+		"Name": "Elongation",
+		"Error": "data",
+		"Sigma": 0.1
+		}
+	},
+		
+"Model": {
+	"model_name": "spring_model", 
+	"input_file": "None", 
+	"param_names": ["C", "K"],
+	"param_values": [1.5, 20.5],
+	"parametrization" : "no"
+	},
+	
+"Inference": {
+	"method": "Bayesian", 
+	"param": {
+		"C": {"initial_val" : 1.5,    "prior_name" : "Uniform", "prior_param" : [0.0, 100]},  
+		"K": {"initial_val" : 20.5,   "prior_name" : "Uniform", "prior_param" : [0.0, 100]}
+		},
+	"likelihood": {
+		"function": "Gaussian",
+		"distance": "L2"
+		},
+	"algorithm": {
+		"name": "RWMH", 
+		"n_iterations": 1e4, 
+		"proposal": { 
+			"name": "Gaussian",
+			"covariance": { 
+				"type": "diag", 
+				"value": [0.000345, 0.007071]
+				}
+			}
+		}
+	}, 
+	
+"PostProcess": { 
+	"Data": { 
+		"display": "yes", 
+		"num_plot": 1
+		},
+	"InitialGuess": {
+		"display": "yes",
+		"num_plot": 1
+		},
+	"MarkovChain": {
+		"display": "yes",
+		"thinning": 1
+		},
+	"Posterior": {
+		"display": "yes",
+		"shaded_area": "yes",
+		"start_val": 1e2,
+		"delta_it": 1e2,
+		"end_val": 1e4,
+		"num_plot": 1
+		}
+	}
+}

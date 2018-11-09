@@ -1,0 +1,64 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+"Data": {
+	"Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+	"FileName": "heat_conduction_data.csv",
+	"xField": ["x"], 
+	"yField": ["T"], 
+	"sigmaField": ["std_T"]
+	},
+	
+"Model": {
+	"model_name": "heat_conduction", 
+	"input_file": "None",
+	"param_names": ["a", "b", "k", "T_amb", "phi", "h"],
+	"param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
+	"parametrization" : "no"
+	},
+	
+"Inference": {
+	"method": "Bayesian", 
+	"param": {
+		"phi": {"initial_val" : -18.41,  "prior_name" : "Uniform", "prior_param" : [-100, 0.0]}, 
+		"h":   {"initial_val" : 0.00191, "prior_name" : "Uniform", "prior_param" : [0.00001, 1.0]}
+		},
+	"likelihood": {
+		"function": "Gaussian",
+		"distance": "L2"
+		},
+	"algorithm": {
+		"name": "RWMH", 
+		"n_iterations": 1e5, 
+		"proposal": { 
+			"name": "Gaussian",
+			"covariance": { 
+				"type": "full", 
+				"value": [[2.4101e-2, -2.0286e-6], [-2.0286e-6, 2.0972e-10]]
+				}
+			}
+		}
+	}, 
+	
+"PostProcess": { 
+	"Data": { 
+		"display": "yes", 
+		"num_plot": 1
+		},
+	"InitialGuess": {
+		"display": "yes",
+		"num_plot": 1
+		},
+	"MarkovChain": {
+		"display": "yes",
+		"thinning": 1
+		},
+	"Posterior": {
+		"display": "yes",
+		"shaded_area": "yes",
+		"start_val": 1e3,
+		"delta_it": 1e3,
+		"end_val": 1e5,
+		"num_plot": 1
+		}
+	}
+}

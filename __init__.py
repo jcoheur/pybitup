@@ -1,3 +1,3 @@
-import pyBIT.src.Metropolis_Hastings_Inference
-import pyBIT.src.postProcessData
-import pyBIT.src.run_inference
+import pyBIT.Metropolis_Hastings_Inference
+import pyBIT.postProcessData
+import pyBIT.run_inference

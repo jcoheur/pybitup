@@ -5,22 +5,55 @@ from scipy import linalg, stats
 import time 
 
 
+class ModelInference: 
+	"""Class for model inference. 
+	All models must have variable parameters called x and model parameters called param """
+	
+	def __init__(self, x=[], param=[]): 
+		
+		# Variables 
+		self._x = x 
+		
+		# Parameters
+		self._param = param
+		
+	def _get_param(self):
+		"""Method that is called when we want to read the attribute 'param' """
+        
+		return self._param
+		
+	def _set_param(self, new_param):
+		"""Method that is called when we want to modify the attribute 'param' """
+
+		self._param = new_param
+
+	param = property(_get_param, _set_param)
+	
+	def _get_x(self):
+		"""Method that is called when we want to read the attribute 'x' """
+        
+		return self._x
+		
+	def _set_x(self, new_x):
+		"""Method that is called when we want to modify the attribute 'x' """
+
+		self._x = new_x
+
+	x = property(_get_x, _set_x)
+
+
 class Model:
 	""" Class defining the model for the inference """
 	
-	def __init__(self, function, name = ''):
+	def __init__(self, model, function, function_f = lambda X, P: X, function_b = lambda Y, P: Y, function_det_jac = lambda X: 1, scaling_factors_parametrization = 1, name = ''):
 		self.name = name 
+		self.model = model
 		self.function = function 
+		self.parametrization_forward = function_f
+		self.parametrization_backward = function_b 
+		self.parametrization_det_jac = function_det_jac
+		self.P = scaling_factors_parametrization 
 		
-	def parametrization_forward(*X):
-		return 1
-	
-	def parametrization_backward(*X):
-		return 1
-	
-	def parametrization_det_jac(*X):
-		return 1
-
 class DataInference:
 	"""Class defining the data in the inference problem"""
 	
@@ -121,7 +154,7 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
 	if len(name_param) > 0:
 		raise ValueError("Parameter(s) {} not found in {}".format(name_param, input_file_name)) 
 		
-def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model, param_bounds, data, f_X):
+def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model, prior, data, f_X):
 	"""Classical random-walk metropolis hastings algorithm
 
 	Created by: Joffrey Coheur 15-10-18
@@ -138,15 +171,14 @@ def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model,
 	chain_val = np.zeros((nIterations+2, n_param))
 	chain_val[0, 0:] = param_init
 	proposal = np.zeros(n_param) 
-	lb = param_bounds[0]
-	ub = param_bounds[1]
 
 	# Reparametrization 
-	
 	x_parametrization = model.parametrization_forward
 	y_parametrization = model.parametrization_backward
 	det_jac = model.parametrization_det_jac
-
+	vec_X_parametrized = np.zeros(n_param) 
+	Y_parametrized = np.zeros(n_param) 
+	
 	# Function evaluation
 	fun_eval_X = f_X(param_init)
 	
@@ -178,21 +210,23 @@ def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model,
 
 		proposal[:] = chain_val[i, :] + np.transpose(np.matmul(R, np.transpose(z_k)))
         
-        #vec_X_parametrized(1,:) = x_parametrization(vec_X(i,:));       
-        #Y_parametrized(1,:) = vec_X_parametrized(1,:) + (R*z_k')';
-        #Y(1,:) = y_parametrization(Y_parametrized(1,:));
+		vec_X_parametrized[:] = x_parametrization(chain_val[i, :], model.P)
+		Y_parametrized[:] = vec_X_parametrized[:] + np.transpose(np.matmul(R, np.transpose(z_k)))
+		proposal[:] = y_parametrization(Y_parametrized[:], model.P)
 
 		
-		# Test bounds 
-		for j in range(n_param):
-			isRejected = 0
-			if proposal[j] < lb[j] or proposal[j] > ub[j]:
-				isRejected = 1
-				break
-        
+		# Compute ratio of prior distribution 
+		pi_0_X = prior.compute_value(chain_val[i, :])
+		pi_0_Y = prior.compute_value(proposal[:])
 		
-		if isRejected:
-			r = 0 
+		# Test prior values to avoid computation of 0/0 
+		if pi_0_Y <= 0: 
+			# A new sample out of bounds always rejected
+			r = 0
+		elif pi_0_X <= 0: 
+			# Previous sample out of bounds always make the new one accepted
+			# (if it is in the bounds, otherwise it is in the case above)
+			r = 1
 		else:
 			# Acceptance ratio
 			fun_eval_Y=f_X(proposal)
@@ -205,6 +239,11 @@ def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model,
 
 			r_det_jac=det_jac(proposal[:])/det_jac(chain_val[i, :]) # Ratio of the determinant of jacobians
 			r = np.exp(SS_Y-SS_X)*r_det_jac 
+			
+			# Multiply by the ratio of prior values
+			r_pi_0 = pi_0_Y/pi_0_X # This ratio can be compute safely 
+			r *= r_pi_0 
+			
 		
 		alpha = min(1,r);
 
@@ -233,15 +272,13 @@ def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model,
 	print("Elapsed time: {} sec".format(time.strftime("%H:%M:%S", time.gmtime(time.clock()-t1))))
 	print("Rejection rate is {} %".format(n_rejected/nIterations*100));
 	
-
-def compute_prior_value(priorNameList, paramList, X): 
-	""" compute_prior(priorNameList, paramList, X) 
-	priorName is the name of the prior pdf 
-	param are the parameters of the prior pdf
-	X is the sample value where the function is evaluated and can be
-	multidimensional 
-
-	Prior distribution implemented are : Uniform, Gamma, Gaussian
+class Prior: 
+	""" Class Prior contains the a priori information on the parameters 
+	prior = Prior(nameList, parameterList)
+	nameList contains the names of the marginal prior distribution (there are
+	assumed to be independant from each other). 
+	parameterList contains the parameter of the corresponding distribution 
+	Prior distributions implemented are : Uniform, Gamma, Gaussian
 
 	Uniform:
 	--------- 
@@ -255,49 +292,63 @@ def compute_prior_value(priorNameList, paramList, X):
 	Gaussian:
 	-------- 
 	Mean and standard deviation must be provided in a [2 x dim] vector 
-
+	
 	Created by: Joffrey Coheur 17-06-18
-	Last modification: Joffrey Coheur 23-07-18"""
-
-
-	dim_sample = X.size
-	Y = 1
-
-	for k in range(dim_sample): 
-		priorName = priorNameList[k]
-		param = paramList[k]
+	Last modification: Joffrey Coheur 09-11-18"""
 		
-		if priorName == "Uniform":
-		
-			lb = param[0]
-			ub = param[1]
+	def __init__(self, nameList, parameterList):
+		self.names = nameList
+		self.parameters = parameterList 	
 
-			# Test bounds and compute probability value
-			Y = Y * (1/(ub - lb))
-			if X[0,k] < lb or X[0,k] > ub:
-				Y = 0
-				break
+		# Check that the prior function provided in names are implemented 
+		implemented_functions = " ".join(["Uniform", "Gamma", "Gaussian"])
+		for name in self.names: 
+				idx = implemented_functions.find(name)
+				if idx < 0: 
+					raise ValueError("No {} prior function implemented \n"
+					"Implemented prior functions are {}.".format(name,implemented_functions))
+		
+	def compute_value(self, X): 
+		""" compute_prior(X) compute the value of the joint prior at X, where 
+		X is a (1 x n_param) numpy array """
+
+
+		dim_sample = X.size
+		Y = 1
+
+		for k in range(dim_sample): 
+			priorName = self.names[k]
+			param = self.parameters[k]
 			
-		elif priorName == "Gamma":
-		
-			theta1 = param[0]
-			theta2 = param[1]
-
-			# Compute probability value
-			Y = Y * stats.gamma.pdf(X[k], theta1, 0, theta2) 
+			if priorName == "Uniform":
 			
-		elif priorName == "Gaussian":
-		
-			mu = param[0]
-			sigma = param[1]
+				lb = param[0]
+				ub = param[1]
 
-			# Compute probability value
-			Y = Y * stats.norm.pdf(X[k], mu, sigma)
+				# Test bounds and compute probability value
+				Y = Y * (1/(ub - lb))
+				if X[k] < lb or X[k] > ub:
+					Y = 0
+					# Because there is a zero in the product, we can directly exit the loop
+					break 
+									
+			elif priorName == "Gamma":
 			
-		else:
-			raise ValueError("This pdf for the prior distribution has not been implemented.")
+				theta1 = param[0]
+				theta2 = param[1]
 
-	return Y 
+				# Compute probability value
+				Y = Y * stats.gamma.pdf(X[k], theta1, 0, theta2) 
+				
+			elif priorName == "Gaussian":
+			
+				mu = param[0]
+				sigma = param[1]
+
+				# Compute probability value
+				Y = Y * stats.norm.pdf(X[k], mu, sigma)
+				
+		return Y 
 	
 def sum_of_square(data1, data2):
 

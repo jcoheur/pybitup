@@ -1,21 +1,42 @@
 import numpy as np
 import math
 
-def model_def(x, param):
+from pyBIT import Metropolis_Hastings_Inference as MH
+
+class HeatConduction(MH.ModelInference): 
 	""" 1D Heat conduction model """	
 	
-	x0 = x[0,0]
-	L = x[0,-1]
+	def __init__(self, x=[], param=[]): 
 	
-	a = param[0]
-	b = param[1]
-	k = param[2]
-	T_amb = param[3]
-	phi = param[4]
-	h = param[5]
+		# Initialize parent object ModelInference
+		MH.ModelInference.__init__(self)	
+		
+	def set_param_values(self):
 	
-	gamma = math.sqrt(2 * (a + b) * h / (a * b * k))
-	c1 = -phi / (k * gamma) * (np.exp(gamma * L) * (h + k * gamma) / (np.exp(-gamma * L) * (h - k * gamma) + np.exp(gamma * L) * (h + k * gamma)))
-	c2 = phi / (k * gamma) + c1
+		# Parameters
+		self.a = self._param[0]
+		self.b = self._param[1]
+		self.k = self._param[2]
+		self.T_amb = self._param[3]
+		self.phi = self._param[4]
+		self.h = self._param[5]
+		
+		self.x0 = self._x[0,0]
+		self.L = self._x[0,-1]
 	
-	return np.array([c1 * np.exp(-gamma * x[0,:]) + c2 * np.exp(gamma * x[0,:]) + T_amb])
+	def compute_temperature(self):
+	
+		# Get the parameters
+		self.set_param_values() 
+		
+		# Compute analytical solution
+		gamma = math.sqrt(2 * (self.a + self.b) * self.h / (self.a * self.b * self.k))
+		c1 = -self.phi / (self.k * gamma) * (np.exp(gamma * self.L) * (self.h + self.k * gamma) / (np.exp(-gamma * self.L) * (self.h - self.k * gamma) \
+			+ np.exp(gamma * self.L) * (self.h + self.k * gamma)))
+		c2 = self.phi / (self.k * gamma) + c1
+	
+		return np.array([c1 * np.exp(-gamma * self.x[0,:]) + c2 * np.exp(gamma * self.x[0,:]) + self.T_amb])
+	
+	
+	
+	

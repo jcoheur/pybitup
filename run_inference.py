@@ -27,6 +27,8 @@ def run_inference(input_file_name, my_model):
 		param_names = user_inputs['Model']['param_names']
 		param_nom = np.array(user_inputs['Model']['param_values'])
 		n_param_model = len(param_nom)
+		
+		my_model.model.param = param_nom
 	else: # Model is build based on a given input file 
 		a = 1
 	
@@ -40,14 +42,17 @@ def run_inference(input_file_name, my_model):
 		std_y = reader[user_inputs['Data']['sigmaField']].values.T
 		dataName = user_inputs['Data']['yField']
 		
+		my_model.model.x = x 
 	elif user_inputs['Data']['Type'] == "GenerateSynthetic": 	
 		if  user_inputs['Data']['x']['Type'] == "range": 
 			x = np.array([np.arange(user_inputs['Data']['x']['Value'][0], user_inputs['Data']['x']['Value'][1], user_inputs['Data']['x']['Value'][2])])
 		elif  user_inputs['Data']['x']['Type'] == "linspace": 
 			x = np.array([np.linspace(user_inputs['Data']['x']['Value'][0], user_inputs['Data']['x']['Value'][1], user_inputs['Data']['x']['Value'][2])])
+			
+		my_model.model.x = x 
 		
 		std_y = np.array([[user_inputs['Data']['y']['Sigma']]])
-		y = np.array(generate_synthetic_data(my_model.function, x, param_nom, user_inputs['Data']['y']['Sigma'], user_inputs['Data']['y']['Error']))
+		y = np.array(generate_synthetic_data(my_model, user_inputs['Data']['y']['Sigma'], user_inputs['Data']['y']['Error']))
 		dataName = user_inputs['Data']['y']['Name']
 		
 	else: 
@@ -77,15 +82,9 @@ def run_inference(input_file_name, my_model):
 		unpar_prior_param.append(param_val['prior_param'])
 	unpar_init_val = np.array(unpar_init_val)
 	
-	# Prior (for now, only uniform)
+	# Prior 
 	# ------ 
-	lb = []
-	ub = []
-	for i in range(n_unpar):
-		lb.append(unpar_prior_param[i][0])
-		ub.append(unpar_prior_param[i][1])
-	bounds = np.array([lb, ub]) 
-
+	prior = MH.Prior(unpar_prior_name, unpar_prior_param)
 	
 	# Redefine the model as a function of the uncertain parameters only
 	# -----------------------------------------------------------------
@@ -98,14 +97,16 @@ def run_inference(input_file_name, my_model):
 
 	if n_unpar < n_param_model: # Only a subset of parameters is uncertain
 		def f_X(var_param):
-			param = param_nom 
+			vec_param = param_nom 
 			for n in range(0, n_unpar): 
-				param[var_param_index[n]] = var_param[n]
-			
-			return my_model.function(data.x, param)
+				vec_param[var_param_index[n]] = var_param[n]
+				
+			my_model.model.param = vec_param
+			return my_model.function()
 	else: # All parameters are uncertain
 		def f_X(var_param):
-			return my_model.function(data.x, var_param)
+			my_model.model.param = var_param
+			return my_model.function()
 			
 	# Likelihood 
 	# -----------
@@ -127,29 +128,32 @@ def run_inference(input_file_name, my_model):
 			print("Invalid InferenceAlgorithmProposalConvarianceType name {}".format(user_inputs['Inference']['algorithm']['proposal']['covariance']['type']))
 			
 		# Run 
-		MH.random_walk_metropolis_hastings(user_inputs['Model']['model_name'], n_iterations, unpar_init_val, proposal_cov, my_model, bounds, data, f_X)
+		MH.random_walk_metropolis_hastings(user_inputs['Model']['model_name'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
 
 	with open('{}_data'.format(user_inputs['Model']['model_name']), 'wb') as file_data_exp: 
 		pickle.dump(data, file_data_exp)
 
 
 	
-def generate_synthetic_data(function, x, param, std_y, type_pert): 
+def generate_synthetic_data(my_model, std_y, type_pert): 
 	"""Generate synthetic data"""
 
 	if type_pert == 'param':
 		print("Generate synthetic data based on perturbed parameters")
-		num_param = len(param[:])
+		num_param = len(my_model.model.param[:])
 		rn_param=np.zeros((1, num_param))
 		for i in range(0, num_param):
 			rn_param[0,i]=random.gauss(0, std_y)
-		y = function(x, param+rn_param[0,:])
+		
+		my_model.model.param = my_model.model.param+rn_param[0,:]
+		y = my_model.function()
 	else: 
-		y = function(x, param) 
+		
+		y = my_model.function() 
 		
 	if type_pert == 'data':
 		print("Generate synthetic data based on perturbed nominal solution")
-		num_data = len(x[0,:])
+		num_data = len(my_model.model.x[0,:])
 		rn_data=np.zeros((1, num_data))
 		for i in range(0, num_data):
 			rn_data[0,i]=random.gauss(0, std_y)

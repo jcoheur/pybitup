@@ -50,7 +50,7 @@ def post_process_data(input_file_name, caseName):
 		n_iterations = int(user_inputs['Inference']['algorithm']['n_iterations'])
 		n_unpar = len(user_inputs['Inference']['param'])
 		param_value = np.zeros((n_iterations+2,n_unpar))
-		with open('param_output_{}.dat'.format(caseName), 'r') as file_param:
+		with open('output_{}/mcmc_chain.dat'.format(caseName), 'r') as file_param:
 			i=0
 			for line in file_param: 
 				c_chain = line.strip()

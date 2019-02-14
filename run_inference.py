@@ -128,8 +128,11 @@ def run_inference(input_file_name, my_model):
 			print("Invalid InferenceAlgorithmProposalConvarianceType name {}".format(user_inputs['Inference']['algorithm']['proposal']['covariance']['type']))
 			
 		# Run 
-		MH.random_walk_metropolis_hastings(user_inputs['Model']['model_name'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
-
+		#MH.random_walk_metropolis_hastings(user_inputs['Model']['model_name'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
+		
+		run_MCMCM = MH.MetropolisHastings(user_inputs['Model']['model_name'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
+		run_MCMCM.random_walk_loop()
+		
 	with open('{}_data'.format(user_inputs['Model']['model_name']), 'wb') as file_data_exp: 
 		pickle.dump(data, file_data_exp)
 

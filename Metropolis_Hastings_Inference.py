@@ -43,7 +43,7 @@ class ModelInference:
 
 
 class Model:
-	""" Class defining the model for the inference """
+	""" Class defining the model function and reparametrization """
 	
 	def __init__(self, model, function, function_f = lambda X, P: X, function_b = lambda Y, P: Y, function_det_jac = lambda X: 1, scaling_factors_parametrization = 1, name = ''):
 		self.name = name 
@@ -153,6 +153,151 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
 	# Check that all params have been found in the input file 
 	if len(name_param) > 0:
 		raise ValueError("Parameter(s) {} not found in {}".format(name_param, input_file_name)) 
+
+class MetropolisHastings: 
+
+	def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X):
+		self.caseName = caseName
+		self.nIterations = nIterations
+		self.param_init = param_init
+		self.V = V
+		self.model = model
+		self.prior = prior 
+		self.data = data 
+		self.f_X = f_X
+	
+	    
+		# Initialize parameters and functions
+		self.n_param = self.param_init.size
+		self.current_val = self.param_init
+		self.new_val = np.zeros(self.n_param)
+		self.current_fun_eval = f_X(self.current_val)
+		self.SS_current_fun_eval=sum_of_square(self.data, self.current_fun_eval) 
+		self.max_LL=self.SS_current_fun_eval # Store the maximum of the log-likelihood function
+		self.arg_max_LL=self.current_val
+		
+		# Reparametrization 
+		self.x_parametrization = self.model.parametrization_forward
+		self.y_parametrization = self.model.parametrization_backward
+		self.det_jac = self.model.parametrization_det_jac
+		self.vec_X_parametrized = np.zeros(self.n_param) 
+		self.Y_parametrized = np.zeros(self.n_param) 
+				
+		# Save the initial guesses in output folder
+		os.system("mkdir output_{}".format(self.caseName))
+		self.fileID=open("output_{}/mcmc_chain.dat".format(self.caseName), "w")
+		np.save("output_{}/fun_eval.0".format(self.caseName), self.current_fun_eval)
+		self.write_val(self.current_val)
+		
+		# Cholesky decomposition of V. Constant if MCMC is not adaptive
+		self.R = linalg.cholesky(V)
+				
+		# Monitoring the chain
+		self.n_rejected = 0
+
+		# Print current time and start clock count
+		print("Start time {}" .format(time.asctime(time.localtime())))
+		self.t1 = time.clock()
+		
+		
+	def random_walk_loop(self): 
+	
+		for i in range(self.nIterations+1):
+
+			self.compute_new_val()
+			self.compute_acceptance_ratio() 
+			self.accept_reject()
+	
+			# We save 100 function evaluation for the post process
+			self.write_fun_eval(i, self.nIterations/100, self.current_fun_eval)  
+		
+			# We estimate time after a hundred iterations
+			if i == 100:
+				self.compute_time(self.t1)
+		
+			# Save the next current value 
+			self.write_val(self.current_val)
+		
+		self.terminate_loop()		
+						
+	def compute_new_val(self): 
+	
+		# Guess parameter (candidate or proposal)
+		z_k = np.zeros((1, self.n_param))
+		for j in range(self.n_param):
+			z_k[0,j] = random.gauss(0,1)
+
+		## Without parameterization 
+		#proposal[:] = chain_val[i, :] + np.transpose(np.matmul(R, np.transpose(z_k)))
+		
+		self.vec_X_parametrized[:] = self.x_parametrization(self.current_val, self.model.P)
+		self.Y_parametrized[:] = self.vec_X_parametrized[:] + np.transpose(np.matmul(self.R, np.transpose(z_k)))
+		self.new_val[:] = self.y_parametrization(self.Y_parametrized[:], self.model.P)
+				
+	def compute_acceptance_ratio(self): 
+		# Compute ratio of prior distribution 
+		pi_0_X = self.prior.compute_value(self.current_val[:])
+		pi_0_Y = self.prior.compute_value(self.new_val[:])
+		
+		# Test prior values to avoid computation of 0/0 
+		if pi_0_Y <= 0: 
+			# A new sample out of bounds always rejected
+			self.r = 0
+		elif pi_0_X <= 0: 
+			# Previous sample out of bounds always make the new one accepted
+			# (if it is in the bounds, otherwise it is in the case above)
+			self.r = 1
+		else:
+			# Acceptance ratio
+			self.new_fun_eval = self.f_X(self.new_val)
+			self.SS_new_fun_eval = sum_of_square(self.data, self.new_fun_eval)
+
+			# Compare value of SS_Y to get MLE
+			if abs(self.SS_new_fun_eval) < abs(self.max_LL):
+				self.max_LL = self.SS_new_fun_eval
+				self.arg_max_LL = self.new_val[:]            			   
+
+			r_det_jac = self.det_jac(self.new_val[:]) / self.det_jac(self.current_val[:]) # Ratio of the determinant of jacobians
+			self.r = np.exp(self.SS_new_fun_eval-self.SS_current_fun_eval) * r_det_jac 
+			
+			# Multiply by the ratio of prior values
+			r_pi_0 = pi_0_Y / pi_0_X # This ratio can be compute safely 
+			self.r *= r_pi_0 
+			
+	def accept_reject(self): 
+		
+		alpha = min(1,self.r);
+
+		# Update 
+		u = random.random() # Uniformly distributed number in the interval [0,1)
+		if u < alpha: # Accepted
+			self.current_val[:] = self.new_val[:]
+			self.current_fun_eval = self.new_fun_eval 
+			self.SS_current_fun_eval = self.SS_new_fun_eval 
+		else: # Rejected, current val remains the same
+			self.n_rejected+=1
+	
+	def terminate_loop(self): 
+		self.fileID.close()	
+		print("End time {}" .format(time.asctime(time.localtime())))
+		print("Elapsed time: {} sec".format(time.strftime("%H:%M:%S", time.gmtime(time.clock()-self.t1))))
+		print("Rejection rate is {} %".format(self.n_rejected/self.nIterations*100))
+		
+	def compute_time(self, t1):
+		""" Return the time in H:M:S from time t1 to current clock time """
+		
+		print("Estimated time: {}".format(time.strftime("%H:%M:%S", time.gmtime((time.clock()-t1) / 100.0 * self.nIterations))))
+	
+	def write_fun_eval(self, current_it, save_freq, fun_val): 
+		if current_it%(save_freq) == 0: 
+			np.save("output_{}/fun_eval.{}".format(self.caseName, current_it), fun_val)	
+	
+	def write_val(self, value):
+		# Write the new current val parameter values
+		self.fileID.write("{}\n".format(str(value)))
+		
+#class RandomWalk(MetropolisHastings): 
+
 		
 def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model, prior, data, f_X):
 	"""Classical random-walk metropolis hastings algorithm
@@ -183,19 +328,19 @@ def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model,
 	fun_eval_X = f_X(param_init)
 	
 	# Save the initial guess '0' as in output file 
-	os.system("mkdir output_{}".format(caseName));
+	os.system("mkdir output_{}".format(caseName))
 	np.save("output_{}/fun_eval.0".format(caseName), fun_eval_X)
-	fileID.write("{}\n".format(str(chain_val[0, 0:]))); 
+	fileID.write("{}\n".format(str(chain_val[0, 0:])))
 	
-	SS_X=sum_of_square(data, fun_eval_X); 
-	max_LL=SS_X; # Store the maximum of the log-likelihood function in this variable
-	arg_max_LL=param_init;
+	SS_X=sum_of_square(data, fun_eval_X) 
+	max_LL=SS_X # Store the maximum of the log-likelihood function in this variable
+	arg_max_LL=param_init
 
 	# Cholesky decomposition of V. Constant if MCMC is not adaptive
-	R = linalg.cholesky(V);
+	R = linalg.cholesky(V)
 			
 	# Monitoring the chain
-	n_rejected = 0;
+	n_rejected = 0
 
 	# Print current time and start clock count
 	print("Start time {}" .format(time.asctime(time.localtime())))
@@ -265,7 +410,7 @@ def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model,
 		
 	
 		# Write new parameter values
-		fileID.write("{}\n".format(str(chain_val[i+1, 0:]))); 
+		fileID.write("{}\n".format(str(chain_val[i+1, 0:])))
 
 	fileID.close()	
 	print("End time {}" .format(time.asctime(time.localtime())))

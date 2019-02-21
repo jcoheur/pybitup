@@ -21,8 +21,8 @@ class HeatConduction(MH.ModelInference):
 		self.phi = self._param[4]
 		self.h = self._param[5]
 		
-		self.x0 = self._x[0,0]
-		self.L = self._x[0,-1]
+		self.x0 = self._x[0]
+		self.L = self._x[-1]
 	
 	def compute_temperature(self):
 	
@@ -35,7 +35,7 @@ class HeatConduction(MH.ModelInference):
 			+ np.exp(gamma * self.L) * (self.h + self.k * gamma)))
 		c2 = self.phi / (self.k * gamma) + c1
 	
-		return np.array([c1 * np.exp(-gamma * self.x[0,:]) + c2 * np.exp(gamma * self.x[0,:]) + self.T_amb])
+		return c1 * np.exp(-gamma * self.x) + c2 * np.exp(gamma * self.x) + self.T_amb
 	
 	
 	

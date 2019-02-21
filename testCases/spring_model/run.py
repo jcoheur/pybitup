@@ -1,7 +1,8 @@
 import spring_model 
 import pyBIT
 
-case_name = "spring_model"
+#case_name = "spring_model"
+case_name = "spring_model_1param"
 input_file_name = "{}.json".format(case_name) 
 
 spring_model = spring_model.SpringModel()

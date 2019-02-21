@@ -26,7 +26,7 @@ class OneReactionPyrolysis(MH.ModelInference):
 		self.tau = self._param[5]
 		
 		self.T = self._x 
-		self.T_0 = self._x[0,0]
+		self.T_0 = self._x[0]
 		
 	def solve_system(self): 
 		

@@ -8,10 +8,9 @@ class HeatCapacity(MH.ModelInference):
 		# Initialize parent object ModelInference
 		MH.ModelInference.__init__(self)	
 		
-
 	def compute_heat_capacity(self):
 	
 		T = self._x 
-		
+
 		return self._param[0] + self._param[1] * (T / 1000) \
 			+ self._param[2] * (T / 1000)**2 + self._param[3] * (T / 1000)**3

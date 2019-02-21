@@ -4,7 +4,6 @@ import random
 from scipy import linalg, stats
 import time 
 
-
 class ModelInference: 
 	"""Class for model inference. 
 	All models must have variable parameters called x and model parameters called param """
@@ -55,28 +54,50 @@ class Model:
 		self.P = scaling_factors_parametrization 
 		
 class DataInference:
-	"""Class defining the data in the inference problem"""
+	"""Class defining the data in the inference problem and contains all the information"""
 	
-	def __init__(self, name="", x=np.array([[1]]), y=np.array([[1]]), std_y=np.array([[1]])):
+	def __init__(self, name="", x=np.array([1]), y=np.array([1]), std_y=np.array([1])):
 		self.name=list([name])
 		self.x=x
+		self.num_points=np.array([len(self.x)])
 		self.y=y
+		self.n_data_set=1
 		self.std_y=std_y
+		self.index_data_set=np.array([[0,len(self.x)-1]])
 		
 	def size_x(self, i):
 		"""Return the length of the i-th data x"""
-		return len(self.x[i,0:])
-		
-	def n_data_set(self):
-		"""Return the number of data sets"""
-		return len(self.y[0:,0])
-				
+		return self.num_points[i]	
+	
 	def add_data_set(self, new_name, new_x, new_y, new_std_y):
 		"""Add a set of data to the object"""
 		self.name.append(new_name) 
-		self.x=np.concatenate((self.x, new_x), axis=0)
-		self.y=np.concatenate((self.y, new_y), axis=0)
-		self.std_y=np.concatenate((self.std_y, new_std_y), axis=0)
+		self.x=np.concatenate((self.x, new_x))
+		self.num_points=np.concatenate((self.num_points, np.array([len(new_x)])), axis=0)
+		self.y=np.concatenate((self.y, new_y))
+		self.std_y=np.concatenate((self.std_y, new_std_y))
+		
+		# Add new indices array
+		last_index = self.index_data_set[self.n_data_set-1,1]+1
+		self.index_data_set=np.concatenate((self.index_data_set,np.array([[last_index,last_index+len(new_x)-1]])),axis=0)
+
+		# Increase the number of dataset
+		self.n_data_set+=1
+
+class Likelihood: 
+    """"Class defining the function and the properties of the likelihood function"""
+	
+    def __inti__(self, name): 
+        self.name=name
+    	
+    def compute_val(self):
+	    """ Compute value of the likelihood at the current point"""
+	
+    def compute_ratio(self): 
+	    """ Compute the ratio of likelihood function"""
+		
+    def sum_of_square(self):
+	    """ Compute the sum of square at the current point"""
 
 def write_tmp_input_file(input_file_name, name_param, value_param): 
 
@@ -108,7 +129,7 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
 					# Temporary variables (see later)
 					new_name_param = list(name_param)
 					new_value_param = list(value_param)	
-					
+
 					# Check which uncertain parameters are in the current line 
 					for idx, name in enumerate(name_param):
 					
@@ -117,17 +138,18 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
 						# If the parameter name is in the current line, replace by its value 
 						if file_param_name == key_name: 
 							
-							# Create the new line 
+							# Create the new line and unpdate length
 							line = line[0:ind_1-1] + "{}".format(value_param[idx]) + line[ind_2+2:len(line)]
-
+							l_line = len(line)
+							
 							# Once a parameter name has been found, we don't need to keep tracking it
 							# in the remaining lines
 							new_name_param.remove(name)
 							new_value_param.remove(value_param[idx])
 							
 							# Update index 
-							is_param = line[ind_2+2:l_line].find("$")
-							ind_1 = ind_2 + is_param - 3
+							ind_1 = is_param = line.find("$")
+							
 							
 							break
 						elif idx < n_param-1: 	
@@ -138,7 +160,7 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
 					
 					if n_param == 0: 
 						# We identified all parameters but we found a "$" in the remaining of the input
-						raise ValueError("There is an extra parameter in the line \n ""{}"" " 
+						raise ValueError("We identified all parameters but there is an extra parameter in the line \n ""{}"" " 
 						"but {} is not found in the list.".format(line, line[ind_1+1:ind_2]))
 					
 					# Update parameter lists with only the ones that we still didn't find 
@@ -210,7 +232,7 @@ class MetropolisHastings:
 	
 			# We save 100 function evaluation for the post process
 			self.write_fun_eval(i, self.nIterations/100, self.current_fun_eval)  
-		
+
 			# We estimate time after a hundred iterations
 			if i == 100:
 				self.compute_time(self.t1)
@@ -219,7 +241,7 @@ class MetropolisHastings:
 			self.write_val(self.current_val)
 		
 		self.terminate_loop()		
-						
+	
 	def compute_new_val(self): 
 	
 		# Guess parameter (candidate or proposal)
@@ -243,10 +265,12 @@ class MetropolisHastings:
 		if pi_0_Y <= 0: 
 			# A new sample out of bounds always rejected
 			self.r = 0
+			
 		elif pi_0_X <= 0: 
 			# Previous sample out of bounds always make the new one accepted
 			# (if it is in the bounds, otherwise it is in the case above)
 			self.r = 1
+			
 		else:
 			# Acceptance ratio
 			self.new_fun_eval = self.f_X(self.new_val)
@@ -259,11 +283,11 @@ class MetropolisHastings:
 
 			r_det_jac = self.det_jac(self.new_val[:]) / self.det_jac(self.current_val[:]) # Ratio of the determinant of jacobians
 			self.r = np.exp(self.SS_new_fun_eval-self.SS_current_fun_eval) * r_det_jac 
-			
+
 			# Multiply by the ratio of prior values
 			r_pi_0 = pi_0_Y / pi_0_X # This ratio can be compute safely 
 			self.r *= r_pi_0 
-			
+
 	def accept_reject(self): 
 		
 		alpha = min(1,self.r);
@@ -294,128 +318,11 @@ class MetropolisHastings:
 	
 	def write_val(self, value):
 		# Write the new current val parameter values
-		self.fileID.write("{}\n".format(str(value)))
-		
+		self.fileID.write("{}\n".format(str(value).replace('\n', '')))
+		# replace is used to remove the end of lines in the arrays
+
 #class RandomWalk(MetropolisHastings): 
 
-		
-def random_walk_metropolis_hastings(caseName, nIterations, param_init, V, model, prior, data, f_X):
-	"""Classical random-walk metropolis hastings algorithm
-
-	Created by: Joffrey Coheur 15-10-18
-
-	algo is a structure that specify the options for the adaptive algorithm.
-
-	parametrization specifies reparametrization functions (foward, backward
-	and the determinant of the jacobian). """
-
-
-	fileID=open("param_output_{}.dat".format(caseName), "w")
-    
-	n_param = param_init.size
-	chain_val = np.zeros((nIterations+2, n_param))
-	chain_val[0, 0:] = param_init
-	proposal = np.zeros(n_param) 
-
-	# Reparametrization 
-	x_parametrization = model.parametrization_forward
-	y_parametrization = model.parametrization_backward
-	det_jac = model.parametrization_det_jac
-	vec_X_parametrized = np.zeros(n_param) 
-	Y_parametrized = np.zeros(n_param) 
-	
-	# Function evaluation
-	fun_eval_X = f_X(param_init)
-	
-	# Save the initial guess '0' as in output file 
-	os.system("mkdir output_{}".format(caseName))
-	np.save("output_{}/fun_eval.0".format(caseName), fun_eval_X)
-	fileID.write("{}\n".format(str(chain_val[0, 0:])))
-	
-	SS_X=sum_of_square(data, fun_eval_X) 
-	max_LL=SS_X # Store the maximum of the log-likelihood function in this variable
-	arg_max_LL=param_init
-
-	# Cholesky decomposition of V. Constant if MCMC is not adaptive
-	R = linalg.cholesky(V)
-			
-	# Monitoring the chain
-	n_rejected = 0
-
-	# Print current time and start clock count
-	print("Start time {}" .format(time.asctime(time.localtime())))
-	t1 = time.clock()
-	
-	for i in range(nIterations+1):
-
-		# Guess parameter (candidate or proposal)
-		z_k = np.zeros((1,n_param))
-		for j in range(n_param):
-			z_k[0,j] = random.gauss(0,1)
-
-		proposal[:] = chain_val[i, :] + np.transpose(np.matmul(R, np.transpose(z_k)))
-        
-		vec_X_parametrized[:] = x_parametrization(chain_val[i, :], model.P)
-		Y_parametrized[:] = vec_X_parametrized[:] + np.transpose(np.matmul(R, np.transpose(z_k)))
-		proposal[:] = y_parametrization(Y_parametrized[:], model.P)
-
-		
-		# Compute ratio of prior distribution 
-		pi_0_X = prior.compute_value(chain_val[i, :])
-		pi_0_Y = prior.compute_value(proposal[:])
-		
-		# Test prior values to avoid computation of 0/0 
-		if pi_0_Y <= 0: 
-			# A new sample out of bounds always rejected
-			r = 0
-		elif pi_0_X <= 0: 
-			# Previous sample out of bounds always make the new one accepted
-			# (if it is in the bounds, otherwise it is in the case above)
-			r = 1
-		else:
-			# Acceptance ratio
-			fun_eval_Y=f_X(proposal)
-			SS_Y=sum_of_square(data, fun_eval_Y)
-
-			# Compare value of SS_Y to get MLE
-			if abs(SS_Y) < abs(max_LL):
-				max_LL=SS_Y
-				arg_max_LL=proposal[:]              			   
-
-			r_det_jac=det_jac(proposal[:])/det_jac(chain_val[i, :]) # Ratio of the determinant of jacobians
-			r = np.exp(SS_Y-SS_X)*r_det_jac 
-			
-			# Multiply by the ratio of prior values
-			r_pi_0 = pi_0_Y/pi_0_X # This ratio can be compute safely 
-			r *= r_pi_0 
-			
-		
-		alpha = min(1,r);
-
-		# Update 
-		u = random.random() # Uniformly distributed number in the interval [0,1)
-		if u < alpha: # Accepted
-			chain_val[i+1, :] = proposal[:]  
-			fun_eval_X=fun_eval_Y
-			SS_X = SS_Y
-		else: # Rejected
-			chain_val[i+1, :] = chain_val[i, :]
-			n_rejected+=1
-
-		if i%(nIterations/100) == 0: # We save 100 function evaluation for the post process
-			np.save("output_{}/fun_eval.{}".format(caseName, i), fun_eval_X)	   
-		
-		if i == 100:
-			print("Estimated time: {}".format(time.strftime("%H:%M:%S", time.gmtime((time.clock()-t1) / 100.0 * nIterations))))
-		
-	
-		# Write new parameter values
-		fileID.write("{}\n".format(str(chain_val[i+1, 0:])))
-
-	fileID.close()	
-	print("End time {}" .format(time.asctime(time.localtime())))
-	print("Elapsed time: {} sec".format(time.strftime("%H:%M:%S", time.gmtime(time.clock()-t1))))
-	print("Rejection rate is {} %".format(n_rejected/nIterations*100));
 	
 class Prior: 
 	""" Class Prior contains the a priori information on the parameters 
@@ -495,11 +402,17 @@ class Prior:
 				
 		return Y 
 	
+# def sum_of_square(data1, data2):
+
+	# J = 0
+	# for i in range(data1.n_data_set()):
+
+		# J -=  1/2 * np.sum(((data1.y[i, :]-data2[i, :])/data1.std_y[i, :])**2, axis=0)
+		
+	# return J
+	
 def sum_of_square(data1, data2):
 
-	J = 0
-	for i in range(data1.n_data_set()):
+    J =  - 1/2 * np.sum(((data1.y-data2)/data1.std_y)**2, axis=0)
 
-		J -=  1/2 * np.sum(((data1.y[i, :]-data2[i, :])/data1.std_y[i, :])**2, axis=0)
-		
-	return J
+    return J

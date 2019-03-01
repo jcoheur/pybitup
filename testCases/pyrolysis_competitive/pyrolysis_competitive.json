@@ -1,0 +1,93 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+"Data": 
+[
+    {
+        "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+        "FileName": "Bessire_366Kmin_withFakeStd.csv",
+        "xField": ["temperature"], 
+        "yField": ["dRho"], 
+        "sigmaField": ["std_dRho"]
+    },
+	{
+	    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+	    "FileName": "Wong_10Kmin_withFakeStd.csv",
+	    "xField": ["temperature"], 
+	    "yField": ["dRho"], 
+	    "sigmaField": ["std_dRho"]
+	}
+],
+"Model": [
+    {
+	"model_name": "competitive_pyrolysis", 
+	"input_file": "reaction_scheme.json", 
+	"param_names": ["tau"],
+	"param_values": [366],
+	"parametrization" : "no"
+	},
+	{
+	"model_name": "competitive_pyrolysis", 
+	"input_file": "reaction_scheme.json", 
+	"param_names": ["tau"],
+	"param_values": [10],
+	"parametrization" : "no"
+	}
+],
+
+"Inference": {
+    "inferenceProblem" : "CompetitivePyrolysis",  
+	"method": "Bayesian", 
+	"param" : {
+		"A1" : {"initial_val" : 4.097387026829339,     "prior_name" : "Uniform", "prior_param" : [0.0, 1000000]},
+		"A2" : {"initial_val" : 18.481205222217397,    "prior_name" : "Uniform", "prior_param" : [0.0, 1000000]}, 
+		"A3" : {"initial_val" : 0.302859645878501,     "prior_name" : "Uniform", "prior_param" : [0.0, 1000000]},
+		"A4" : {"initial_val" : 1.5002610140384331,    "prior_name" : "Uniform", "prior_param" : [0.0, 1000000]},
+		"E1" : {"initial_val" : 34111.7311124222,      "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+		"E2" : {"initial_val" : 128183.83287506446,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]}, 
+		"E3" : {"initial_val" : 51997.65825648188,     "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+		"E4" : {"initial_val" : 34320.30286288397,     "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+		"g1" : {"initial_val" : 6.937260114092008e-05, "prior_name" : "Uniform", "prior_param" : [0.0, 10]},
+		"g2" : {"initial_val" : 0.0036623826495427885, "prior_name" : "Uniform", "prior_param" : [0.0, 10]}, 
+		"g3" : {"initial_val" : 0.16429389050789625,   "prior_name" : "Uniform", "prior_param" : [0.0, 10]},
+		"g4" : {"initial_val" : 0.2776036939043133,    "prior_name" : "Uniform", "prior_param" : [0.0, 10]}
+		},
+	"likelihood": {
+		"function": "Gaussian",
+		"distance": "L2"
+		},
+	"algorithm": {
+		"name": "RWMH", 
+		"n_iterations": 1e2, 
+		"proposal": { 
+			"name": "Gaussian",
+			"covariance": { 
+				"type": "diag", 
+				"value": [0.01, 0.01, 0.01, 0.01, 1000, 1000, 1000, 1000, 0.00001, 0.00001, 0.00001, 0.00001]
+				}
+			}
+		}
+	}, 
+	
+"PostProcess": { 
+	"Data": { 
+		"display": "yes", 
+		"num_plot": 1
+		},
+	"InitialGuess": {
+		"display": "yes",
+		"num_plot": 1
+		},
+	"MarkovChain": {
+		"display": "no",
+		"thinning": 1
+		},
+	"Posterior": {
+		"display": "yes",
+		"shaded_area": "yes",
+		"start_val": 1e1,
+		"delta_it": 1e0,
+		"end_val": 1e2,
+		"num_plot": 1
+		}
+	}
+}

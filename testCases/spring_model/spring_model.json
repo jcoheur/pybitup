@@ -66,9 +66,7 @@
 	    "Posterior": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "start_val": 1e2,
-		    "delta_it": 1e2,
-		    "end_val": 1e4,
+			"burnin": 0,
 		    "num_plot": 1
 		}
 	}

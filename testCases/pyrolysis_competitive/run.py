@@ -20,5 +20,5 @@ pyrolysis_model = pyBIT.Metropolis_Hastings_Inference.Model(pyro_model, pyro_mod
 
 
 pyBIT.run_inference.run_inference(input_file_name, pyrolysis_model)
-pyBIT.postProcessData.post_process_data(input_file_name, 'CompetitivePyrolysis')
+pyBIT.postProcessData.post_process_data(input_file_name)
 

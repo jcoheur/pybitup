@@ -206,9 +206,9 @@ class MetropolisHastings:
 		self.Y_parametrized = np.zeros(self.n_param) 
 				
 		# Save the initial guesses in output folder
-		os.system("mkdir output_{}".format(self.caseName))
-		self.fileID=open("output_{}/mcmc_chain.dat".format(self.caseName), "w")
-		np.save("output_{}/fun_eval.0".format(self.caseName), self.current_fun_eval)
+		os.system("mkdir output")
+		self.fileID=open("output/mcmc_chain.dat", "w")
+		np.save("output/fun_eval.0", self.current_fun_eval)
 		self.write_val(self.current_val)
 		
 		# Cholesky decomposition of V. Constant if MCMC is not adaptive
@@ -314,7 +314,7 @@ class MetropolisHastings:
 	
 	def write_fun_eval(self, current_it, save_freq, fun_val): 
 		if current_it%(save_freq) == 0: 
-			np.save("output_{}/fun_eval.{}".format(self.caseName, current_it), fun_val)	
+			np.save("output/fun_eval.{}".format(current_it), fun_val)	
 	
 	def write_val(self, value):
 		# Write the new current val parameter values

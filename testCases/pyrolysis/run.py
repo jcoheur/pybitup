@@ -26,4 +26,4 @@ pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
 my_model = pyBIT.Metropolis_Hastings_Inference.Model(pyro_model, pyro_model.compute_gas_prod, name = case_name)
 
 pyBIT.run_inference.run_inference(input_file_name, my_model)
-pyBIT.postProcessData.post_process_data(input_file_name, case_name)
+pyBIT.postProcessData.post_process_data(input_file_name)

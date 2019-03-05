@@ -187,7 +187,7 @@ def run_inference(input_file_name, my_model):
         run_MCMCM = MH.MetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
         run_MCMCM.random_walk_loop()
 		
-    with open('{}_data'.format(user_inputs['Inference']['inferenceProblem']), 'wb') as file_data_exp: 
+    with open('output/data', 'wb') as file_data_exp: 
         pickle.dump(data, file_data_exp)
 
 

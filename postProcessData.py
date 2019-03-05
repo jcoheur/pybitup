@@ -4,7 +4,7 @@ import json
 from jsmin import jsmin
 import numpy as np
 
-def post_process_data(input_file_name, caseName):
+def post_process_data(input_file_name):
 
 	# Open and read input file 
 	# -------------------------
@@ -16,8 +16,11 @@ def post_process_data(input_file_name, caseName):
 	#with open("heat_capacity.json", 'r') as input_file:
 	#	user_inputs = json.load(input_file)
 	
-    # Load experimental data 
-	data_exp = load_exp_data(caseName)
+    # Load experimental data 	
+	with open('output/data', 'rb') as file_data_exp:
+		pickler_data_exp = pickle.Unpickler(file_data_exp)
+		data_exp = pickler_data_exp.load()
+		
 	
 	# Colors 
 	lineColor = [['C0'], ['C1'], ['C2'], ['C3'], ['C4'], ['C5'], ['C6'], ['C7']]
@@ -44,7 +47,7 @@ def post_process_data(input_file_name, caseName):
 	# -------------------------------------------
 	
 	if user_inputs["PostProcess"]["InitialGuess"]["display"] == "yes":
-		data_init = np.load("output_{}/fun_eval.{}.npy".format(caseName, 0))	
+		data_init = np.load("output/fun_eval.{}.npy".format(0))	
 	
 		for i in range(data_exp.n_data_set):
 		
@@ -63,7 +66,7 @@ def post_process_data(input_file_name, caseName):
 		n_iterations = int(user_inputs['Inference']['algorithm']['n_iterations'])
 		n_unpar = len(user_inputs['Inference']['param'])
 		param_value = np.zeros((n_iterations+2,n_unpar))
-		with open('output_{}/mcmc_chain.dat'.format(caseName), 'r') as file_param:
+		with open('output/mcmc_chain.dat', 'r') as file_param:
 			i=0
 			for line in file_param: 
 				c_chain = line.strip()
@@ -82,9 +85,13 @@ def post_process_data(input_file_name, caseName):
 	if user_inputs["PostProcess"]["Posterior"]["display"] == "yes":
 		plt.figure(user_inputs["PostProcess"]["Posterior"]["num_plot"])	
 		
-		start_val = int(user_inputs["PostProcess"]["Posterior"]["start_val"])
-		delta_it = int(user_inputs["PostProcess"]["Posterior"]["delta_it"])
-		end_val = int(user_inputs["PostProcess"]["Posterior"]["end_val"])
+		# By default, we have saved 100 function evaluations
+		delta_it = int(user_inputs["Inference"]["algorithm"]["n_iterations"]/100) 
+		
+		start_val  = int(user_inputs["PostProcess"]["Posterior"]["burnin"]*delta_it)
+		
+		# By default, the last function evaluation to be plotted is equal to the number of iterations
+		end_val = int(user_inputs["Inference"]["algorithm"]["n_iterations"]) 
 		
 		for i in range(data_exp.n_data_set):
 		
@@ -94,14 +101,14 @@ def post_process_data(input_file_name, caseName):
 			ind_2 = data_exp.index_data_set[i,1]
 
 			# Initialise bounds
-			data_i1 = np.load("output_{}/fun_eval.{}.npy".format(caseName, start_val))
+			data_i1 = np.load("output/fun_eval.{}.npy".format(start_val))
 			data_ij_max = -1e5*np.ones(data_exp.size_x(i))
 			data_ij_min = 1e5*np.ones(data_exp.size_x(i))
 			
 			for j in range(start_val+delta_it, end_val+1, delta_it):
 
 				# Load current data 
-				data_ij = np.load("output_{}/fun_eval.{}.npy".format(caseName, j))
+				data_ij = np.load("output/fun_eval.{}.npy".format(j))
 				data_set_n = data_ij[ind_1:ind_2+1]
 
 				# Update bounds
@@ -123,11 +130,3 @@ def post_process_data(input_file_name, caseName):
 	
 	# Show plot 
 	plt.show()
-	
-def load_exp_data(caseName): 
-
-	with open('{}_data'.format(caseName), 'rb') as file_data_exp:
-		pickler_data_exp = pickle.Unpickler(file_data_exp)
-		data_exp = pickler_data_exp.load()
-		
-	return data_exp

@@ -173,20 +173,44 @@ def run_inference(input_file_name, my_model):
     algo_name = user_inputs['Inference']['algorithm']['name']
     n_iterations = int(user_inputs['Inference']['algorithm']['n_iterations']) # must be an integer
 
+    # Proposal
+    # ---------
+    if user_inputs['Inference']['algorithm']['proposal']['covariance']['type'] == "diag": 
+        proposal_cov = np.diag(user_inputs['Inference']['algorithm']['proposal']['covariance']['value'])
+    elif user_inputs['Inference']['algorithm']['proposal']['covariance']['type'] == "full":
+        proposal_cov = np.array(user_inputs['Inference']['algorithm']['proposal']['covariance']['value']) 
+    else: 
+        print("Invalid InferenceAlgorithmProposalConvarianceType name {}".format(user_inputs['Inference']['algorithm']['proposal']['covariance']['type']))
+			
     if algo_name == "RWMH": 
-		
-		# Proposal
-		# ---------
-        if user_inputs['Inference']['algorithm']['proposal']['covariance']['type'] == "diag": 
-            proposal_cov = np.diag(user_inputs['Inference']['algorithm']['proposal']['covariance']['value'])
-        elif user_inputs['Inference']['algorithm']['proposal']['covariance']['type'] == "full":
-            proposal_cov = np.array(user_inputs['Inference']['algorithm']['proposal']['covariance']['value']) 
-        else: 
-            print("Invalid InferenceAlgorithmProposalConvarianceType name {}".format(user_inputs['Inference']['algorithm']['proposal']['covariance']['type']))
-
+        print("Using random-walk Metropolis-Hastings algorithm.")
         run_MCMCM = MH.MetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
         run_MCMCM.random_walk_loop()
-		
+    elif algo_name == "AMH": 
+        print("Using adaptive random-walk Metropolis-Hastings algorithm.")
+        starting_it = int(user_inputs['Inference']['algorithm']['AMH']['starting_it'])
+        updating_it = int(user_inputs['Inference']['algorithm']['AMH']['updating_it'])
+        eps_v = user_inputs['Inference']['algorithm']['AMH']['eps_v']
+        run_MCMCM = MH.AdaptiveMetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X,
+                                                  starting_it, updating_it, eps_v)
+        run_MCMCM.random_walk_loop()
+    elif algo_name == "DR": 
+        print("Using delayed-rejection random-walk Metropolis-Hastings algorithm.")
+        gamma = user_inputs['Inference']['algorithm']['DR']['gamma']
+        run_MCMCM = MH.DelayedRejectionMetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X,
+                                                  gamma)
+        run_MCMCM.random_walk_loop()
+    elif algo_name == "DRAM": 
+        print("Using delayed-rejection adaptive random-walk Metropolis-Hastings algorithm.")
+        starting_it = int(user_inputs['Inference']['algorithm']['DRAM']['starting_it'])
+        updating_it = int(user_inputs['Inference']['algorithm']['DRAM']['updating_it'])
+        eps_v = user_inputs['Inference']['algorithm']['DRAM']['eps_v']
+        gamma = user_inputs['Inference']['algorithm']['DRAM']['gamma']
+        run_MCMCM = MH.DelayedRejectionAdaptiveMetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X,
+                                                  starting_it, updating_it, eps_v, gamma)
+        run_MCMCM.random_walk_loop()
+    else:
+        raise ValueError('Algorithm "{}" unknown.'.format(algo_name)) 	
     with open('output/data', 'wb') as file_data_exp: 
         pickle.dump(data, file_data_exp)
 

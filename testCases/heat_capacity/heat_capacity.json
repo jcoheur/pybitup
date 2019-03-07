@@ -39,8 +39,11 @@
 		    "distance": "L2"
 	    },
 	    "algorithm": {
-		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "name": "DR",
+            "DR": {
+                "gamma": 0.5
+			},
+		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 

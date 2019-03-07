@@ -33,13 +33,20 @@
 		    "distance": "L2"
 		},
 	    "algorithm": {
-		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "name": "DRAM", 
+			"DRAM": {
+                "starting_it": 1e2, 
+				"updating_it": 1e1, 
+				"eps_v": 0.0, 
+				"gamma": 0.2
+			},
+			
+		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "full", 
-				    "value": [[2.4101e-2, -2.0286e-6], [-2.0286e-6, 2.0972e-10]]
+				    "value": [[2.1034e-2, -2.0286e-6], [-2.0286e-6, 2.0972e-10]]
 				}
 			}
 		}

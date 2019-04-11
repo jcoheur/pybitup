@@ -14,7 +14,7 @@
 	[
         {
 	        "model_name": "parallel_pyrolysis", 
-	        "input_file": "reaction_scheme.json", 
+	        "input_file": "reaction_scheme_2react.json", 
 	        "param_names": ["tau"],
 	        "param_values": [6.1],
 	        "parametrization" : "no"
@@ -28,7 +28,11 @@
 		    "A1": {"initial_val" : 4.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
 		    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
 		    "n1": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-		    "g1": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+		    "g1": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
+			"A2": {"initial_val" : 3.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
+		    "E2": {"initial_val" : 78000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
+		    "n2": {"initial_val" : 3.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+		    "g2": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
 		},
 	    "likelihood": {
 		    "function": "Gaussian",
@@ -36,12 +40,12 @@
 		},
 	    "algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e4,
+		    "n_iterations": 1e3,
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-				    "value": [1e-4, 1e-3, 1e-3, 1e-4]
+				    "value": [1e-4, 1e-3, 1e-3, 1e-6, 1e-4, 1e-3, 1e-3, 1e-6]
 				}
 			}
 		}
@@ -57,7 +61,7 @@
 		    "num_plot": 1
 		},
 	    "MarkovChain": {
-		    "display": "yes",
+		    "display": "no",
 		    "thinning": 1
 		},
 	    "Posterior": {

@@ -26,15 +26,8 @@ class SetCompetitiveReaction(MH.ModelInference):
         """Set parameters. For competitive pyrolysis, reactions parameters are read from input file. 
         Uncertain parameters and their values are specified."""
 		
-        # Initialize pyrolysis model 
-        self.pyro_model = PyrolysisCompetitive()
-		
         # Write the input file.
         MH.write_tmp_input_file(input_file_name, param_names, param_values)
-
-        # Read the parameters from the temporary file 
-        self.pyro_model.react_reader("tmp_"+input_file_name)
-        self.pyro_model.param_reader("tmp_"+input_file_name)
 
 		# Parameters
         self.tau = self._param[0]
@@ -51,13 +44,20 @@ class SetCompetitiveReaction(MH.ModelInference):
 		
         self.n_T_steps = len(self._x)
 		
+        # Initialize pyrolysis model 
+        self.pyro_model = PyrolysisCompetitive(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
+		
+		# Read the parameters from the temporary file 
+        self.pyro_model.react_reader("tmp_"+input_file_name)
+        self.pyro_model.param_reader("tmp_"+input_file_name)
+		
     def solve_system(self, input_file_name, param_names, param_values): 
 		
         # Set parameter
         self.set_param_values(input_file_name, param_names, param_values) 
 
         # Solve the system  
-        self.pyro_model.solve_system(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
+        self.pyro_model.solve_system()
 
     def compute_output(self, input_file_name, param_names, param_values):
 		

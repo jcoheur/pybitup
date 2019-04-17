@@ -2,8 +2,8 @@ import numpy as np
 import math	
 
 # Packages for the pyrolysis model
-from src.pyrolysis import PyrolysisParallel 
 
+from src.pyrolysis import PyrolysisParallel 
 
 # Packages for stochastic inference
 from pyBIT import Metropolis_Hastings_Inference as MH
@@ -59,8 +59,8 @@ class SetParallelReaction(MH.ModelInference):
         self.set_param_values(input_file_name, param_names, param_values) 
 
         # Solve the system  
-        #self.pyro_model.solve_system()
-        self.pyro_model.compute_analytical_solution()
+        self.pyro_model.solve_system()
+        #self.pyro_model.compute_analytical_solution()
 
     def compute_output(self, input_file_name, param_names, param_values):
 		

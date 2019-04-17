@@ -338,7 +338,14 @@ class MetropolisHastings:
 		print("End time {}" .format(time.asctime(time.localtime())))
 		print("Elapsed time: {} sec".format(time.strftime("%H:%M:%S", time.gmtime(time.clock()-self.t1))))
 		print("Rejection rate is {} %".format(self.n_rejected/self.nIterations*100))
-		
+
+		with open("output/output.dat", 'w') as output_file:
+			output_file.write("Rejection rate is {} % \n".format(self.n_rejected/self.nIterations*100))
+			output_file.write("Maximum Likelihood Estimator (MLE) \n")
+			output_file.write("{} \n".format(self.arg_max_LL))
+			output_file.write("Log-likelihood value \n")
+			output_file.write("{}".format(self.max_LL))
+       		
 	def compute_time(self, t1):
 		""" Return the time in H:M:S from time t1 to current clock time """
 		

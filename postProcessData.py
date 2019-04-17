@@ -4,6 +4,8 @@ import json
 from jsmin import jsmin
 import numpy as np
 
+from matplotlib2tikz import save as tikz_save
+
 def post_process_data(input_file_name):
 
 	# Open and read input file 
@@ -128,5 +130,15 @@ def post_process_data(input_file_name):
 		
 		
 	
-	# Show plot 
+	# Show plot
+	print(plt.figure(user_inputs["PostProcess"]["Posterior"]["num_plot"]))	
+	saveToTikz('test.tex')	
 	plt.show()
+	
+def saveToTikz(nameTikzFile): 
+
+    plt.grid(True)
+    tikz_save(nameTikzFile, figureheight='\\figureheight', figurewidth='\\figurewidth', 
+	        extra_axis_parameters=['/pgf/number format/.cd, 1000 sep={}', 'title=\\figuretitle', 'xlabel=\\figurexlabel', 'ylabel=\\figureylabel'])
+			
+			

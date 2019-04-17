@@ -1,0 +1,70 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+    "Data": 
+    [
+        {
+            "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+            "FileName": "fakePyroData.csv",
+            "xField": ["temperature"], 
+            "yField": ["dRho"], 
+            "sigmaField": ["std_dRho"]
+        }
+    ],
+    "Model": 
+	[
+        {
+	        "model_name": "parallel_pyrolysis", 
+	        "input_file": "reaction_scheme.json", 
+	        "param_names": ["tau"],
+	        "param_values": [6.1],
+	        "parametrization" : "no"
+	    }
+    ],
+
+    "Inference": {
+        "inferenceProblem" : "ParallelPyrolysis",  
+	    "method": "Bayesian", 
+	    "param" : {
+		    "A1": {"initial_val" : 4.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
+		    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
+		    "n1": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+		    "g1": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+		},
+	    "likelihood": {
+		    "function": "Gaussian",
+		    "distance": "L2"
+		},
+	    "algorithm": {
+		    "name": "RWMH", 
+		    "n_iterations": 1e4,
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+				    "type": "diag", 
+				    "value": [1e-4, 1e-3, 1e-3, 1e-4]
+				}
+			}
+		}
+	}, 
+	
+    "PostProcess": { 
+	    "Data": { 
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "InitialGuess": {
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+		},
+	    "Posterior": {
+		    "display": "yes",
+		    "shaded_area": "yes",
+		    "burnin": 0,
+		    "num_plot": 1
+		}
+	}
+}

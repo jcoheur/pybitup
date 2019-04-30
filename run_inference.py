@@ -181,7 +181,7 @@ def run_inference(input_file_name, my_model):
         proposal_cov = np.array(user_inputs['Inference']['algorithm']['proposal']['covariance']['value']) 
     else: 
         print("Invalid InferenceAlgorithmProposalConvarianceType name {}".format(user_inputs['Inference']['algorithm']['proposal']['covariance']['type']))
-			
+
     if algo_name == "RWMH": 
         print("Using random-walk Metropolis-Hastings algorithm.")
         run_MCMCM = MH.MetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
@@ -208,6 +208,10 @@ def run_inference(input_file_name, my_model):
         gamma = user_inputs['Inference']['algorithm']['DRAM']['gamma']
         run_MCMCM = MH.DelayedRejectionAdaptiveMetropolisHastings(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X,
                                                   starting_it, updating_it, eps_v, gamma)
+        run_MCMCM.random_walk_loop()
+    elif algo_name == "Ito-SDE": 
+        print("Running Ito-SDE algorithm.")
+        run_MCMCM = MH.ito_SDE(user_inputs['Inference']['inferenceProblem'], n_iterations, unpar_init_val, proposal_cov, my_model, prior, data, f_X)
         run_MCMCM.random_walk_loop()
     else:
         raise ValueError('Algorithm "{}" unknown.'.format(algo_name)) 	

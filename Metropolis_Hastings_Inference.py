@@ -188,7 +188,6 @@ class MetropolisHastings:
 		self.data = data 
 		self.f_X = f_X
 	
-	    
 		# Initialize parameters and functions
 		self.n_param = self.param_init.size
 		self.current_val = self.param_init
@@ -254,8 +253,8 @@ class MetropolisHastings:
 		z_k = self.compute_multivariate_normal()
 
 		## Without parameterization 
-		#proposal[:] = chain_val[i, :] + np.transpose(np.matmul(R, np.transpose(z_k)))
-		
+		#self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(z_k)))
+
 		self.vec_X_parametrized[:] = self.x_parametrization(self.current_val, self.model.P)
 		self.Y_parametrized[:] = self.vec_X_parametrized[:] + np.transpose(np.matmul(self.R, np.transpose(z_k)))
 		self.new_val[:] = self.y_parametrization(self.Y_parametrized[:], self.model.P)
@@ -327,9 +326,9 @@ class MetropolisHastings:
 		
 	def compute_multivariate_normal(self): 
 
-		mv_norm = np.zeros((1, self.n_param))
+		mv_norm = np.zeros(self.n_param)
 		for j in range(self.n_param):
-			mv_norm[0,j] = random.gauss(0,1)
+			mv_norm[j] = random.gauss(0,1)
 
 		return mv_norm
 			
@@ -338,7 +337,14 @@ class MetropolisHastings:
 		print("End time {}" .format(time.asctime(time.localtime())))
 		print("Elapsed time: {} sec".format(time.strftime("%H:%M:%S", time.gmtime(time.clock()-self.t1))))
 		print("Rejection rate is {} %".format(self.n_rejected/self.nIterations*100))
-		
+
+		with open("output/output.dat", 'w') as output_file:
+			output_file.write("Rejection rate is {} % \n".format(self.n_rejected/self.nIterations*100))
+			output_file.write("Maximum Likelihood Estimator (MLE) \n")
+			output_file.write("{} \n".format(self.arg_max_LL))
+			output_file.write("Log-likelihood value \n")
+			output_file.write("{}".format(self.max_LL))
+       		
 	def compute_time(self, t1):
 		""" Return the time in H:M:S from time t1 to current clock time """
 		
@@ -512,7 +518,94 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
 		# The inverse of the covariance must be update accordingly for the DRAM
 		inv_R = linalg.inv(self.R)
 		self.inv_V = inv_R*np.transpose(inv_R)
+	
+
+class ito_SDE(MetropolisHastings): 
+	"""Implementation of the Ito-SDE (Arnst et al.) mcmc methods. Joffrey Coheur 17-04-19."""
+	
+	def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X): 
+		MetropolisHastings.__init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X)
+
+		# Set forward and backward change of variables
+		self.cv_forward = self.x_parametrization
+		self.cv_backward = self.y_parametrization
+
+		# Change variable of initial parameters
+		xi = self.cv_forward(self.param_init)
+
+		# Definition of the log-likelihood function
+		self.SS_X = lambda x : sum_of_square(data, self.f_X(self.cv_backward(x))) 
+		#self.log_prior = lambda cv_xi : np.log(np.exp(cv_xi[0]) * np.exp(cv_xi[1]) * 1/((sec(1/2 + np.arctan(cv_xi[2])/np.pi))**2))
+
+		# Compute hessian matrix for scaling 
+		hess_FD = -computeHessianFD(self.SS_X, xi, eps=0.0000001)
+		#hess_FD = np.eye(self.param_init.size)
+		#hess_FD = np.array([[ 0.00228828, 0.00493598, 0.00120998, 0.00078303], [0.00493598, 0.03795819,0.00413551,0.00403603], [0.00120998,0.00413551,0.01384492, 0.00300218],[0.00078303, 0.00403603,0.00300218, 0.00344156]])
+		self.C_approx = linalg.inv(hess_FD) #np.array([np.log(1e4)**2]) 
+		#self.C_approx = np.array([[10000, 0], [0, 100]]) 
+		L_c = linalg.cholesky(self.C_approx)
+		self.inv_L_c_T = linalg.inv(np.transpose(L_c))
+
+		# Parameters for the ito-sde resolution 
+		self.h = 0.5
+		self.f0 = 4
+		self.hfm = 1 - self.h*self.f0/4
+		self.hfp = 1 + self.h*self.f0/4
 		
+		# Initial parameters
+		self.xi_nm=np.array(xi)
+		self.P_nm=np.zeros(self.n_param)
+	
+		#y=computeGradientFD(SS_X = lambda x : sum_of_square(self.data, self.f_X(x)), self.current_val)
+		#print(y)
+		
+		# T = 200.
+		# myfun = lambda x: 1/2 * x[0]**2 * x[1]**2 * T 
+		# print(computeHessianFD(myfun, np.array([10.0, 10.0]), eps=0.00001))
+
+	def random_walk_loop(self): 
+	
+		for i in range(self.nIterations+1):
+
+			# Solve Ito-SDE using Stormer-Verlet scheme
+			WP_np = self.h**2 * self.compute_multivariate_normal()
+			xi_n = self.xi_nm + self.h/2*np.matmul(self.C_approx, self.P_nm)
+
+			# Gradient Log-Likelihood
+			grad_LL = computeGradientFD(self.SS_X, xi_n, eps=0.000001)
+
+			# Gradient Log-Prior
+			# grad_LP = np.transpose(computeGradientFD(self.log_prior, np.transpose(xi_n)))
+			grad_LP = 0 # Prior cancels for now 
+			grad_phi = -grad_LP - grad_LL
+
+			P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp*(-grad_phi) + np.sqrt(self.f0)/self.hfp * np.matmul(self.inv_L_c_T, WP_np)
+			xi_np = xi_n + self.h/2*np.matmul(self.C_approx, P_np) 
+
+			self.P_nm=P_np
+			self.xi_nm=xi_np
+
+			# Reverse Change variable and store values of the chain 
+			self.current_val = self.cv_backward(xi_n)
+			self.current_fun_eval = self.f_X(self.current_val)
+			
+			# We save 100 function evaluation for the post process
+			self.write_fun_eval(i, self.nIterations/100, self.current_fun_eval)  
+
+			# We estimate time after a hundred iterations
+			if i == 100:
+				self.compute_time(self.t1)
+		
+			# Save the next current value 
+			self.write_val(self.current_val)
+		
+		self.compute_covariance()
+		
+		self.terminate_loop()
+		    
+
+
+	
 		
 class Prior: 
 	""" Class Prior contains the a priori information on the parameters 
@@ -600,3 +693,134 @@ def sum_of_square(data1, data2):
     J =  - 1/2 * np.sum(((data1.y-data2)/data1.std_y)**2, axis=0)
 
     return J
+
+def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01): 
+	""" ComputeGradientFD
+	Compute the gradient of the model f_X with respect to its variables
+	around the values provided in var_model.
+
+	f_X is a function with variables var_model
+	schemeType is optional. Default value is 'Forward' FD scheme
+	eps is optional. Default value is 1/100 of the variable. 
+
+	Joffrey Coheur 19-04-19"""
+     
+	nVar = var_model.size
+	grad_FD = np.zeros(nVar)
+    
+	if schemeType == 'Forward': 
+		f_X_init = f_X(var_model)
+		for i in range(nVar):
+			# initialize parameter
+			var_model_pert = np.array(var_model)
+			delta_p = var_model_pert[i]*eps
+			
+			# Perturb the good parameters
+			var_model_pert[i] = var_model[i]+delta_p
+
+			# Compute the function with perturbed parameters
+			f_X_pert = f_X(var_model_pert)
+
+			# Compute the gradient using Forward FD
+			grad_FD[i] = (f_X_pert - f_X_init)/delta_p  
+			
+	elif schemeType == 'Central': 
+		for i in range(nVar):
+			# initialize parameter
+			var_model_pert_p = var_model
+			var_model_pert_m = var_model
+			delta_p = var_model_pert[i]*eps
+			
+			# Perturb the good parameters
+			var_model_pert_p[i] = var_model[i]+delta_p
+			var_model_pert_m[i] = var_model[i]-delta_p
+			
+			# Compute the function with perturbed parameters
+			f_X_pert_p = f_X(var_model_pert_p)
+			f_X_pert_m = f_X(var_model_pert_m) 
+			
+			# Compute the gradient using Central FD
+			grad_FD[i] = (f_X_pert_p - f_X_pert_m)/(2*delta_p)
+
+	else:
+		raise ValueError("Finite difference scheme {} not implemented. \n ".format(schemeType))
+
+	return grad_FD
+	
+def computeHessianFD(f_X, var_model, eps=0.01): 
+	"""Compute the hessian matrix of the model f_X with respect to its variables around the values provided in var_model
+
+	f_x is a function handle of variables var_model
+	delta_p is optional. Default value of sqrt(eps) is used
+
+	Joffrey Coheur 19-04-19"""
+
+
+	nVar = var_model.size
+	hess_FD = np.zeros([nVar, nVar])
+
+	# 1) Diagonal terms
+	f_X_init = f_X(var_model)
+	for i in range(nVar):
+
+		# Initialize parameter
+		var_model_pert_p = np.array(var_model)
+		var_model_pert_m = np.array(var_model)
+		delta_pi = var_model[i]*eps
+
+		# Perturb the good parameters
+		var_model_pert_p[i] = var_model[i]+delta_pi
+		var_model_pert_m[i] = var_model[i]-delta_pi 
+
+		# Compute the function with perturbed parameters
+		f_X_pert_p = f_X(var_model_pert_p)
+		f_X_pert_m = f_X(var_model_pert_m)
+
+		# Finite difference scheme for the diagonal terms
+		num = f_X_pert_p - 2*f_X_init + f_X_pert_m
+		hess_FD[i,i] = num/(delta_pi**2)
+
+	# 2) Off diagonal terms
+	for i in range(nVar):
+		# Initialize parameter
+		var_i_model_pert_p = np.array(var_model)
+		var_i_model_pert_m = np.array(var_model)
+		delta_pi = var_model[i]*eps
+
+		# Perturb the good parameters
+		var_i_model_pert_p[i] = var_model[i]+delta_pi
+		var_i_model_pert_m[i] = var_model[i]-delta_pi
+
+		# Compute the function with perturbed parameters
+		f_X_i_pert_p = f_X(var_i_model_pert_p)
+		f_X_i_pert_m = f_X(var_i_model_pert_m)
+
+		for j in range(nVar):
+
+			if j <= i:
+				continue
+
+			delta_pj = var_model[j]*eps
+			var_j_model_pert_p = np.array(var_model)
+			var_j_model_pert_m = np.array(var_model)
+			var_j_model_pert_p[j] = var_model[j]+delta_pj 
+			var_j_model_pert_m[j] = var_model[j]-delta_pj 
+
+			var_ij_model_pert_p = var_i_model_pert_p
+			var_ij_model_pert_m = var_i_model_pert_m
+			var_ij_model_pert_p[j] = var_i_model_pert_p[j]+delta_pj
+			var_ij_model_pert_m[j] = var_i_model_pert_m[j]-delta_pj 
+			
+			# Compute the function with perturbed parameters
+			f_X_j_pert_p = f_X(var_j_model_pert_p)
+			f_X_j_pert_m = f_X(var_j_model_pert_m)
+
+			# Compute the function with perturbed parameters
+			f_X_ij_pert_p = f_X(var_ij_model_pert_p)
+			f_X_ij_pert_m = f_X(var_ij_model_pert_m)
+
+			# Finite difference scheme for off-diagonal terms
+			hess_FD[i,j] = (f_X_ij_pert_p - f_X_i_pert_p - f_X_j_pert_p + 2*f_X_init - f_X_i_pert_m - f_X_j_pert_m + f_X_ij_pert_m)/(2*delta_pj*delta_pi)
+			hess_FD[j,i] = hess_FD[i,j]
+
+	return hess_FD

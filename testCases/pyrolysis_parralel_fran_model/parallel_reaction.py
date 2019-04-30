@@ -2,8 +2,8 @@ import numpy as np
 import math	
 
 # Packages for the pyrolysis model
-from pyrolysis_general.src.pyrolysis import PyrolysisCompetitive 
-from pyrolysis_general.src.read_experiments import ReadExperiments
+
+from src.pyrolysis import PyrolysisParallel 
 
 # Packages for stochastic inference
 from pyBIT import Metropolis_Hastings_Inference as MH
@@ -11,7 +11,7 @@ from pyBIT import Metropolis_Hastings_Inference as MH
 # Python packages 
 
 
-class SetCompetitiveReaction(MH.ModelInference): 
+class SetParallelReaction(MH.ModelInference): 
     """ Define the class for the competitive reaction used for the stochastic inference. 
 	It calls the model implemented in Francisco's pyrolysis-general toolbox. 
     """
@@ -25,6 +25,7 @@ class SetCompetitiveReaction(MH.ModelInference):
     def set_param_values(self, input_file_name, param_names, param_values):
         """Set parameters. For competitive pyrolysis, reactions parameters are read from input file. 
         Uncertain parameters and their values are specified."""
+		
 		
         # Write the input file.
         MH.write_tmp_input_file(input_file_name, param_names, param_values)
@@ -43,13 +44,14 @@ class SetCompetitiveReaction(MH.ModelInference):
         self.T_end = self._x[-1]
 		
         self.n_T_steps = len(self._x)
-		
-        # Initialize pyrolysis model 
-        self.pyro_model = PyrolysisCompetitive(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
+
+		# Initialize pyrolysis model 
+        self.pyro_model = PyrolysisParallel(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
 		
 		# Read the parameters from the temporary file 
         self.pyro_model.react_reader("tmp_"+input_file_name)
         self.pyro_model.param_reader("tmp_"+input_file_name)
+		
 		
     def solve_system(self, input_file_name, param_names, param_values): 
 		
@@ -57,7 +59,8 @@ class SetCompetitiveReaction(MH.ModelInference):
         self.set_param_values(input_file_name, param_names, param_values) 
 
         # Solve the system  
-        self.pyro_model.solve_system()
+        #self.pyro_model.solve_system()
+        self.pyro_model.compute_analytical_solution()
 
     def compute_output(self, input_file_name, param_names, param_values):
 		
@@ -66,4 +69,83 @@ class SetCompetitiveReaction(MH.ModelInference):
         self.solve_system(input_file_name, param_names, param_values)
 
         return self.pyro_model.get_drho_solid() 
+
+    # def cv_forward(self, X):
+	
+        # Y = np.zeros(len(X[:]))
+
+        # Y[0] = np.log(X[0])
+
+
+        # return Y
+		
+		
+    # def cv_backward(self, Y):
+	
+        # X = np.zeros(len(Y[:]))
+
+        # X[0] = np.exp(Y[0])
+
+	
+
+        # return X 
+
+    def cv_forward(self, X):
+
+        Y = np.zeros(len(X[:]))
+
+        Y[0] = np.log(X[0])
+
+        Y[1] = np.log(X[1])
+
+        return Y
+		
+		
+    def cv_backward(self, Y):
+
+        X = np.zeros(len(Y[:]))
+
+        X[0] = np.exp(Y[0])
+
+        X[1] = np.exp(Y[1])
+
+        return X 
+		
+		
+    # def cv_forward(self, X):
+	
+        # Y = np.zeros(len(X[:]))
+
+        # Y[0] = np.log(X[0])
+
+        # Y[1] = np.log(X[1])
+
+        # Y[2] = np.log(X[2])
+
+        # Y[3] = np.tan((X[3] - 1/2)*np.pi)
+
+        # return Y
+		
+		
+    # def cv_backward(self, Y):
+	
+        # X = np.zeros(len(Y[:]))
+
+        # X[0] = np.exp(Y[0])
+
+        # X[1] = np.exp(Y[1])
+
+        # X[2] = np.exp(Y[2])
+
+        # X[3] = (1/np.pi) * np.arctan(Y[3]) + 1/2
+	
+
+        # return X 
+	
+	
+	
+	
+	
+	
+	
 	

@@ -23,7 +23,7 @@ class OneReactionPyrolysis(MH.ModelInference):
 		self.n = self._param[2]
 		self.m = self._param[3] 
 		self.F = self._param[4]
-		self.tau = self._param[5]
+		self.tau = self._param[5]/60 # /!\ tau should be initially in K/m /!\
 		
 		self.T = self._x 
 		self.T_0 = self._x[0]

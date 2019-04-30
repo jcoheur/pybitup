@@ -62,6 +62,7 @@ class SetParallelReaction(MH.ModelInference):
         #self.pyro_model.solve_system()
         self.pyro_model.compute_analytical_solution()
 
+
     def compute_output(self, input_file_name, param_names, param_values):
 		
         # Solve the system to get xi_T
@@ -141,11 +142,6 @@ class SetParallelReaction(MH.ModelInference):
 	
 
         # return X 
-	
-	
-	
-	
-	
 	
 	
 	

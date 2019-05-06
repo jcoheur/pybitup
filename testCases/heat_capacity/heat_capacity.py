@@ -1,14 +1,14 @@
-from pyBIT import Metropolis_Hastings_Inference as MH
+from pybit import inference_problem as ip
 
-class HeatCapacity(MH.ModelInference): 
+class HeatCapacity(ip.Model): 
 	""" 1D Heat conduction model """	
 	
 	def __init__(self, x=[], param=[]): 
 	
 		# Initialize parent object ModelInference
-		MH.ModelInference.__init__(self)	
+		ip.Model.__init__(self)	
 		
-	def compute_heat_capacity(self):
+	def fun_x(self):
 	
 		T = self._x 
 

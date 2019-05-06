@@ -57,7 +57,7 @@
 		},
 	"algorithm": {
 		"name": "RWMH", 
-		"n_iterations": 1e5,
+		"n_iterations": 1e3,
 		"proposal": { 
 			"name": "Gaussian",
 			"covariance": { 
@@ -81,7 +81,7 @@
 		"display": "yes",
 		"thinning": 1
 		},
-	"Posterior": {
+	"Propagation": {
 		"display": "yes",
 		"shaded_area": "yes",
 		"burnin": 0,

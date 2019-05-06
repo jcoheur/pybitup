@@ -3,47 +3,39 @@ import math
 
 # Packages for the pyrolysis model
 
-from src.pyrolysis import PyrolysisParallel 
+from pyrolysis_general.src.pyrolysis import PyrolysisParallel 
 
 # Packages for stochastic inference
-from pyBIT import Metropolis_Hastings_Inference as MH
+from pybit import inference_problem as ip
 
 # Python packages 
 
 
-class SetParallelReaction(MH.ModelInference): 
+class SetParallelReaction(ip.Model): 
     """ Define the class for the competitive reaction used for the stochastic inference. 
 	It calls the model implemented in Francisco's pyrolysis-general toolbox. 
     """
 	
-    def __init__(self, x=[], param=[]): 
-			
-        # Initialize parent object ModelInference
-        MH.ModelInference.__init__(self)
-				
-		
+    def __init__(self, x=[], param=[], scaling_factors_parametrization=1, name=""):
+        ip.Model.__init__(self,x, param, scaling_factors_parametrization, name)
+
     def set_param_values(self, input_file_name, param_names, param_values):
         """Set parameters. For competitive pyrolysis, reactions parameters are read from input file. 
         Uncertain parameters and their values are specified."""
-		
-		
+        
         # Write the input file.
-        MH.write_tmp_input_file(input_file_name, param_names, param_values)
+        ip.write_tmp_input_file(input_file_name, param_names, param_values)
 
-		# Parameters
-        self.tau = self._param[0]
-		
-        # self.time = self._x
-        # self.T_0 = self._param[1] 
-        # self.T = self.T_0 + self.time * self.tau
-        # self.T_end = self.T[-1]
-		
-        self.T = self._x 
+        # Parameters
+        self.tau = self.param[0]
+				
+        # Variables
+        self.T = self.x 
         self.T_0 = self._x[0]
         self.time = (self.T - self.T_0)/(self.tau/60)
-        self.T_end = self._x[-1]
+        self.T_end = self.x[-1]
 		
-        self.n_T_steps = len(self._x)
+        self.n_T_steps = len(self.x)
 
 		# Initialize pyrolysis model 
         self.pyro_model = PyrolysisParallel(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
@@ -63,7 +55,7 @@ class SetParallelReaction(MH.ModelInference):
         self.pyro_model.compute_analytical_solution()
 
 
-    def compute_output(self, input_file_name, param_names, param_values):
+    def fun_x(self, input_file_name, param_names, param_values):
 		
         # Solve the system to get xi_T
 
@@ -71,7 +63,7 @@ class SetParallelReaction(MH.ModelInference):
 
         return self.pyro_model.get_drho_solid() 
 
-    # def cv_forward(self, X):
+    # def parametrization_forward(self, X):
 	
         # Y = np.zeros(len(X[:]))
 
@@ -81,39 +73,38 @@ class SetParallelReaction(MH.ModelInference):
         # return Y
 		
 		
-    # def cv_backward(self, Y):
+    # def parametrization_backward(self, Y):
 	
         # X = np.zeros(len(Y[:]))
 
         # X[0] = np.exp(Y[0])
 
-	
 
         # return X 
 
-    def cv_forward(self, X):
+    # def parametrization_forward(self, X):
 
-        Y = np.zeros(len(X[:]))
+    #     Y = np.zeros(len(X[:]))
 
-        Y[0] = np.log(X[0])
+    #     Y[0] = np.log(X[0])
 
-        Y[1] = np.log(X[1])
+    #     Y[1] = np.log(X[1])
 
-        return Y
+    #     return Y
 		
 		
-    def cv_backward(self, Y):
+    # def parametrization_backward(self, Y):
 
-        X = np.zeros(len(Y[:]))
+    #     X = np.zeros(len(Y[:]))
 
-        X[0] = np.exp(Y[0])
+    #     X[0] = np.exp(Y[0])
 
-        X[1] = np.exp(Y[1])
+    #     X[1] = np.exp(Y[1])
 
-        return X 
+    #     return X 
 		
 		
-    # def cv_forward(self, X):
+    # def parametrization_forward(self, X):
 	
         # Y = np.zeros(len(X[:]))
 
@@ -128,7 +119,7 @@ class SetParallelReaction(MH.ModelInference):
         # return Y
 		
 		
-    # def cv_backward(self, Y):
+    # def parametrization_backward(self, Y):
 	
         # X = np.zeros(len(Y[:]))
 

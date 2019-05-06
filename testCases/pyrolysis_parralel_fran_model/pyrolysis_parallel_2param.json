@@ -25,14 +25,15 @@
         "inferenceProblem" : "ParallelPyrolysis",  
 	    "method": "Bayesian", 
 	    "param" : {
-		    "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, 
-		    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}
+		    "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [0, 1e6]}, // [0, 1e10]
+		    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [8e4, 1.5e5]} // [0, 1e10]
 			
 		},
 	    "likelihood": {
 		    "function": "Gaussian",
 		    "distance": "L2"
 		},
+       // "algorithm": "None"
 	    "algorithm": {
 		    "name": "Ito-SDE", 
 		    "n_iterations": 1e3,
@@ -59,7 +60,12 @@
 		    "display": "yes",
 		    "thinning": 1
 		},
-	    "Posterior": {
+        "Posterior": {
+            "display": "no", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity" // ksdensity, histogram, contour (only for bivariate)
+		},
+	    "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
 		    "burnin": 0,

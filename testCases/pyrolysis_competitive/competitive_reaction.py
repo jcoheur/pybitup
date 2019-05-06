@@ -6,12 +6,12 @@ from pyrolysis_general.src.pyrolysis import PyrolysisCompetitive
 from pyrolysis_general.src.read_experiments import ReadExperiments
 
 # Packages for stochastic inference
-from pyBIT import Metropolis_Hastings_Inference as MH
+from pybit import inference_problem as ip
 
 # Python packages 
 
 
-class SetCompetitiveReaction(MH.ModelInference): 
+class SetCompetitiveReaction(ip.Model): 
     """ Define the class for the competitive reaction used for the stochastic inference. 
 	It calls the model implemented in Francisco's pyrolysis-general toolbox. 
     """
@@ -19,7 +19,7 @@ class SetCompetitiveReaction(MH.ModelInference):
     def __init__(self, x=[], param=[]): 
 			
         # Initialize parent object ModelInference
-        MH.ModelInference.__init__(self)
+        ip.Model.__init__(self)
 				
 		
     def set_param_values(self, input_file_name, param_names, param_values):
@@ -27,7 +27,7 @@ class SetCompetitiveReaction(MH.ModelInference):
         Uncertain parameters and their values are specified."""
 		
         # Write the input file.
-        MH.write_tmp_input_file(input_file_name, param_names, param_values)
+        ip.write_tmp_input_file(input_file_name, param_names, param_values)
 
 		# Parameters
         self.tau = self._param[0]
@@ -59,7 +59,7 @@ class SetCompetitiveReaction(MH.ModelInference):
         # Solve the system  
         self.pyro_model.solve_system()
 
-    def compute_output(self, input_file_name, param_names, param_values):
+    def fun_x(self, input_file_name, param_names, param_values):
 		
         # Solve the system to get xi_T
 

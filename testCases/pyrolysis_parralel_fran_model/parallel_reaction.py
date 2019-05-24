@@ -2,29 +2,28 @@ import numpy as np
 import math	
 
 # Packages for the pyrolysis model
-
 from pyrolysis_general.src.pyrolysis import PyrolysisParallel 
 
 # Packages for stochastic inference
-from pybit import inference_problem as ip
+from pybit import bayesian_inference as bi
 
 # Python packages 
 
 
-class SetParallelReaction(ip.Model): 
+class SetParallelReaction(bi.Model): 
     """ Define the class for the competitive reaction used for the stochastic inference. 
 	It calls the model implemented in Francisco's pyrolysis-general toolbox. 
     """
 	
     def __init__(self, x=[], param=[], scaling_factors_parametrization=1, name=""):
-        ip.Model.__init__(self,x, param, scaling_factors_parametrization, name)
+        bi.Model.__init__(self,x, param, scaling_factors_parametrization, name)
 
     def set_param_values(self, input_file_name, param_names, param_values):
         """Set parameters. For competitive pyrolysis, reactions parameters are read from input file. 
         Uncertain parameters and their values are specified."""
         
         # Write the input file.
-        ip.write_tmp_input_file(input_file_name, param_names, param_values)
+        bi.write_tmp_input_file(input_file_name, param_names, param_values)
 
         # Parameters
         self.tau = self.param[0]
@@ -63,24 +62,24 @@ class SetParallelReaction(ip.Model):
 
         return self.pyro_model.get_drho_solid() 
 
-    # def parametrization_forward(self, X):
+    def parametrization_forward(self, X):
 	
-        # Y = np.zeros(len(X[:]))
+        Y = np.zeros(len(X[:]))
 
-        # Y[0] = np.log(X[0])
+        Y[0] = np.log(X[0])
 
 
-        # return Y
+        return Y
 		
 		
-    # def parametrization_backward(self, Y):
+    def parametrization_backward(self, Y):
 	
-        # X = np.zeros(len(Y[:]))
+        X = np.zeros(len(Y[:]))
 
-        # X[0] = np.exp(Y[0])
+        X[0] = np.exp(Y[0])
 
 
-        # return X 
+        return X 
 
     # def parametrization_forward(self, X):
 

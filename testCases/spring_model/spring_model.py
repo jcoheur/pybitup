@@ -1,15 +1,15 @@
 import numpy as np
 import math
 
-from pybit import inference_problem as ip
+from pybit import bayesian_inference as bi
 
-class SpringModel(ip.Model): 
+class SpringModel(bi.Model): 
 	""" Class for the spring model """	
 	
 	def __init__(self, x=[], param=[], name=""): 
 	
 		# Initialize parent object ModelInference
-		ip.Model.__init__(self, name=name)	
+		bi.Model.__init__(self, name=name)	
 	
 	def set_param_values(self):
 

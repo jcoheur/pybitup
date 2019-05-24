@@ -1,44 +1,44 @@
 /* This is a json file. Comments are allowed as jsmin is used to removed comments */
 {
-    "Data":
-	[   
-        {   
-	        "Type": "GenerateSynthetic", 
-	        "x":{
-                "Type": "range", 
-		        "Value": [300.0, 1401.0, 10.0]
-	        },
-	        "y":{
-		        "Name": "Temperature",
-		        "Error": "data",
-		        "Sigma": 50
-	        }
-        }
-    ],
-	
-    "Model":[
-        {
-	        "input_file": "None", 
-	        "param_names": ["A", "B", "C", "D"],
-	        "param_values": [-333.33, 4095.83, -2553.33, 570.83],
-	        "parametrization" : "no"
-	    }
-    ],
-	
-    "Inference": {
-	    "inferenceProblem" : "heat_capacity",
-	    "method": "Bayesian", 
-	    "param": {
-		    "A": {"initial_val" : -333.33,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}, 
-		    "B": {"initial_val" : 4095.83,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}, 
-		    "C": {"initial_val" : -2553.33,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}, 
-		    "D": {"initial_val" : 570.83,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}
-	    },
-	    "likelihood": {
-		    "function": "Gaussian",
-		    "distance": "L2"
-	    },
-	    "algorithm": {
+    "Sampling": {
+        "BayesianPosterior" : { 
+            "Data": [   
+                {   
+                    "Type": "GenerateSynthetic", 
+                    "x":{
+                        "Type": "range", 
+                        "Value": [300.0, 1401.0, 10.0]
+                    },
+                    "y":{
+                        "Name": "Temperature",
+                        "Error": "data",
+                        "Sigma": 50
+                    }
+                }
+            ],
+            "Model": [
+                {
+                    "input_file": "None", 
+                    "param_names": ["A", "B", "C", "D"],
+                    "param_values": [-333.33, 4095.83, -2553.33, 570.83],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior": { 
+                "Distribution": "Mixture", 
+                "Param": {
+                    "A": {"initial_val" : -333.33,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}, 
+                    "B": {"initial_val" : 4095.83,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}, 
+                    "C": {"initial_val" : -2553.33,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}, 
+                    "D": {"initial_val" : 570.83,    "prior_name" : "Uniform", "prior_param" : [-1e4, 1e4]}
+                }
+            },
+	        "Likelihood": {
+                "function": "Gaussian",
+                "distance": "L2"
+            }
+        },
+	    "Algorithm": {
 		    "name": "DR",
             "DR": {
                 "gamma": 0.5
@@ -67,11 +67,17 @@
 		    "display": "yes",
 		    "thinning": 1
 	    },
-	    "Propagation": {
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 100
+        },
+        "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-			"burnin": 0,
+		    "burnin": 0,
 		    "num_plot": 1
-	    }
+		}
     }
 }

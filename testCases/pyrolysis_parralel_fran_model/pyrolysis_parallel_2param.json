@@ -1,40 +1,39 @@
 /* This is a json file. Comments are allowed as jsmin is used to removed comments */
 {
-    "Data": 
-    [
-        {
-            "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-            "FileName": "fakePyroData.csv",
-            "xField": ["temperature"], 
-            "yField": ["dRho"], 
-            "sigmaField": ["std_dRho"]
-        }
-    ],
-    "Model": 
-	[
-        {
-	        "model_name": "parallel_pyrolysis", 
-	        "input_file": "reaction_scheme_2param.json", 
-	        "param_names": ["tau"],
-	        "param_values": [6.1],
-	        "parametrization" : "no"
-	    }
-    ],
-
-    "Inference": {
-        "inferenceProblem" : "ParallelPyrolysis",  
-	    "method": "Bayesian", 
-	    "param" : {
-		    "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [0, 1e6]}, // [0, 1e10]
-		    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [8e4, 1.5e5]} // [0, 1e10]
-			
-		},
-	    "likelihood": {
-		    "function": "Gaussian",
-		    "distance": "L2"
-		},
-       // "algorithm": "None"
-	    "algorithm": {
+    "Sampling": {
+        "BayesianPosterior" : {
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "fakePyroData.csv",
+                    "xField": ["temperature"], 
+                    "yField": ["dRho"], 
+                    "sigmaField": ["std_dRho"]
+                }
+            ],
+            "Model": [
+                {
+                    "model_name": "parallel_pyrolysis", 
+                    "input_file": "reaction_scheme_2param.json", 
+                    "param_names": ["tau"],
+                    "param_values": [6.1],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior": { 
+                "Distribution": "Mixture",
+                "Param" : {
+                    "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [10, 1e6]}, // [0, 1e10]
+                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [8e4, 1.5e5]} // [0, 1e10]   
+                }
+            },
+            "Likelihood": {
+                "function": "Gaussian",
+                "distance": "L2"
+            }
+        },
+       // "Algorithm": "None"
+	    "Algorithm": {
 		    "name": "Ito-SDE", 
 		    "n_iterations": 1e3,
 		    "proposal": { 
@@ -63,7 +62,7 @@
         "Posterior": {
             "display": "no", 
             "distribution": "marginal", // marginal, bivariate
-            "estimation": "ksdensity" // ksdensity, histogram, contour (only for bivariate)
+            "estimation": "ksdensity+hist" // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
 		},
 	    "Propagation": {
 		    "display": "yes",

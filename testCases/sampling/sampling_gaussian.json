@@ -1,0 +1,38 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{  
+    "Sampling": {
+        "Distribution": {
+            "name": "Gaussian", 
+            "hyperparameters" : [113000, 350],
+            "init_val" : 113000
+        }, 
+        "Algorithm": {
+            "name": "Ito-SDE", 
+            "Ito-SDE" : {
+                "h" : 50, 
+                "f0" : 1.4
+            },
+            "n_iterations": 1e5, 
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+				    "type": "diag", 
+				    "value": [7e5]
+                }
+            }
+        },
+        "ComputeAnalyticalDistribution": "yes"
+    }, 
+    "PostProcess": { 
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+        },
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin" : 0
+		}
+	}
+}

@@ -1,38 +1,37 @@
 /* This is a json file. Comments are allowed as jsmin is used to removed comments */
 {
-    "Data": 
-	[
-	    {
-	        "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-	        "FileName": "heat_conduction_data.csv",
-	        "xField": ["x"], 
-	        "yField": ["T"], 
-	        "sigmaField": ["std_T"]
-	    }
-	],
-	
-    "Model": 
-	[
-	    {
-	        "input_file": "None",
-	        "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
-	        "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
-	        "parametrization" : "no"
-	    }
-	],
-	
-    "Inference": {
-	    "inferenceProblem": "heat_conduction",
-	    "method": "Bayesian", 
-	    "param": {
-		    "phi": {"initial_val" : -18.41,  "prior_name" : "Uniform", "prior_param" : [-100, 0.0]}, 
-		    "h":   {"initial_val" : 0.00191, "prior_name" : "Uniform", "prior_param" : [0.00001, 1.0]}
-		},
-	    "likelihood": {
-		    "function": "Gaussian",
-		    "distance": "L2"
-		},
-	    "algorithm": {
+    "Sampling": {
+        "BayesianPosterior" : {
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "heat_conduction_data.csv",
+                    "xField": ["x"], 
+                    "yField": ["T"], 
+                    "sigmaField": ["std_T"]
+                }
+            ],
+            "Model": [
+                {
+                    "input_file": "None",
+                    "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
+                    "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior": { 
+                "Distribution": "Mixture", 
+                "Param": {
+                    "phi": {"initial_val" : -18.41,  "prior_name" : "Uniform", "prior_param" : [-100, 0.0]}, 
+                    "h":   {"initial_val" : 0.00191, "prior_name" : "Uniform", "prior_param" : [0.00001, 1.0]}
+                }
+            },
+	        "Likelihood": {
+		        "function": "Gaussian",
+		        "distance": "L2"
+            }
+        },
+	    "Algorithm": {
 		    "name": "DRAM", 
 			"DRAM": {
                 "starting_it": 1e2, 
@@ -40,7 +39,6 @@
 				"eps_v": 0.0, 
 				"gamma": 0.2
 			},
-			
 		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
@@ -65,10 +63,16 @@
 		    "display": "yes",
 		    "thinning": 1
 		},
-	    "Propagation": {
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 100
+        },
+        "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-			"burnin": 0,
+		    "burnin": 0,
 		    "num_plot": 1
 		}
 	}

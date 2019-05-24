@@ -23,6 +23,6 @@ pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
 # X must be equal to param_values
 # print(X) 
 
-post_param_pdf = pybit.inference_problem.Posterior(input_file_name, pyro_model)
-post_param_pdf.run_inference()
-pybit.post_process.post_process_data(input_file_name)
+post_dist = pybit.sample_dist.SolveProblem(input_file_name)
+post_dist.sample(pyro_model)
+post_dist.post_process_dist()

@@ -6,12 +6,12 @@ from pyrolysis_general.src.pyrolysis import PyrolysisCompetitive
 from pyrolysis_general.src.read_experiments import ReadExperiments
 
 # Packages for stochastic inference
-from pybit import inference_problem as ip
+from pybit import bayesian_inference as bi
 
 # Python packages 
 
 
-class SetCompetitiveReaction(ip.Model): 
+class SetCompetitiveReaction(bi.Model): 
     """ Define the class for the competitive reaction used for the stochastic inference. 
 	It calls the model implemented in Francisco's pyrolysis-general toolbox. 
     """
@@ -19,7 +19,7 @@ class SetCompetitiveReaction(ip.Model):
     def __init__(self, x=[], param=[]): 
 			
         # Initialize parent object ModelInference
-        ip.Model.__init__(self)
+        bi.Model.__init__(self)
 				
 		
     def set_param_values(self, input_file_name, param_names, param_values):
@@ -27,7 +27,7 @@ class SetCompetitiveReaction(ip.Model):
         Uncertain parameters and their values are specified."""
 		
         # Write the input file.
-        ip.write_tmp_input_file(input_file_name, param_names, param_values)
+        bi.write_tmp_input_file(input_file_name, param_names, param_values)
 
 		# Parameters
         self.tau = self._param[0]

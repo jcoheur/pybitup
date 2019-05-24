@@ -1,15 +1,15 @@
 import numpy as np
 import math
 
-from pybit import inference_problem as ip
+from pybit import bayesian_inference as bi
 
-class HeatConduction(ip.Model): 
+class HeatConduction(bi.Model): 
     """ 1D Heat conduction model """	
 
     def __init__(self, x=[], param=[]): 
 
         # Initialize parent object ModelInference
-        ip.Model.__init__(self)	
+        bi.Model.__init__(self)	
         
     def set_param_values(self):
 

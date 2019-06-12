@@ -1,6 +1,7 @@
 import numpy as np 
 from scipy import linalg
 from scipy import stats
+from scipy.integrate import simps
 
 import matplotlib.pyplot as plt
 
@@ -40,41 +41,51 @@ class ProbabilityDistribution:
     def compute_log_value(self, X):
         return 0
 
-    def compute_density(self):
+    def compute_density(self, distr_support=[]):
         """ Compute the probability density function of the associated distribution. 
         Only for one dimension and two dimensions. """
 
+        if distr_support: 
+            # If we provide a value for the support of the distribution as input 
+            self.distr_support = np.array(distr_support)
+            # Otherwise it is already implemented, see Gaussian 
+
         if self.dim == 1:
             vec_param_i = np.linspace(self.distr_support[0,0],self.distr_support[0,1], 2000)
-            delta_param_i = vec_param_i[1]-  vec_param_i[0]
+            delta_param_i = vec_param_i[1] - vec_param_i[0]
             f_post = np.zeros(vec_param_i.size)
             for i, param_i in np.ndenumerate(vec_param_i): 
                     c_param = np.array([param_i])
                     f_post[i] = self.compute_value(c_param)  
 
-            int_post = np.sum(f_post)*delta_param_i
+            #int_post = np.sum(f_post)*delta_param_i
+            int_post = simps(f_post, vec_param_i)
 
             plt.figure(200)
             plt.plot(vec_param_i, f_post/int_post)
 
 
         elif self.dim == 2:
-            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 50)
-            delta_param_i = vec_param_i[1]-  vec_param_i[0]
-            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], 50)
-            delta_param_j = vec_param_j[1]-  vec_param_j[0]
-            f_post = np.zeros(vec_param_i.size, vec_param_j.size)
+            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 100)
+            delta_param_i = np.exp(vec_param_i[1] - vec_param_i[0])
+            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], 100)
+            delta_param_j = np.exp(vec_param_j[1] - vec_param_j[0])
+            f_post = np.zeros([vec_param_i.size, vec_param_j.size])
             for i, param_i in np.ndenumerate(vec_param_i): 
                 for j, param_j in np.ndenumerate(vec_param_j): 
                     c_param = np.array([param_i, param_j])
                     f_post[i,j] = self.compute_value(c_param) 
 
             marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
-            marginal_post_2 = np.sum(f_post*delta_param_i, axis=0)
-            plt.figure(1)
-            plt.plot(vec_param_i, marginal_post_1)
-            plt.figure(2)
-            plt.plot(vec_param_j, marginal_post_2)
+            int_f_post  = np.sum(marginal_post_1*delta_param_i, axis=0)
+            norm_f_post = f_post / int_f_post
+
+            marginal_post_norm_1 = np.sum(norm_f_post*delta_param_j, axis=1)
+            marginal_post_norm_2 = np.sum(norm_f_post*delta_param_i, axis=0)
+            plt.figure(200)
+            plt.plot(np.exp(vec_param_i), marginal_post_norm_1)
+            plt.figure(201)
+            plt.plot(np.exp(vec_param_j), marginal_post_norm_2)
 
         return f_post 
 
@@ -92,33 +103,48 @@ class Gaussian(ProbabilityDistribution):
     def __init__(self, hyperparam): 
         ProbabilityDistribution.__init__(self, hyperparam)
 
-        self.mean = np.array([hyperparam[0][0]]) 
-        self.cov = np.array([[hyperparam[0][1]]])
-
+        self.mean = np.array(hyperparam[0][0]) 
+        self.cov = np.array(hyperparam[0][1])
+    
         # Support of the distribution in each dimension as mean +- 4 sigma 
         self.dim = len(self.mean)
         self.distr_support = np.zeros([self.dim, 2])
         for i in range(self.dim): 
-            sigma_ii = np.sqrt(self.cov[i,i])**2
+            var_ii = self.cov[i,i]
             # lower bound 
-            self.distr_support[i,0] = self.mean - 4 * sigma_ii
+            self.distr_support[i,0] = self.mean[i] - 4 * np.sqrt(var_ii)
             # upper bound 
-            self.distr_support[i,1] = self.mean + 4 * sigma_ii
+            self.distr_support[i,1] = self.mean[i] + 4 * np.sqrt(var_ii)
 
-        if len(self.mean) < 2: 
-            self.inv_cov = 1 / self.cov**2
+        if self.dim < 2: 
+            self.inv_cov = 1 / self.cov
         else: 
             self.inv_cov = linalg.inv(self.cov)
 
+        det_cov = linalg.det(self.cov)
+        self.gauss_coeff = 1/np.sqrt((2 * np.pi) ** self.dim * det_cov)
+
+        
+
+    def compute_exp_arg(self, X): 
+       
+        diff_x = (X-self.mean)
+        M1 = np.matmul(self.inv_cov, np.transpose(diff_x))
+        M2 = np.matmul(diff_x, M1) 
+
+        return M2
+
     def compute_value(self, X): 
 
-        val = np.exp(-1/2*(X - self.mean)*self.inv_cov*np.transpose((X-self.mean))) 
+        exp_arg = self.compute_exp_arg(X)
+        val = self.gauss_coeff*np.exp(-1/2*exp_arg) 
 
         return val 
 
     def compute_log_value(self, X):
 
-        log_val = -1/2*(X - self.mean)*self.inv_cov*np.transpose((X-self.mean))
+        exp_arg = self.compute_exp_arg(X)   
+        log_val = np.log(self.gauss_coeff) - 1/2*exp_arg
 
         return log_val
 
@@ -177,3 +203,9 @@ class Mixture(ProbabilityDistribution):
             Y *= c_mixt.compute_value(X[i])
 
         return Y 
+
+    def compute_log_value(self, X): 
+
+        Y = self.compute_value(X)
+
+        return np.log(Y)

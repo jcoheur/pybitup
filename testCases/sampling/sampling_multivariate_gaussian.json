@@ -3,25 +3,27 @@
     "Sampling": {
         "Distribution": {
             "name": "Gaussian", 
-            "hyperparameters" : [[113000], [[122500]]],
-            "init_val" : [113000]
+            "hyperparameters" : [[16630, 113000], [[1e4, 0], [0, 122500]]],
+            "init_val" : [16630, 113000]
         }, 
         "Algorithm": {
             "name": "Ito-SDE", 
             "Ito-SDE" : {
-                "h" : 50, 
+                "h" : 60, 
                 "f0" : 1.4
             },
-            "n_iterations": 1e5, 
+            "n_iterations": 5e5, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-				    "value": [7e5]
+				    "value": [1e4, 122500]
                 }
             }
         },
-        "ComputeAnalyticalDistribution": "yes"
+        "ComputeAnalyticalDistribution": {
+            "compute" : "yes"
+        }
     }, 
     "PostProcess": { 
 	    "MarkovChain": {

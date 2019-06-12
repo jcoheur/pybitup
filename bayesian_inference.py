@@ -15,24 +15,26 @@ class BayesianPosterior(pybit.distributions.ProbabilityDistribution):
 
         self.dim = len(param_init)
         # for the verification of ito-sde for the 1param (E) pyro model
-        self.distr_support = np.array([[self.model.parametrization_forward(np.array([1e5])), self.model.parametrization_forward(np.array([2e5]))]])
-
+        #self.distr_support = np.array([[self.model.parametrization_forward(np.array([1e5])), self.model.parametrization_forward(np.array([2e5]))]])
+        #self.distr_support = np.array([[np.array([4]), np.array([15])], [np.array([11.3]), np.array([12.95])]])
+       
     def get_dim(self): 
         return len(self.param_init)
 
     def compute_value(self, Y):
 
         X = self.model.parametrization_backward(Y) 
-
-        bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(X) * self.likelihood.compute_value(X)
+        
+        bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(Y) * self.likelihood.compute_value(X) 
 
         return bayes_post 
 
     def compute_log_value(self, Y): 
 
         X = self.model.parametrization_backward(Y) 
-        log_bayes_post = self.prior.compute_log_value(X) + np.log(self.model.parametrization_det_jac(X)) + self.likelihood.compute_log_value(X)
 
+        log_bayes_post = self.prior.compute_log_value(X) + np.log(self.model.parametrization_det_jac(Y)) + self.likelihood.compute_log_value(X)
+        
         return log_bayes_post
 
     def update_eval(self): 
@@ -42,6 +44,11 @@ class BayesianPosterior(pybit.distributions.ProbabilityDistribution):
     def save_value(self, name_file): 
 
         self.likelihood.write_fun_eval(name_file)
+
+    def save_sample(self, fileID_sample, value):
+
+        X = self.model.parametrization_backward(value) 
+        fileID_sample.write("{}\n".format(str(X).replace('\n', '')))
 
 
 class Data:
@@ -154,7 +161,7 @@ class Model:
 class Likelihood: 
     """"Class defining the function and the properties of the likelihood function."""
 
-    def __init__(self, exp_data, model_fun, tot_num_fun_eval): 
+    def __init__(self, exp_data, model_fun): 
         self.data = exp_data
         self.model_fun = model_fun
         self.model_eval = 0

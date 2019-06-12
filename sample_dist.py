@@ -10,7 +10,6 @@ import pybit.distributions
 import pybit.bayesian_inference
 import pybit.inference_problem
 import pybit.post_process
-import pybit.metropolis_hastings_algorithms_new as mha
 
 class SolveProblem(): 
 
@@ -53,8 +52,8 @@ class SolveProblem():
             distr_init_val.append(self.user_inputs["Sampling"]["Distribution"]["init_val"])
             sample_dist = pybit.distributions.set_probability_dist(distr_name, distr_param)
 
-            unpar_init_val = np.array(distr_init_val)
-
+            unpar_init_val = np.array(self.user_inputs["Sampling"]["Distribution"]["init_val"])
+            
         elif (self.user_inputs["Sampling"].get("BayesianPosterior") is not None):
             # Sample a Bayesian Posterior distribution
 
@@ -209,29 +208,33 @@ class SolveProblem():
             
             # Likelihood 
             # -----------
-            likelihood_fun = pybit.bayesian_inference.Likelihood(data, f_X, self.user_inputs["Sampling"]["Algorithm"]["n_iterations"])
+            likelihood_fun = pybit.bayesian_inference.Likelihood(data, f_X)
 
             # ----------------------
             # Posterior computation 
             # ----------------------
-         
             sample_dist = pybit.bayesian_inference.BayesianPosterior(prior_dist, likelihood_fun, my_model, unpar_init_val) 
 
 
         else:
             raise ValueError('No samling distribution provided or invalid name.')
 
-        # Run sampling of the distribution 
-        algo = self.user_inputs["Sampling"]["Algorithm"]
-        sampling_dist = pybit.inference_problem.Sampler(sample_dist, algo) 
-        sampling_dist.sample(unpar_init_val) 
+        # Run sampling of the distribution
+        if (self.user_inputs["Sampling"].get('Algorithm') is not None): 
+            algo = self.user_inputs["Sampling"]["Algorithm"]
+            sampling_dist = pybit.inference_problem.Sampler(sample_dist, algo) 
+            sampling_dist.sample(unpar_init_val) 
 
         # Compute the posterior directly from analytical formula (bayes formula in case of Bayesian inference)
         if (self.user_inputs["Sampling"].get('ComputeAnalyticalDistribution') is not None):
-            if (self.user_inputs["Sampling"]['ComputeAnalyticalDistribution'] == "yes"):
-                print("Computing analytical distribution function from formula.")
-        
+            #if (self.user_inputs["Sampling"]['ComputeAnalyticalDistribution'] == "yes"):
+            print("Computing analytical distribution function from formula.")
+            if (self.user_inputs["Sampling"]["ComputeAnalyticalDistribution"].get('DistributionSupport') is not None): 
+                distr_support = self.user_inputs["Sampling"]["ComputeAnalyticalDistribution"]["DistributionSupport"]
+                posterior = sample_dist.compute_density(distr_support)
+            else:
                 posterior = sample_dist.compute_density()
+                            
 
 
     def post_process_dist(self):

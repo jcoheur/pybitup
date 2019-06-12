@@ -1,92 +1,39 @@
-import os
 import numpy as np
 import random
 from scipy import linalg
 import time
-import matplotlib.pyplot as plt
-
-def bayes_formula(prior, param_space, data, f_X):
-    """ Compute the posterior distribution from Bayes formula """
-    
-    n_param = len(param_space)
-
-    if n_param == 1:
-        vec_param_i = np.linspace(param_space[0][0], param_space[0][1], 2000)
-        delta_param_i = vec_param_i[1]-  vec_param_i[0]
-        f_post = np.zeros(vec_param_i.size)
-        for i, param_i in np.ndenumerate(vec_param_i): 
-                c_param = np.array([param_i])
-                f_like = np.exp(sum_of_square(data, f_X(c_param)))
-                f_post[i] = prior.compute_value(c_param) * f_like 
-
-        int_post = np.sum(f_post)*delta_param_i
-
-        plt.figure(200)
-        plt.plot(vec_param_i, f_post/int_post)
-
-
-    elif n_param == 2:
-        vec_param_i = np.linspace(param_space[0][0], param_space[0][1], 50)
-        delta_param_i = vec_param_i[1]-  vec_param_i[0]
-        vec_param_j = np.linspace(param_space[1][0], param_space[1][1], 50)
-        delta_param_j = vec_param_j[1]-  vec_param_j[0]
-        f_post = np.zeros((vec_param_i.size, vec_param_j.size))
-        for i, param_i in np.ndenumerate(vec_param_i): 
-            for j, param_j in np.ndenumerate(vec_param_j): 
-                c_param = np.array([param_i, param_j])
-                f_like = np.exp(sum_of_square(data, f_X(c_param)))
-                f_post[i,j] = prior.compute_value(c_param) * f_like 
-
-        marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
-        marginal_post_2 = np.sum(f_post*delta_param_i, axis=0)
-        plt.figure(1)
-        plt.plot(vec_param_i, marginal_post_1)
-        plt.figure(2)
-        plt.plot(vec_param_j, marginal_post_2)
-
-    return f_post 
-    
 
 
 class MetropolisHastings:
 
-    def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X):
+    def __init__(self, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
+        self.save_freq = nIterations/100
         self.param_init = param_init
         self.V = V
-        self.model = model
-        self.prior = prior
-        self.data = data
-        self.f_X = f_X
+        self.prob_distr = prob_distr 
+        self.distr_fun = prob_distr.compute_log_value
 
         # Initialize parameters and functions
         self.n_param = self.param_init.size
         self.current_val = self.param_init
         self.new_val = np.zeros(self.n_param)
-        self.current_fun_eval = f_X(self.current_val)
-        self.SS_current_fun_eval = sum_of_square(self.data, self.current_fun_eval)
+        self.distr_fun_current_val = self.distr_fun(self.current_val)
 
-        # Store the maximum of the log-likelihood function
-        self.max_LL = self.SS_current_fun_eval
-        self.arg_max_LL = self.current_val
-
-        # Reparametrization
-        self.x_parametrization = self.model.parametrization_forward
-        self.y_parametrization = self.model.parametrization_backward
-        self.det_jac = self.model.parametrization_det_jac
-        self.vec_X_parametrized = np.zeros(self.n_param)
-        self.Y_parametrized = np.zeros(self.n_param)
-
-        # Save the initial guesses in output folder
-        os.system("mkdir output")
         # Create the output file mcmc_chain.dat and close it
         tmp_fileID = open("output/mcmc_chain.dat", "w")
         tmp_fileID.close()
+        tmp_fileID2 = open("output/mcmc_chain2.dat", "w")
+        tmp_fileID2.close()
         # Re-open it in read and write mode (option r+ cannot create non existing file)
         self.fileID = open("output/mcmc_chain.dat", "r+")
-        np.save("output/fun_eval.0", self.current_fun_eval)
+        self.fileID2 = open("output/mcmc_chain2.dat", "r+")
+
+        self.distr_output_file_name = "output/fun_eval."
         self.write_val(self.current_val)
+        self.prob_distr.update_eval()
+        self.write_fun_distr_val(0)
 
         # Cholesky decomposition of V. Constant if MCMC is not adaptive
         self.R = linalg.cholesky(V)
@@ -98,7 +45,7 @@ class MetropolisHastings:
         print("Start time {}" .format(time.asctime(time.localtime())))
         self.t1 = time.clock()
 
-    def random_walk_loop(self):
+    def run_algorithm(self):
 
         for i in range(self.nIterations+1):
 
@@ -106,15 +53,13 @@ class MetropolisHastings:
             self.compute_acceptance_ratio()
             self.accept_reject()
 
-            # We save 100 function evaluation for the post process
-            self.write_fun_eval(i, self.nIterations/100, self.current_fun_eval)
-
             # We estimate time after a hundred iterations
             if i == 100:
                 self.compute_time(self.t1)
 
             # Save the next current value
             self.write_val(self.current_val)
+            self.write_fun_distr_val(i)
 
         self.compute_covariance()
 
@@ -125,49 +70,16 @@ class MetropolisHastings:
         # Guess parameter (candidate or proposal)
         z_k = self.compute_multivariate_normal()
 
-        ## Without parameterization
-        #self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(z_k)))
-
-        self.vec_X_parametrized[:] = self.x_parametrization(
-            self.current_val, self.model.P)
-        self.Y_parametrized[:] = self.vec_X_parametrized[:] + \
-            np.transpose(np.matmul(self.R, np.transpose(z_k)))
-        self.new_val[:] = self.y_parametrization(
-            self.Y_parametrized[:], self.model.P)
+        # Compute new value 
+        self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(z_k)))
 
     def compute_acceptance_ratio(self):
-        # Compute ratio of prior distributions
-        pi_0_X = self.prior.compute_value(self.current_val[:])
-        pi_0_Y = self.prior.compute_value(self.new_val[:])
 
-        # Test prior values to avoid computation of 0/0
-        if pi_0_Y <= 0:
-            # A new sample out of bounds always rejected
-            self.r = 0
+        self.distr_fun_new_val = self.distr_fun(self.new_val[:])
 
-        elif pi_0_X <= 0:
-            # Previous sample out of bounds always make the new one accepted
-            # (if it is in the bounds, otherwise it is in the case above)
-            self.r = 1
+        #self.r = self.distr_fun_new_val/self.distr_fun_current_val
 
-        else:
-            # Acceptance ratio
-            self.new_fun_eval = self.f_X(self.new_val)
-            self.SS_new_fun_eval = sum_of_square(self.data, self.new_fun_eval)
-
-            # Compare value of SS_Y to get MLE
-            if abs(self.SS_new_fun_eval) < abs(self.max_LL):
-                self.max_LL = self.SS_new_fun_eval
-                self.arg_max_LL = self.new_val[:]
-
-            # Ratio of the determinant of jacobians
-            r_det_jac = self.det_jac(self.new_val[:]) / self.det_jac(self.current_val[:])
-            self.r = np.exp(self.SS_new_fun_eval-self.SS_current_fun_eval) * r_det_jac
-
-            # Multiply by the ratio of prior values
-            r_pi_0 = pi_0_Y / pi_0_X  # This ratio can be compute safely
-            self.r *= r_pi_0
-
+        self.r = np.exp(self.distr_fun_new_val - self.distr_fun_current_val)
         self.alpha = min(1, self.r)
 
     def accept_reject(self):
@@ -176,8 +88,8 @@ class MetropolisHastings:
         u = random.random()  # Uniformly distributed number in the interval [0,1)
         if u < self.alpha:  # Accepted
             self.current_val[:] = self.new_val[:]
-            self.current_fun_eval = self.new_fun_eval
-            self.SS_current_fun_eval = self.SS_new_fun_eval
+            self.distr_fun_current_val = self.distr_fun_new_val
+            self.prob_distr.update_eval()
         else:  # Rejected, current val remains the same
             self.n_rejected += 1
 
@@ -196,7 +108,7 @@ class MetropolisHastings:
             j += 1
 
         # Compute sample mean and covariance
-        mean_c = np.mean(param_values, axis=0)
+        #mean_c = np.mean(param_values, axis=0)
         cov_c = np.cov(param_values, rowvar=False)
         print("Final chain Covariance is")
         print(cov_c)
@@ -217,12 +129,17 @@ class MetropolisHastings:
         print("Rejection rate is {} %".format(self.n_rejected/self.nIterations*100))
 
         with open("output/output.dat", 'w') as output_file:
-            output_file.write("Rejection rate is {} % \n".format(
+            output_file.write("$RandomVarName$\n")
+            for i in range(self.n_param): 
+                output_file.write("X{} ".format(i))
+            output_file.write("\n$IterationNumber$\n{}\n".format(self.nIterations))
+            
+            output_file.write("\nRejection rate is {} % \n".format(
                 self.n_rejected/self.nIterations*100))
             output_file.write("Maximum Likelihood Estimator (MLE) \n")
-            output_file.write("{} \n".format(self.arg_max_LL))
+            #output_file.write("{} \n".format(self.arg_max_LL))
             output_file.write("Log-likelihood value \n")
-            output_file.write("{}".format(self.max_LL))
+            #output_file.write("{}".format(self.max_LL))
 
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
@@ -230,28 +147,31 @@ class MetropolisHastings:
         print("Estimated time: {}".format(time.strftime("%H:%M:%S",
                                                 time.gmtime((time.clock()-t1) / 100.0 * self.nIterations))))
 
-    def write_fun_eval(self, current_it, save_freq, fun_val):
-        if current_it % (save_freq) == 0:
-            np.save("output/fun_eval.{}".format(current_it), fun_val)
 
     def write_val(self, value):
         # Write the new current val parameter values
         self.fileID.write("{}\n".format(str(value).replace('\n', '')))
         # replace is used to remove the end of lines in the arrays
+        
+        # Write also the sample in the initial parameter space
+        self.prob_distr.save_sample(self.fileID2, value)
+
+    def write_fun_distr_val(self, current_it):
+        if current_it % (self.save_freq) == 0:
+            self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
 
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
 
-    def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X,
+    def __init__(self, caseName, nIterations, param_init, V, prob_distr,
             starting_it, updating_it, eps_v):
-        MetropolisHastings.__init__(
-            self, caseName, nIterations, param_init, V, model, prior, data, f_X)
+        MetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr)
         self.starting_it = starting_it
         self.updating_it = updating_it
         self.S_d = 2.38**2/self.n_param
         self.eps_Id = eps_v*np.eye(self.n_param)
 
-    def random_walk_loop(self):
+    def run_algorithm(self):
 
         for i in range(self.nIterations+1):
 
@@ -260,15 +180,13 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
             self.accept_reject()
             self.adapt_covariance(i)
 
-            # We save 100 function evaluation for the post process
-            self.write_fun_eval(i, self.nIterations/100, self.current_fun_eval)
-
             # We estimate time after a hundred iterations
             if i == 100:
                 self.compute_time(self.t1)
 
             # Save the next current value
             self.write_val(self.current_val)
+            self.write_fun_distr_val(i)
 
         self.compute_covariance()
 
@@ -315,10 +233,8 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
 class DelayedRejectionMetropolisHastings(MetropolisHastings):
 
-    def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X,
-            gamma):
-        MetropolisHastings.__init__(
-            self, caseName, nIterations, param_init, V, model, prior, data, f_X)
+    def __init__(self, caseName, nIterations, param_init, V, prob_distr, gamma):
+        MetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr)
         self.gamma = gamma
 
         # Compute inverse of covariance
@@ -331,8 +247,8 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
         u = random.random()  # Uniformly distributed number in the interval [0,1)
         if u < self.alpha:  # Accepted
             self.current_val[:] = self.new_val[:]
-            self.current_fun_eval = self.new_fun_eval
-            self.SS_current_fun_eval = self.SS_new_fun_eval
+            self.distr_fun_current_val = self.distr_fun_new_val
+            self.prob_distr.update_eval()
         else:  # Delayed rejection
             self.delayed_rejection()
 
@@ -343,57 +259,40 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
         # New Guess parameter (candidate or proposal)
         z_k = self.compute_multivariate_normal()
 
-        self.Y_parametrized[:] = self.vec_X_parametrized[:] + \
-            np.transpose(self.gamma*np.matmul(self.R, np.transpose(z_k)))
-        DR_new_val = self.y_parametrization(self.Y_parametrized[:], self.model.P)
+        # Compute new value 
+        DR_new_val = self.current_val[:] + np.transpose(self.gamma*np.matmul(self.R, np.transpose(z_k)))
 
-        # Compute ratio of prior distributions
-        pi_0_X = self.prior.compute_value(self.current_val[:])
-        pi_0_Y = self.prior.compute_value(DR_new_val[:])
+        # Acceptance ratio
+        DR_distr_fun_new_eval = self.distr_fun(DR_new_val)
+        r_12 = np.exp(self.distr_fun_new_val - DR_distr_fun_new_eval)
+        alpha_12 = min(1, r_12)
+        diff_estimates = self.current_val - DR_new_val
+        M1 = np.matmul(diff_estimates, self.inv_V)
+        M2 = np.matmul(M1, np.transpose(diff_estimates))
+        r_2 = np.exp(DR_distr_fun_new_eval - self.distr_fun_current_val) * \
+                        np.exp(-1/2*M2) * (1 - alpha_12) / (1 - self.alpha)
+        #print(alpha_12, self.alpha )
+        alpha_2 = min(1, r_2)
 
-        # Test prior values to avoid computation of 0/0
-        if pi_0_Y <= 0:
-            # A new sample out of bounds always rejected
-            r_2 = 0
-
-        elif pi_0_X <= 0:
-            # Previous sample out of bounds always make the new one accepted
-            # (if it is in the bounds, otherwise it is in the case above)
-            r_2 = 1
-
-        else:
-            # Acceptance ratio
-            DR_new_fun_eval = self.f_X(DR_new_val)
-            SS_Y_2 = sum_of_square(self.data, DR_new_fun_eval)
-            r_12 = np.exp(self.SS_new_fun_eval - SS_Y_2)
-            alpha_12 = min(1, r_12)
-            diff_estimates = self.current_val - DR_new_val
-            M1 = np.matmul(diff_estimates, self.inv_V)
-            M2 = np.matmul(M1, np.transpose(diff_estimates))
-            r_2 = np.exp(SS_Y_2 - self.SS_current_fun_eval) * \
-                            np.exp(-1/2*M2) * (1 - alpha_12) / (1 - self.alpha)
-            #print(alpha_12, self.alpha )
-            alpha_2 = min(1, r_2)
-
-            # Update 2
-            u = random.random()  # uniformly distributed number in the interval [0,1]
-            if u < alpha_2:  # Accepted
-                self.current_val[:] = DR_new_val[:]
-                self.current_fun_eval = DR_new_fun_eval
-                self.SS_current_fun_eval = SS_Y_2
-            else:  # Rejected, current val remains the same
-                self.n_rejected += 1
+        # Update 2
+        u = random.random()  # uniformly distributed number in the interval [0,1]
+        if u < alpha_2:  # Accepted
+            self.current_val[:] = DR_new_val[:]
+            self.distr_fun_current_val = DR_distr_fun_new_eval
+            self.prob_distr.update_eval()
+        else:  # Rejected, current val remains the same
+            self.n_rejected += 1
 
 
 class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, DelayedRejectionMetropolisHastings):
 
-    def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X,
+    def __init__(self, caseName, nIterations, param_init, V, prob_distr,
             starting_it, updating_it, eps_v, gamma):
         # There is still a problem here as we initialize two times the mother class MetropolisHastings, while once is enough. Don't know yet how to do.
-        AdaptiveMetropolisHastings.__init__(
-            self, caseName, nIterations, param_init, V, model, prior, data, f_X, starting_it, updating_it, eps_v)
-        DelayedRejectionMetropolisHastings.__init__(
-            self, caseName, nIterations, param_init, V, model, prior, data, f_X, gamma)
+        AdaptiveMetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr,
+                                            starting_it, updating_it, eps_v)
+        DelayedRejectionMetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr,
+                                                    gamma)
 
     def update_covariance(self):
         self.R = linalg.cholesky(self.V_i)
@@ -405,59 +304,48 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
 class ito_SDE(MetropolisHastings):
     """Implementation of the Ito-SDE (Arnst et al.) mcmc methods. Joffrey Coheur 17-04-19."""
 
-    def __init__(self, caseName, nIterations, param_init, V, model, prior, data, f_X):
-        MetropolisHastings.__init__(
-            self, caseName, nIterations, param_init, V, model, prior, data, f_X)
+    def __init__(self, caseName, nIterations, param_init, prob_distr, h, f0):
+        MetropolisHastings.__init__(self, caseName, nIterations, param_init, np.ones([1,1]), prob_distr)
 
-        # Set forward and backward change of variables
-        self.cv_forward = self.x_parametrization
-        self.cv_backward = self.y_parametrization
+        # Time step h and free parameter f0 for the ito-sde resolution
+        self.h = h
+        self.f0 = f0 
+        self.hfm = 1 - self.h*self.f0/4
+        self.hfp = 1 + self.h*self.f0/4
 
-        # Change variable of initial parameters
-        xi_init = self.cv_forward(self.param_init)
+        # Definition of the log-distribution function
+        self.log_like = self.distr_fun
 
-        # Definition of the log-likelihood function
-        self.SS_xi = lambda xi: sum_of_square(self.data, self.f_X(self.cv_backward(xi)))
         #self.log_prior = lambda cv_xi : np.log(np.exp(cv_xi[0]) * np.exp(cv_xi[1]) * 1/((sec(1/2 + np.arctan(cv_xi[2])/np.pi))**2))
 
         # Compute matrix G for precondictioning (scaling and correlation)
         G_matrix = "Hessian" # Insert this in input file 
         if G_matrix == "Hessian": 
-            hess_FD = -computeHessianFD(self.SS_xi, xi_init, eps=0.0000001)
+            hess_FD = -computeHessianFD(self.log_like, self.param_init, eps=0.0000001)
             self.C_approx = linalg.inv(hess_FD)  # np.array([np.log(1e4)**2])
         elif G_matrix == "Identity": 
             self.C_approx = np.identity(self.n_param)
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(G_matrix))
-
+ 
         L_c = linalg.cholesky(self.C_approx)
         self.inv_L_c_T = linalg.inv(np.transpose(L_c))
 
-        # Time step h and free parameter f0 for the ito-sde resolution
-        self.h = 0.1
-        self.f0 = 4
-        self.hfm = 1 - self.h*self.f0/4
-        self.hfp = 1 + self.h*self.f0/4
-
         # Initial parameters
-        self.xi_nm = np.array(xi_init)
+        self.xi_nm = np.array(self.param_init)
         self.P_nm = np.zeros(self.n_param)
 
-    def random_walk_loop(self):
+    def run_algorithm(self):
 
         for i in range(self.nIterations+1):
 
             # Solve Ito-SDE using Stormer-Verlet scheme
-            WP_np = self.h * self.compute_multivariate_normal()
+            WP_np = np.sqrt(self.h) * self.compute_multivariate_normal()
             xi_n = self.xi_nm + self.h/2*np.matmul(self.C_approx, self.P_nm)
 
             # Gradient Log-Likelihood
-            grad_LL = computeGradientFD(self.SS_xi, xi_n, eps=0.000001)
-
-            # Gradient Log-Prior
-            # grad_LP = np.transpose(computeGradientFD(self.log_prior, np.transpose(xi_n)))
-            grad_LP = 0  # Prior cancels for now
-            grad_phi = -grad_LP - grad_LL
+            grad_LL = computeGradientFD(self.log_like, xi_n, eps=0.000001)
+            grad_phi = - grad_LL
 
             P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp * \
                 (-grad_phi) + np.sqrt(self.f0)/self.hfp * \
@@ -467,33 +355,18 @@ class ito_SDE(MetropolisHastings):
             self.P_nm = P_np
             self.xi_nm = xi_np
 
-            # Reverse Change variable and store values of the chain
-            self.current_val = self.cv_backward(xi_n)
-            self.current_fun_eval = self.f_X(self.current_val)
-
-            # We save 100 function evaluation for the post process
-            self.write_fun_eval(i, self.nIterations/100, self.current_fun_eval)
-
             # We estimate time after a hundred iterations
             if i == 100:
                 self.compute_time(self.t1)
 
             # Save the next current value
-            self.write_val(self.current_val)
-
-            # Can we also store the xi_np value? If yes there would be two times more samples 
-            #self.write_val(self.cv_backward(xi_np))
+            self.write_val(xi_n)
+            self.prob_distr.update_eval()
+            self.write_fun_distr_val(i)
 
         self.compute_covariance()
 
         self.terminate_loop()
-
-
-def sum_of_square(data1, data2):
-
-    J = - 1/2 * np.sum(((data1.y-data2)/data1.std_y)**2, axis=0)
-
-    return J
 
 
 def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):

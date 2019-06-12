@@ -6,7 +6,8 @@ import parallel_reaction
 # Packages for stochastic inference
 import pybit
 
-case_name = "pyrolysis_parallel_1param"
+case_name = "pyrolysis_parallel_2param"
+
 input_file_name = "{}.json".format(case_name) 
 
 pyrolysis_model = parallel_reaction.SetParallelReaction()

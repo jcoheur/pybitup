@@ -24,7 +24,7 @@
                 "Distribution": "Mixture",
                 "Param" : {
                     "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [10, 1e6]}, // [0, 1e10]
-                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [8e4, 1.5e5]} // [0, 1e10]   
+                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]} // [0, 1e10]   
                 }
             },
             "Likelihood": {
@@ -32,18 +32,20 @@
                 "distance": "L2"
             }
         },
-       // "Algorithm": "None"
-	    "Algorithm": {
-		    "name": "Ito-SDE", 
-		    "n_iterations": 1e3,
-		    "proposal": { 
-			    "name": "Gaussian",
-			    "covariance": { 
-				    "type": "diag", 
-				    "value": [1e4, 1e5]
-				}
-			}
-		}
+	    // "Algorithm": {
+        //     "name": "RWMH", 
+		//     "n_iterations": 1e3,
+		//     "proposal": { 
+		// 	    "name": "Gaussian",
+		// 	    "covariance": { 
+		// 		    "type": "full", // [[4448053.36085535, 1596854.21736173], [1596854.21736173, 617149.42165369]]
+		// 		    "value": [[0.03945913, 0.0022852 ], [0.0022852, 0.00013557]]
+		// 		}
+		// 	}
+        // },
+        "ComputeAnalyticalDistribution": { // [[8.5, 11], [11.55, 12.75]] [[9000, 50000], [109000, 125000]] [[9.1, 10.81], [11.6, 11.73]]
+            "DistributionSupport" : [[9.1, 10.81], [11.6, 11.73]]
+        }
 	}, 
 	
     "PostProcess": { 
@@ -60,14 +62,15 @@
 		    "thinning": 1
 		},
         "Posterior": {
-            "display": "no", 
+            "display": "yes", 
             "distribution": "marginal", // marginal, bivariate
-            "estimation": "ksdensity+hist" // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 100
 		},
 	    "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "burnin": 0,
+		    "burnin": 10,
 		    "num_plot": 1
 		}
 	}

@@ -76,7 +76,7 @@ def post_process_data(inputFields):
 
         # Load the samples of the distribution                        
         param_value_raw = np.zeros((n_iterations+2, n_unpar))
-        with open('output/mcmc_chain.dat', 'r') as file_param:
+        with open('output/mcmc_chain2.dat', 'r') as file_param:
             i = 0
             for line in file_param:
                 c_chain = line.strip()

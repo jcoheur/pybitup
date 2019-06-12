@@ -1,6 +1,6 @@
 import numpy as np
 
-import pybit.metropolis_hastings_algorithms_new as mha
+import pybit.metropolis_hastings_algorithms as mha
 
 
 class Sampler: 
@@ -70,4 +70,4 @@ class Sampler:
             f0 = self.algo['Ito-SDE']['f0']
             run_MCMCM = mha.ito_SDE("sampling", self.n_iterations, sample_init, self.prob_dist, h, f0)
         
-        run_MCMCM.random_walk_loop()
+        run_MCMCM.run_algorithm()

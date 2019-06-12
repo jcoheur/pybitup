@@ -1,44 +1,44 @@
 /* This is a json file. Comments are allowed as jsmin is used to removed comments */
 {
-    "Data": 
-    [
-        {
-            "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-            "FileName": "fakePyroData.csv",
-            "xField": ["temperature"], 
-            "yField": ["dRho"], 
-            "sigmaField": ["std_dRho"]
-        }
-    ],
-    "Model": 
-	[
-        {
-	        "model_name": "parallel_pyrolysis", 
-	        "input_file": "reaction_scheme_2react.json", 
-	        "param_names": ["tau"],
-	        "param_values": [6.1],
-	        "parametrization" : "no"
-	    }
-    ],
-
     "Inference": {
-        "inferenceProblem" : "ParallelPyrolysis",  
-	    "method": "Bayesian", 
-	    "param" : {
-		    "A1": {"initial_val" : 4.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
-		    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
-		    "n1": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-		    "g1": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
-			"A2": {"initial_val" : 3.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
-		    "E2": {"initial_val" : 78000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
-		    "n2": {"initial_val" : 3.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-		    "g2": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
-		},
-	    "likelihood": {
-		    "function": "Gaussian",
-		    "distance": "L2"
-		},
-	    "algorithm": {
+        "BayesianPosterior" : {
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "fakePyroData.csv",
+                    "xField": ["temperature"], 
+                    "yField": ["dRho"], 
+                    "sigmaField": ["std_dRho"]
+                }
+            ],
+            "Model": [
+                {
+                    "model_name": "parallel_pyrolysis", 
+                    "input_file": "reaction_scheme_2react.json", 
+                    "param_names": ["tau"],
+                    "param_values": [6.1],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior": { 
+                "Distribution": "Mixture",
+                "Param" : {
+                    "A1": {"initial_val" : 4.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
+                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
+                    "n1": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+                    "g1": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
+                    "A2": {"initial_val" : 3.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
+                    "E2": {"initial_val" : 78000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
+                    "n2": {"initial_val" : 3.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+                    "g2": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+                }
+            },
+            "Likelihood": {
+                "function": "Gaussian",
+                "distance": "L2"
+            }
+        },
+	    "Algorithm": {
 		    "name": "RWMH", 
 		    "n_iterations": 1e3,
 		    "proposal": { 
@@ -63,6 +63,11 @@
 	    "MarkovChain": {
 		    "display": "no",
 		    "thinning": 1
+		},
+        "Posterior": {
+            "display": "no", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist" // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
 		},
 	    "Propagation": {
 		    "display": "yes",

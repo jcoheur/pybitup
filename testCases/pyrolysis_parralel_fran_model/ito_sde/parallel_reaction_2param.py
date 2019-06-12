@@ -62,26 +62,6 @@ class SetParallelReaction(bi.Model):
 
         return self.pyro_model.get_drho_solid() 
 
-    # def parametrization_forward(self, X):
-	
-    #     Y = np.zeros(len(X[:]))
-
-    #     Y[0] = np.log(X[0])
-
-
-    #     return Y
-		
-		
-    # def parametrization_backward(self, Y):
-	
-    #     X = np.zeros(len(Y[:]))
-
-    #     X[0] = np.exp(Y[0])
-
-
-    #     return X 
-
-
 
     def parametrization_forward(self, X):
 
@@ -107,38 +87,9 @@ class SetParallelReaction(bi.Model):
     def parametrization_det_jac(self, X):
 
         return np.exp(X[0])*np.exp(X[1])
-
-
-
-    # def parametrization_forward(self, X):
-	
-        # Y = np.zeros(len(X[:]))
-
-        # Y[0] = np.log(X[0])
-
-        # Y[1] = np.log(X[1])
-
-        # Y[2] = np.log(X[2])
-
-        # Y[3] = np.tan((X[3] - 1/2)*np.pi)
-
-        # return Y
 		
 		
-    # def parametrization_backward(self, Y):
-	
-        # X = np.zeros(len(Y[:]))
 
-        # X[0] = np.exp(Y[0])
-
-        # X[1] = np.exp(Y[1])
-
-        # X[2] = np.exp(Y[2])
-
-        # X[3] = (1/np.pi) * np.arctan(Y[3]) + 1/2
-	
-
-        # return X 
 	
 	
 	

@@ -4,32 +4,26 @@
         "BayesianPosterior" : {
             "Data": [
                 {
-                    "Type": "GenerateSynthetic", 
-                    "x": {
-                        "Type": "linspace", 
-                        "Value": [0.0, 5.0, 51]
-                    },
-                    "y": {
-                        "Name": "Elongation",
-                        "Error": "data",
-                        "Sigma": 0.1
-                    }
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "../fakePyroData.csv",
+                    "xField": ["temperature"], 
+                    "yField": ["dRho"], 
+                    "sigmaField": ["std_dRho"]
                 }
             ],
-    
             "Model": [
                 {
-                    "input_file": "None", 
-                    "param_names": ["C", "K"],
-                    "param_values": [1.5, 20.5],
+                    "model_name": "parallel_pyrolysis_1param", 
+                    "input_file": "reaction_scheme_1param.json", 
+                    "param_names": ["tau"],
+                    "param_values": [6.1],
                     "parametrization" : "no"
                 }
             ],
             "Prior": { 
                 "Distribution": "Mixture", 
-                "Param": {
-                    "C": {"initial_val" : 1.5,    "prior_name" : "Uniform", "prior_param" : [0.0, 100]},  
-                    "K": {"initial_val" : 20.5,   "prior_name" : "Uniform", "prior_param" : [0.0, 100]}
+	            "Param" : {
+		            "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" :  [10, 1e10]}  // [8e4, 1.5e5] [100, 1e10]
                 }
             },
             "Likelihood": {
@@ -38,21 +32,21 @@
             }
         },
 	    "Algorithm": {
-		    "name": "RWMH", 
-		    "n_iterations": 1e4, 
-		    "proposal": { 
-			    "name": "Gaussian",
-			    "covariance": { 
-				    "type": "diag", 
-				    "value": [0.0345, 0.7071]
-				}
-			}
-		}
-	}, 
-	
+            "name": "Ito-SDE", 
+            "Ito-SDE" : {
+                "h" : 0.1, 
+                "f0" : 4
+            },
+		    "n_iterations": 1e4
+        },
+        "ComputeAnalyticalDistribution": { // [[11.55, 12.75]] [[109000, 125000]]
+            "DistributionSupport" :[[11.625, 11.650]] 
+        }
+    }, 
+    	
     "PostProcess": { 
 	    "Data": { 
-		    "display": "yes", 
+		    "display": "yes",
 		    "num_plot": 1
 		},
 	    "InitialGuess": {
@@ -62,9 +56,9 @@
 	    "MarkovChain": {
 		    "display": "yes",
 		    "thinning": 1
-		},
+        },
         "Posterior": {
-            "display": "no", 
+            "display": "yes", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 100

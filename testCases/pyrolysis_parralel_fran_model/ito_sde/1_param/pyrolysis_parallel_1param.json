@@ -5,7 +5,7 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "../fakePyroData.csv",
+                    "FileName": "../../fakePyroData.csv",
                     "xField": ["temperature"], 
                     "yField": ["dRho"], 
                     "sigmaField": ["std_dRho"]

@@ -1,4 +1,4 @@
-# pyBIT
+# pybit
 Python Bayesian Inference toolbox
 
 Installation on Windows : 

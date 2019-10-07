@@ -9,7 +9,7 @@ class MetropolisHastings:
     def __init__(self, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        self.save_freq = nIterations/100
+        self.save_freq = nIterations/500
         self.param_init = param_init
         self.V = V
         self.prob_distr = prob_distr 
@@ -19,6 +19,7 @@ class MetropolisHastings:
         self.n_param = self.param_init.size
         self.current_val = self.param_init
         self.new_val = np.zeros(self.n_param)
+        self.z_k = np.zeros(self.n_param)
         self.distr_fun_current_val = self.distr_fun(self.current_val)
 
         # Create the output file mcmc_chain.dat and close it
@@ -26,9 +27,13 @@ class MetropolisHastings:
         tmp_fileID.close()
         tmp_fileID2 = open("output/mcmc_chain2.dat", "w")
         tmp_fileID2.close()
+        tmp_file_gp = open("output/gp.dat", "w") # Gaussian proposal
+        tmp_file_gp.close()
+
         # Re-open it in read and write mode (option r+ cannot create non existing file)
         self.fileID = open("output/mcmc_chain.dat", "r+")
         self.fileID2 = open("output/mcmc_chain2.dat", "r+")
+        self.file_gp = open("output/gp.dat", "r+")
 
         self.distr_output_file_name = "output/fun_eval."
         self.write_val(self.current_val)
@@ -68,20 +73,24 @@ class MetropolisHastings:
     def compute_new_val(self):
 
         # Guess parameter (candidate or proposal)
-        z_k = self.compute_multivariate_normal()
+        self.z_k = self.compute_multivariate_normal()
 
         # Compute new value 
-        self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(z_k)))
+        self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(self.z_k)))
 
     def compute_acceptance_ratio(self):
 
         self.distr_fun_new_val = self.distr_fun(self.new_val[:])
+       
+        if self.distr_fun_new_val is -np.inf: 
+            self.r = 0
+        else: 
+            #self.r = self.distr_fun_new_val/self.distr_fun_current_val
+            self.r = np.exp(self.distr_fun_new_val - self.distr_fun_current_val)
 
-        #self.r = self.distr_fun_new_val/self.distr_fun_current_val
-
-        self.r = np.exp(self.distr_fun_new_val - self.distr_fun_current_val)
+    
         self.alpha = min(1, self.r)
-
+        
     def accept_reject(self):
 
         # Update
@@ -153,6 +162,9 @@ class MetropolisHastings:
         self.fileID.write("{}\n".format(str(value).replace('\n', '')))
         # replace is used to remove the end of lines in the arrays
         
+        #Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
+        self.file_gp.write("{}\n".format(str(self.z_k).replace('\n', '')))
+
         # Write also the sample in the initial parameter space
         self.prob_distr.save_sample(self.fileID2, value)
 
@@ -257,10 +269,10 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
         # Delayed rejection algorithm
 
         # New Guess parameter (candidate or proposal)
-        z_k = self.compute_multivariate_normal()
+        self.z_k = self.compute_multivariate_normal()
 
         # Compute new value 
-        DR_new_val = self.current_val[:] + np.transpose(self.gamma*np.matmul(self.R, np.transpose(z_k)))
+        DR_new_val = self.current_val[:] + np.transpose(self.gamma*np.matmul(self.R, np.transpose(self.z_k)))
 
         # Acceptance ratio
         DR_distr_fun_new_eval = self.distr_fun(DR_new_val)
@@ -360,6 +372,7 @@ class ito_SDE(MetropolisHastings):
                 self.compute_time(self.t1)
 
             # Save the next current value
+            self.z_k=P_np
             self.write_val(xi_n)
             self.prob_distr.update_eval()
             self.write_fun_distr_val(i)

@@ -33,8 +33,15 @@ class BayesianPosterior(pybit.distributions.ProbabilityDistribution):
 
         X = self.model.parametrization_backward(Y) 
 
-        log_bayes_post = self.prior.compute_log_value(X) + np.log(self.model.parametrization_det_jac(Y)) + self.likelihood.compute_log_value(X)
-        
+        prior_log_value = self.prior.compute_log_value(X)
+        log_like_val = self.likelihood.compute_log_value(X)
+        if prior_log_value is -np.inf or log_like_val is np.nan:
+            # Avoid computation of likelihood if prior is zero 
+            log_bayes_post = -np.inf
+        else: 
+            log_bayes_post = prior_log_value + np.log(self.model.parametrization_det_jac(Y)) + log_like_val
+
+
         return log_bayes_post
 
     def update_eval(self): 

@@ -5,16 +5,16 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "../fakePyroData.csv",
-                    "xField": ["temperature"], 
-                    "yField": ["dRho"], 
-                    "sigmaField": ["std_dRho"]
+                    "FileName":  "data_file_test.csv",
+                    "xField": ["T"], 
+                    "yField": ["H2"], 
+                    "sigmaField": ["std_H2"]
                 }
             ],
             "Model": [
                 {
                     "model_name": "parallel_pyrolysis", 
-                    "input_file": "reaction_scheme_2param.json", 
+                    "input_file": "reaction_scheme_2react.json", 
                     "param_names": ["tau"],
                     "param_values": [6.1],
                     "parametrization" : "no"
@@ -23,8 +23,8 @@
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
-                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]} // [0, 1e10]   
+                    "A1": {"initial_val" : 4.95173490e+04,    "prior_name" : "Uniform", "prior_param" : [100, 1e10]}, // [0, 1e10]
+                    "E1": {"initial_val" : 1.14254610e+05,    "prior_name" : "Uniform", "prior_param" : [100, 1e10]} // [0, 1e10]   
                 }
             },
             "Likelihood": {
@@ -41,7 +41,7 @@
 				"gamma": 0.2
 			},
             "Ito-SDE" : {
-                "h" : 0.01, 
+                "h" : 0.005, 
                 "f0" : 4
             },
 		    "n_iterations": 1e4,
@@ -52,9 +52,6 @@
 				    "value": [[4448053.36085535, 1596854.21736173], [1596854.21736173, 617149.42165369]]
 				}
 			}
-        },
-        "ComputeAnalyticalDistribution": { // [[8.5, 11], [11.55, 12.75]] [[9000, 50000], [109000, 125000]]
-            "DistributionSupport" : [[9.1, 10.81], [11.6, 11.73]]
         }
 	}, 
 	
@@ -73,14 +70,14 @@
 		},
         "Posterior": {
             "display": "yes", 
-            "distribution": "marginal", // marginal, bivariate
-            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "distribution": "bivariate", // marginal, bivariate
+            "estimation": "scatter+ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 100
 		},
 	    "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "burnin": 10,
+		    "burnin": 60,
 		    "num_plot": 1
 		}
 	}

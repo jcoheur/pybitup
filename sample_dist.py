@@ -62,7 +62,7 @@ class SolveProblem():
             # ----------------------------------------------------------
             
             BP_inputs = self.user_inputs["Sampling"]["BayesianPosterior"]
-            n_data_set = len(BP_inputs['Data'])
+            n_data_set = len(BP_inputs['Data']) # data that can be reproduced using different models
             for data_set in range(n_data_set):
             
                 # Load current data and model properties 

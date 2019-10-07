@@ -67,6 +67,29 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# Latex documentation 
+# latex fiels in documentation folder 
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.lof
+*.log
+*.lot
+*.nlg
+*.nlo
+*.nls
+*.gz
+*.bat
+*.out
+*.toc
+*.ilg
+*.run.xml
+*-blx.bib
+*.spl
+*.tdo
+
 # PyBuilder
 target/
 

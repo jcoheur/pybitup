@@ -7,16 +7,18 @@ import pandas as pd
 from pyrolysis_general.src.pyrolysis import PyrolysisParallel
 
 
-test = PyrolysisParallel()
-
-test.react_reader(filename="data_parallel.json")
-test.param_reader(filename="data_parallel.json")
 
 T = np.linspace(300,1400, 101) 
 T_0 = 300
 tau = 6.1
 time0 = (T - T_0)/(tau/60)
-test.solve_system(temp_0=T_0, temp_end=T[-1], time = time0, beta=tau, n_points=101)
+
+test = PyrolysisParallel(temp_0=T_0, temp_end=T[-1], time = time0, beta=tau, n_points=101)
+
+test.react_reader(filename="data_parallel.json")
+test.param_reader(filename="data_parallel.json")
+
+test.solve_system()
 plt.figure(1)
 test.plot_solid_density()
 
@@ -35,12 +37,13 @@ for i in range(0, num_data):
 		
 		
 plt.plot(temperature, drho_solid_pert, 'o')
-plt.show()
 
 myfile = {'time': time0, 'temperature': T, 'rho': rho_solid, 'dRho': drho_solid_pert, 'std_dRho': std_y} 
 df = pd.DataFrame(myfile, columns=['time', 'temperature', 'rho', 'dRho', 'std_dRho'])
 
 
-df.to_csv("fakePyroData.csv")
+#df.to_csv("fakePyroData.csv")
+
+plt.show()
 	
 

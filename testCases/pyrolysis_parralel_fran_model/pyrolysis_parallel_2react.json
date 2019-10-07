@@ -1,6 +1,6 @@
 /* This is a json file. Comments are allowed as jsmin is used to removed comments */
 {
-    "Inference": {
+    "Sampling": {
         "BayesianPosterior" : {
             "Data": [
                 {

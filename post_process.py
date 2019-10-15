@@ -305,7 +305,7 @@ def post_process_data(inputFields):
                 del data_ij_max, data_ij_min, data_set_n
 
     # Show plot   
-    saveToTikz('propagation.tex')
+    #saveToTikz('propagation.tex')
     plt.show()
 
 

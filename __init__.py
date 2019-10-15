@@ -1,3 +1,6 @@
-import pyBIT.Metropolis_Hastings_Inference
-import pyBIT.postProcessData
-import pyBIT.run_inference
+import pybit.metropolis_hastings_algorithms
+import pybit.post_process
+import pybit.inference_problem
+import pybit.distributions
+import pybit.sample_dist
+import pybit.bayesian_inference

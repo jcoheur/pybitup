@@ -6,12 +6,12 @@ from pyrolysis_general.src.pyrolysis import PyrolysisCompetitive
 from pyrolysis_general.src.read_experiments import ReadExperiments
 
 # Packages for stochastic inference
-from pyBIT import Metropolis_Hastings_Inference as MH
+from pybit import bayesian_inference as bi
 
 # Python packages 
 
 
-class SetCompetitiveReaction(MH.ModelInference): 
+class SetCompetitiveReaction(bi.Model): 
     """ Define the class for the competitive reaction used for the stochastic inference. 
 	It calls the model implemented in Francisco's pyrolysis-general toolbox. 
     """
@@ -19,22 +19,15 @@ class SetCompetitiveReaction(MH.ModelInference):
     def __init__(self, x=[], param=[]): 
 			
         # Initialize parent object ModelInference
-        MH.ModelInference.__init__(self)
+        bi.Model.__init__(self)
 				
 		
     def set_param_values(self, input_file_name, param_names, param_values):
         """Set parameters. For competitive pyrolysis, reactions parameters are read from input file. 
         Uncertain parameters and their values are specified."""
 		
-        # Initialize pyrolysis model 
-        self.pyro_model = PyrolysisCompetitive()
-		
         # Write the input file.
-        MH.write_tmp_input_file(input_file_name, param_names, param_values)
-
-        # Read the parameters from the temporary file 
-        self.pyro_model.react_reader("tmp_"+input_file_name)
-        self.pyro_model.param_reader("tmp_"+input_file_name)
+        bi.write_tmp_input_file(input_file_name, param_names, param_values)
 
 		# Parameters
         self.tau = self._param[0]
@@ -51,15 +44,22 @@ class SetCompetitiveReaction(MH.ModelInference):
 		
         self.n_T_steps = len(self._x)
 		
+        # Initialize pyrolysis model 
+        self.pyro_model = PyrolysisCompetitive(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
+		
+		# Read the parameters from the temporary file 
+        self.pyro_model.react_reader("tmp_"+input_file_name)
+        self.pyro_model.param_reader("tmp_"+input_file_name)
+		
     def solve_system(self, input_file_name, param_names, param_values): 
 		
         # Set parameter
         self.set_param_values(input_file_name, param_names, param_values) 
 
         # Solve the system  
-        self.pyro_model.solve_system(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
+        self.pyro_model.solve_system()
 
-    def compute_output(self, input_file_name, param_names, param_values):
+    def fun_x(self, input_file_name, param_names, param_values):
 		
         # Solve the system to get xi_T
 

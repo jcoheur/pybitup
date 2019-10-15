@@ -1,42 +1,42 @@
 /* This is a json file. Comments are allowed as jsmin is used to removed comments */
 {
-    "Data":
-	[ 
-	    {
-	        "Type": "GenerateSynthetic", 
-	        "x": {
-		        "Type": "linspace", 
-		        "Value": [0.0, 5.0, 101]
-		    },
-	        "y": {
-		        "Name": "Elongation",
-		        "Error": "data",
-		        "Sigma": 0.1
-		    }
-	    }
-	],
-	
-    "Model":
-	[ 
-	    {
-	        "input_file": "None", 
-	        "param_names": ["C", "K"],
-	        "param_values": [1.5, 20.5],
-	        "parametrization" : "no"
-	    }
-	],
-	
-    "Inference": {
-        "inferenceProblem": "spring_model_1param", 
-	    "method": "Bayesian", 
-	    "param": {
-		    "C": {"initial_val" : 1.5,    "prior_name" : "Uniform", "prior_param" : [0.0, 100]}
-		},
-	    "likelihood": {
-		    "function": "Gaussian",
-		    "distance": "L2"
-		},
-	    "algorithm": {
+    "Sampling": {
+        "BayesianPosterior" : {
+            "Data": [ 
+                {
+                    "Type": "GenerateSynthetic", 
+                    "x": {
+                        "Type": "linspace", 
+                        "Value": [0.0, 5.0, 101]
+                    },
+                    "y": {
+                        "Name": "Elongation",
+                        "Error": "data",
+                        "Sigma": 0.1
+                    }
+                }
+            ],
+            "Model": [ 
+                {
+                    "input_file": "None", 
+                    "param_names": ["C", "K"],
+                    "param_values": [1.5, 20.5],
+                    "parametrization" : "no"
+                }
+            ],
+
+            "Prior": { 
+                "Distribution": "Mixture", 
+                "Param": {
+                    "C": {"initial_val" : 1.5,    "prior_name" : "Uniform", "prior_param" : [0.0, 100]}
+                }
+            },
+            "Likelihood": {
+                "function": "Gaussian",
+                "distance": "L2"
+            }
+        },
+	    "Algorithm": {
 		    "name": "RWMH", 
 		    "n_iterations": 1e4, 
 		    "proposal": { 
@@ -62,10 +62,16 @@
 		    "display": "yes",
 		    "thinning": 1
 		},
-	    "Posterior": {
+        "Posterior": {
+            "display": "no", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 100
+		},
+	    "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-			"burnin": 0,
+		    "burnin": 0,
 		    "num_plot": 1
 		}
 	}

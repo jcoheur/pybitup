@@ -1,0 +1,87 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+    "Sampling": {
+        "BayesianPosterior" : {
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName":  "../../fakePyroData.csv",
+                    "xField": ["temperature"], 
+                    "yField": ["dRho"], 
+                    "sigmaField": ["std_dRho"]
+                }
+            ],
+            "Model": [
+                {
+                    "model_name": "parallel_pyrolysis", 
+                    "input_file": "reaction_scheme_2param.json", 
+                    "param_names": ["tau"],
+                    "param_values": [6.1],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior": { 
+                "Distribution": "Mixture",
+                "Param" : {
+                    "A1": {"initial_val" : 16634,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
+                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]} // [0, 1e10]   
+                }
+            },
+            "Likelihood": {
+                "function": "Gaussian",
+                "distance": "L2"
+            }
+        },
+	    "Algorithm": {
+            "name": "Ito-SDE", 
+            "DRAM": {
+                "starting_it": 1e2, 
+				"updating_it": 1e1, 
+				"eps_v": 0.0, 
+				"gamma": 0.2
+			},
+            "Ito-SDE" : {
+                "h" : 0.01, 
+                "f0" : 4
+            },
+		    "n_iterations": 1e4,
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+				    "type": "full", 
+				    "value": [[4448053.36085535, 1596854.21736173], [1596854.21736173, 617149.42165369]]
+				}
+			}
+        },
+        "ComputeAnalyticalDistribution": { // [[8.5, 11], [11.55, 12.75]] [[9000, 50000], [109000, 125000]]
+            "DistributionSupport" : [[9.1, 10.81], [11.6, 11.73]]
+        }
+	}, 
+	
+    "PostProcess": { 
+	    "Data": { 
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "InitialGuess": {
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+		},
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 100
+		},
+	    "Propagation": {
+		    "display": "yes",
+		    "shaded_area": "yes",
+		    "burnin": 10,
+		    "num_plot": 1
+		}
+	}
+}

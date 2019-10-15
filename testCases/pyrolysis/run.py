@@ -1,6 +1,6 @@
 import one_reaction_pyrolysis 
 import numpy as np
-import pyBIT
+import pybit
 import matplotlib.pyplot as plt
 
 case_name = "one_reaction_pyrolysis"
@@ -23,7 +23,6 @@ pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
 # X must be equal to param_values
 # print(X) 
 
-my_model = pyBIT.Metropolis_Hastings_Inference.Model(pyro_model, pyro_model.compute_gas_prod, name = case_name)
-
-pyBIT.run_inference.run_inference(input_file_name, my_model)
-pyBIT.postProcessData.post_process_data(input_file_name)
+post_dist = pybit.sample_dist.SolveProblem(input_file_name)
+post_dist.sample(pyro_model)
+post_dist.post_process_dist()

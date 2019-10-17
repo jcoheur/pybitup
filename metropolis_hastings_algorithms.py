@@ -2,7 +2,7 @@ import numpy as np
 import random
 from scipy import linalg
 import time
-
+import pandas as pd 
 
 class MetropolisHastings:
 
@@ -34,6 +34,8 @@ class MetropolisHastings:
         self.fileID = open("output/mcmc_chain.dat", "r+")
         self.fileID2 = open("output/mcmc_chain2.dat", "r+")
         self.file_gp = open("output/gp.dat", "r+")
+
+        self.fileID3=open('output/mcmc_chain.csv','ab')
 
         self.distr_output_file_name = "output/fun_eval."
         self.write_val(self.current_val)
@@ -132,6 +134,7 @@ class MetropolisHastings:
 
     def terminate_loop(self):
         self.fileID.close()
+        self.fileID3.close()
         print("End time {}" .format(time.asctime(time.localtime())))
         print("Elapsed time: {} sec".format(time.strftime(
             "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
@@ -166,7 +169,11 @@ class MetropolisHastings:
         self.file_gp.write("{}\n".format(str(self.z_k).replace('\n', '')))
 
         # Write also the sample in the initial parameter space
-        self.prob_distr.save_sample(self.fileID2, value)
+        #self.prob_distr.save_sample(self.fileID2, value)
+
+        # df = pd.DataFrame(value)
+        # df.to_csv('my_csv.csv', header=None, index=None, mode='a')
+        np.savetxt(self.fileID3, np.array([value]), fmt="%f", delimiter=",")
 
     def write_fun_distr_val(self, current_it):
         if current_it % (self.save_freq) == 0:

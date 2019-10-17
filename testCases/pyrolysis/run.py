@@ -24,5 +24,8 @@ pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
 # print(X) 
 
 post_dist = pybit.sample_dist.SolveProblem(input_file_name)
-post_dist.sample(pyro_model)
-post_dist.post_process_dist()
+#post_dist.sample(pyro_model)
+#post_dist.post_process_dist()
+
+post_dist.propagate(pyro_model)
+

@@ -51,8 +51,8 @@ def post_process_data(inputFields):
                 plt.plot(data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1],
                         'o', color=lineColor[i][0], mfc='none')
 
-                #error_bar (data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1], 
-                        #data_exp.std_y[ind_1:ind_2+1], lineColor[i][0])
+                error_bar (data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1], 
+                        data_exp.std_y[ind_1:ind_2+1], lineColor[i][0])
 
                 #, edgecolors='r'
 
@@ -300,8 +300,10 @@ def post_process_data(inputFields):
                                 np.percentile(data_hist, 97.5, axis=0), facecolor=lineColor[i][0], alpha=0.3)
                 # Plot 95% prediction interval
                 # -----------------------------
-                plt.fill_between(data_exp.x[ind_1:ind_2+1],  np.percentile(data_hist, 2.5, axis=0)-.005, 
-                                np.percentile(data_hist, 97.5, axis=0)+0.005, facecolor=lineColor[i][0], alpha=0.1)
+                # For the prediction interval, we add the std to the result
+
+                plt.fill_between(data_exp.x[ind_1:ind_2+1],  np.percentile(data_hist, 2.5, axis=0)-data_exp.std_y[ind_1:ind_2+1], 
+                                np.percentile(data_hist, 97.5, axis=0)+data_exp.std_y[ind_1:ind_2+1], facecolor=lineColor[i][0], alpha=0.1)
                 del data_ij_max, data_ij_min, data_set_n
 
     # Show plot   

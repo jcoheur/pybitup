@@ -9,7 +9,7 @@ class MetropolisHastings:
     def __init__(self, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        self.save_freq = nIterations/500
+        self.save_freq = nIterations/100
         self.param_init = param_init
         self.V = V
         self.prob_distr = prob_distr 

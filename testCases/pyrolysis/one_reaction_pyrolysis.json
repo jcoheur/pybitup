@@ -101,7 +101,7 @@
 		    "thinning": 1
 		},
         "Posterior": {
-            "display": "yes", 
+            "display": "no", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 100

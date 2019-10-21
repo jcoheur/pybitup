@@ -3,6 +3,7 @@ import json
 from jsmin import jsmin
 import pandas as pd
 import pickle
+import time
 
 import numpy as np
 
@@ -142,6 +143,14 @@ class SolveProblem():
                 models[model_id] = my_model
 
                  
+                # Model 
+                # ------
+                #if c_model['input_file'] == "None": 
+                #param_names = c_model['param_names']
+                param_nom = np.array(c_model['param_values'])
+                #n_param_model = len(param_nom)
+                my_model.param = param_nom
+
                 # Data 
                 # -----
                 if c_data['Type'] == "ReadFromFile": 
@@ -176,19 +185,11 @@ class SolveProblem():
                 else: 
                     data.add_data_set(dataName, x, y, std_y)	
 
-
-                # Model 
-                # ------
-                if c_model['input_file'] == "None": 
-                    #param_names = c_model['param_names']
-                    param_nom = np.array(c_model['param_values'])
-                    #n_param_model = len(param_nom)
-
-                    my_model.param = param_nom
-                else: 
-                    # Design points for the model need to be specified explicitely 
-                    #models[model_id].x = data.x[data.index_data_set[data_set,0]:data.index_data_set[data_set,1]+1]
-                    design_points[model_id] = data.x[data.index_data_set[model_id,0]:data.index_data_set[model_id,1]+1]
+                # When the model comes from external routine, we specify the design points 
+                #if c_model['input_file'] != "None": 
+                # Design points for the model need to be specified explicitely 
+                #models[model_id].x = data.x[data.index_data_set[data_set,0]:data.index_data_set[data_set,1]+1]
+                design_points[model_id] = data.x[data.index_data_set[model_id,0]:data.index_data_set[model_id,1]+1]
 
             # Write the data in output data file 
             with open('output/data', 'wb') as file_data_exp: 
@@ -201,9 +202,9 @@ class SolveProblem():
             # Get uncertain parameters 
             # -------------------------
             n_unpar = len(BP_inputs['Prior']['Param'])
-            unpar_name = []
+            unpar_name = {} #unpar_name = {}
             for names in BP_inputs['Prior']['Param'].keys():
-                unpar_name.append(names)
+                unpar_name[names] = [] #unpar_name.append(names)
 
             # Get a priori information on the uncertain parameters
             # ----------------------------------------------------
@@ -350,14 +351,31 @@ class SolveProblem():
         data_ij_min = {}
         data_ij_mean = {}
         data_ij_var = {}
+        data_hist = {}
         for model_id in model_id_list: 
             data_ij_max[model_id] = -1e5*np.ones(n_points[model_id] )
             data_ij_min[model_id] = 1e5*np.ones(n_points[model_id] )
             data_ij_mean[model_id] = np.zeros(n_points[model_id] )
             data_ij_var[model_id] = np.zeros(n_points[model_id] )
+            data_hist[model_id] = np.zeros([n_sample_param, n_points[model_id]])
 
-        # Iterate of all the parameter values 
+        # Initialize output files 
+        output_file_model_eval = {}
+        for model_id in model_id_list: 
+            output_file_model_eval[model_id]=open('output/'+model_id+'_eval.csv','ab')
+
+        # Print current time and start clock count
+        print("Start time {}" .format(time.asctime(time.localtime())))
+        self.t1 = time.clock()
+
+        # Iterate over all the parameter values 
         for i in range(n_sample_param): 
+
+            # We estimate time after a hundred iterations
+            if i == 100:
+                print("Estimated time: {}".format(time.strftime("%H:%M:%S",
+                                                time.gmtime((time.clock()-self.t1) / 100.0 * n_sample_param))))
+
 
             # Get the parameter values 
             for j, name in enumerate(unpar_inputs.keys()):
@@ -370,6 +388,13 @@ class SolveProblem():
             for model_id in model_id_list: 
                 c_eval = fun_eval[model_id]
 
+                # Store it for later percentile estimatation 
+                data_hist[model_id][i, :] = c_eval
+
+                # Write the csv for the function evaluation 
+                np.savetxt(output_file_model_eval[model_id], np.array([c_eval]), fmt="%f", delimiter=",")
+
+
                 # Update bounds
                 for k in range(n_points[model_id]):
                     if data_ij_max[model_id][k] < c_eval[k]:
@@ -381,11 +406,27 @@ class SolveProblem():
                 # Update mean 
                 data_ij_mean[model_id][:] = data_ij_mean[model_id][:] + c_eval[:]
 
+        print("End time {}" .format(time.asctime(time.localtime())))
+        print("Elapsed time: {} sec".format(time.strftime(
+            "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
+            
+        # Post process and plot 
         for i, model_id in enumerate(model_id_list): 
 
             # Compute mean 
             data_ij_mean[model_id][:] = data_ij_mean[model_id][:]/n_sample_param
 
+            # Save values in csv format 
+            df = pd.DataFrame({"mean" : data_ij_mean[model_id][:], 
+                               "lower_bound": data_ij_min[model_id][:], 
+                               "upper_bound": data_ij_max[model_id][:]})
+            df.to_csv('output/'+model_id+"_interval.csv", index=None)
+
+            df_CI = pd.DataFrame({"CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
+                                  "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
+            df_CI.to_csv('output/'+model_id+"_CI.csv", index=None)
+
+            # Plot graphs
             plt.figure(i+1000)
             plt.plot(design_points[model_id], data_ij_mean[model_id], color=lineColor[i][0], alpha=0.5)
             plt.fill_between(design_points[model_id], data_ij_min[model_id][:],

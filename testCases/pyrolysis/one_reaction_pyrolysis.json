@@ -55,7 +55,7 @@
         "Model": [ 
             {
                 // Emulator ? 
-                "model_id": "6.1 K/min", // Optional
+                "model_id": "6.1_K_per_Min", // Optional
                 "input_file": "None",
                 "design_points": {
                     "filename": "test_design_points.dat", 
@@ -67,7 +67,7 @@
             }, 
             {
                 // Emulator ? 
-                "model_id": "366 K/min", // Optional
+                "model_id": "366_K_per_Min", // Optional
                 "input_file": "None",
                 "design_points": {
                     "filename": "test_design_points.dat", 

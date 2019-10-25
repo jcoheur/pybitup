@@ -1,5 +1,5 @@
-# pybit
-Python Bayesian Inference toolbox
+# pybitup
+Python Bayesian Inference Toolbox and Uncertainty Propagation 
 
 Installation on Windows : 
 --------------------------

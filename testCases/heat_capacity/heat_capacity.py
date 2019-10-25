@@ -1,4 +1,4 @@
-from pybit import bayesian_inference as bi
+from pybitup import bayesian_inference as bi
 
 class HeatCapacity(bi.Model): 
 	""" 1D Heat conduction model """	

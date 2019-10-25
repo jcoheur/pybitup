@@ -2,9 +2,9 @@ import numpy as np
 from scipy import stats
 import random
 
-import pybit.distributions
+import pybitup.distributions
 
-class BayesianPosterior(pybit.distributions.ProbabilityDistribution):  
+class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):  
 
     def __init__(self, prior, likelihood, class_model, param_init): 
 

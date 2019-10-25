@@ -1,6 +1,6 @@
 import numpy as np
 
-import pybit.metropolis_hastings_algorithms as mha
+import pybitup.metropolis_hastings_algorithms as mha
 
 
 class Sampler: 

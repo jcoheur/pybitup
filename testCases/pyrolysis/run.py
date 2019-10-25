@@ -1,6 +1,6 @@
 import one_reaction_pyrolysis 
 import numpy as np
-import pybit
+import pybitup
 import matplotlib.pyplot as plt
 
 case_name = "one_reaction_pyrolysis"
@@ -23,7 +23,7 @@ pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
 # X must be equal to param_values
 # print(X) 
 
-post_dist = pybit.sample_dist.SolveProblem(input_file_name)
+post_dist = pybitup.sample_dist.SolveProblem(input_file_name)
 post_dist.sample(pyro_model)
 #post_dist.post_process_dist()
 

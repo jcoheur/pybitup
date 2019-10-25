@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from pybit import bayesian_inference as bi
+from pybitup import bayesian_inference as bi
 
 class SpringModel(bi.Model): 
 	""" Class for the spring model """	

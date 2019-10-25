@@ -51,6 +51,42 @@
         }
     },
     
+    "Propagation": {
+        "Model": [ 
+            {
+                // Emulator ? 
+                "model_id": "6.1_K_per_Min", // Optional
+                "input_file": "None",
+                "design_points": {
+                    "filename": "test_design_points.dat", 
+                    "field": 0
+                },  
+                "param_names": ["A", "E", "n", "m", "F", "tau"],
+                "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
+                "parametrization" : "no"
+            }, 
+            {
+                // Emulator ? 
+                "model_id": "366_K_per_Min", // Optional
+                "input_file": "None",
+                "design_points": {
+                    "filename": "test_design_points.dat", 
+                    "field": 0
+                },  
+                "param_names": ["A", "E", "n", "m", "F", "tau"],
+                "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 366],
+                "parametrization" : "no"
+            }
+        ],
+        "Uncertain_param": {
+            "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            //"A":  {"filename": "None, "distribution": "Gaussian", "hyperparam": [mean, sigma]}, 
+            "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
+            "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
+            "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
+        }
+    },
+
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes",
@@ -65,7 +101,7 @@
 		    "thinning": 1
 		},
         "Posterior": {
-            "display": "yes", 
+            "display": "no", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 100

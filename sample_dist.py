@@ -12,11 +12,6 @@ import pybit.bayesian_inference
 import pybit.inference_problem
 import pybit.post_process
 
-import matplotlib.pyplot as plt
-# Colors
-lineColor = [['C0'], ['C1'], ['C2'], [
-    'C3'], ['C4'], ['C5'], ['C6'], ['C7']]
-
 class SolveProblem(): 
     
 
@@ -424,18 +419,7 @@ class SolveProblem():
 
             df_CI = pd.DataFrame({"CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
                                   "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
-            df_CI.to_csv('output/'+model_id+"_CI.csv", index=None)
-
-            # Plot graphs
-            plt.figure(i+1000)
-            plt.plot(design_points[model_id], data_ij_mean[model_id], color=lineColor[i][0], alpha=0.5)
-            plt.fill_between(design_points[model_id], data_ij_min[model_id][:],
-                            data_ij_max[model_id][:], facecolor=lineColor[i][0], alpha=0.1)
-        
-
-        plt.show()
-
-  
+            df_CI.to_csv('output/'+model_id+"_CI.csv", index=None) 
 
 
 

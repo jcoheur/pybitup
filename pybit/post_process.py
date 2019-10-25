@@ -5,7 +5,7 @@ from jsmin import jsmin
 import numpy as np
 from scipy import stats
 
-from matplotlib2tikz import save as tikz_save
+from tikzplotlib import save as tikz_save
 
 
 def post_process_data(inputFields):

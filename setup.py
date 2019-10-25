@@ -1,10 +1,10 @@
 from setuptools import setup
 
 setup(
-    name='pyBIT',
+    name='pybitup',
     version='1.0',
-    packages=['pybit'],
-    url='https://github.com/jcoheur/pybitup/',
+    packages=['pybitup'],
+    url='https://github.com/jcoheur/pybitupup/',
     license='',
     author='Joffrey Coheur',
     author_email='',

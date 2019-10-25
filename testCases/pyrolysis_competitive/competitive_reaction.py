@@ -6,7 +6,7 @@ from pyrolysis_general.src.pyrolysis import PyrolysisCompetitive
 from pyrolysis_general.src.read_experiments import ReadExperiments
 
 # Packages for stochastic inference
-from pybit import bayesian_inference as bi
+from pybitup import bayesian_inference as bi
 
 # Python packages 
 

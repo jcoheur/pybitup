@@ -1,4 +1,4 @@
-# pybitup
+# pybitupup
 Python Bayesian Inference Toolbox and Uncertainty Propagation 
 
 Installation : 
@@ -12,7 +12,7 @@ Manual installation on Windows :
 
 Copy-past the folder in the site packages: 
 -------------------------------------------
-Create a pybitup directory
+Create a pybitupup directory
 Copy-paste the following objects 
 __init__
 metropolis_hastings_algorithms
@@ -29,6 +29,6 @@ C:\Users\USER\AppData\Local\Programs\Python\Python37\Lib\site-packages
 
 Directly change environment variables 
 ------------------------------------
-Add to you pythonpath the path to pybitup directory 
+Add to you pythonpath the path to pybitupup directory 
 (in French) 
 Propriétés système > Variables d'environnement > PYTHONPATH 

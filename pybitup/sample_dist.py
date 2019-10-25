@@ -7,10 +7,10 @@ import time
 
 import numpy as np
 
-import pybit.distributions 
-import pybit.bayesian_inference
-import pybit.inference_problem
-import pybit.post_process
+import pybitup.distributions 
+import pybitup.bayesian_inference
+import pybitup.inference_problem
+import pybitup.post_process
 
 class SolveProblem(): 
     
@@ -111,7 +111,7 @@ class SolveProblem():
             distr_name.append(self.user_inputs['Sampling']['Distribution']['name']) 
             distr_param.append(self.user_inputs['Sampling']['Distribution']['hyperparameters'])
             distr_init_val.append(self.user_inputs["Sampling"]["Distribution"]["init_val"])
-            sample_dist = pybit.distributions.set_probability_dist(distr_name, distr_param)
+            sample_dist = pybitup.distributions.set_probability_dist(distr_name, distr_param)
 
             unpar_init_val = np.array(self.user_inputs["Sampling"]["Distribution"]["init_val"])
             
@@ -165,7 +165,7 @@ class SolveProblem():
                     my_model.x = x 
 
                     std_y = np.array(c_data['y']['Sigma'])
-                    y = np.array(pybit.bayesian_inference.generate_synthetic_data(my_model, c_data['y']['Sigma'], c_data['y']['Error']))
+                    y = np.array(pybitup.bayesian_inference.generate_synthetic_data(my_model, c_data['y']['Sigma'], c_data['y']['Error']))
                     dataName = c_data['y']['Name']
                     std_y = np.ones(len(y))*std_y
 
@@ -174,7 +174,7 @@ class SolveProblem():
 
                 # Initialise data set
                 if data_set == 0: 
-                    data = pybit.bayesian_inference.Data(dataName, x, y, std_y)
+                    data = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
                     
                 # When there are more than one data set, add them to previous data
                 else: 
@@ -216,7 +216,7 @@ class SolveProblem():
             # ------ 
             distr_name = [BP_inputs['Prior']['Distribution']]
             hyperparam = [unpar_prior_name, unpar_prior_param]
-            prior_dist = pybit.distributions.set_probability_dist(distr_name, hyperparam)
+            prior_dist = pybitup.distributions.set_probability_dist(distr_name, hyperparam)
 
             # Function evaluation from the model as a function of the uncertain parameters only 
             # ----------------------------------------------------------------------------------			
@@ -230,12 +230,12 @@ class SolveProblem():
             
             # Likelihood 
             # -----------
-            likelihood_fun = pybit.bayesian_inference.Likelihood(data, vec_model_eval)
+            likelihood_fun = pybitup.bayesian_inference.Likelihood(data, vec_model_eval)
 
             # ----------------------
             # Posterior computation 
             # ----------------------
-            sample_dist = pybit.bayesian_inference.BayesianPosterior(prior_dist, likelihood_fun, my_model, unpar_init_val) 
+            sample_dist = pybitup.bayesian_inference.BayesianPosterior(prior_dist, likelihood_fun, my_model, unpar_init_val) 
 
 
         else:
@@ -244,7 +244,7 @@ class SolveProblem():
         # Run sampling of the distribution
         if (self.user_inputs["Sampling"].get('Algorithm') is not None): 
             algo = self.user_inputs["Sampling"]["Algorithm"]
-            sampling_dist = pybit.inference_problem.Sampler(sample_dist, algo) 
+            sampling_dist = pybitup.inference_problem.Sampler(sample_dist, algo) 
             sampling_dist.sample(unpar_init_val) 
 
         # Compute the posterior directly from analytical formula (bayes formula in case of Bayesian inference)
@@ -266,7 +266,7 @@ class SolveProblem():
         else: 
             raise ValueError('Ask for post processing data but no inputs were provided')
 
-        pybit.post_process.post_process_data(self.pp)
+        pybitup.post_process.post_process_data(self.pp)
 
 
     def propagate(self, my_model=[]): 

@@ -14,7 +14,7 @@
 \usepackage{lmodern}
 
 
-\title{\huge \textbf{pybit: \\ python Bayesian inference toolbox}}
+\title{\huge \textbf{pybitup: \\ python Bayesian inference toolbox}}
 
 \author{\textbf{Joffrey Coheur, Maarten Arnst}}
 
@@ -34,9 +34,9 @@ Universit\'e de Li\`ege, Aerospace and Mechanical Engineering, All\'ee de la D\'
 
 \section{Introduction} 
 
-We described here the general structure and some practical implementations of pybit, the solver for Bayesian inference that is developed within this work. The python Bayesian inference toolbox, or pybit, is mainly constructed for Bayesian inference but can also be used for sampling from known probability distribution functions. It is therefore developed in a general framework. Future applications should combine sampling from posterior distributions in pybit and propagation of these samples using methods such as polynomial chaos expansion (PCE), or other propagation methods. 
+We described here the general structure and some practical implementations of pybitup, the solver for Bayesian inference that is developed within this work. The python Bayesian inference toolbox, or pybitup, is mainly constructed for Bayesian inference but can also be used for sampling from known probability distribution functions. It is therefore developed in a general framework. Future applications should combine sampling from posterior distributions in pybitup and propagation of these samples using methods such as polynomial chaos expansion (PCE), or other propagation methods. 
 
-Pybit to not intend to compete with current ``industrial level'' toolbox for uncertainty quantification, such as Dakota, UQLab or ChaosPy, but rather intends to be a research code where state-of-the-art algorithms can be implemented within python.
+pybitup to not intend to compete with current ``industrial level'' toolbox for uncertainty quantification, such as Dakota, UQLab or ChaosPy, but rather intends to be a research code where state-of-the-art algorithms can be implemented within python.
 
 
 
@@ -52,7 +52,7 @@ Every case contains an input file that the code will first read and which specif
 
 The code is based on the definition of a \texttt{ProbabilityDistribution} class. For known distribution, it is defined by an analytical function, the probability distribution function, and we can access to its value by calling the \texttt{compute\_value} method\footnote{A method of a class is a function available for objects of that class.} at a given sample point $\textbf{p}$. For Bayesian posteriors, the definition of the likelihood and the prior distributions need to be first specified. In this case the \texttt{compute\_value} method returns directly the product of the likelihood times the prior distribution. 
 
-The Bayesian posterior definition needs to be complemented by the definition of the data and the physical model, for which we have two separated python classes, \texttt{Data} and \texttt{Model} respectively. The \texttt{Data} class contains the abscissa and ordinates (the observations) of the problem. We can specify as much data sets as we want. Those are specified in the input file using the list \texttt{Data : [ { dataSet1 }, { dataSet2 }, etc, ]}. The different data sets are then concatenated in a single one dimensional \texttt{numpy} array in memory. The \texttt{Model} class contains the information about the physical model (and not the statistical model). There must be as much model delimiters in the input file as data sets, even if the model is the same to represent all data sets. The \texttt{Model} class can incorporate change of variable (used for example for the Ito-SDE algorithm of for reparametrizing the model) and is optional (default is $\mathbf{p} = \tilde{\mathbf{p}}$). There is not pre-implemented models within pybit and the user must specified its model in a separated python file following the \texttt{Model} class structure. The \texttt{fun\_x} method is mandatory and specifies the function that is used to reproduce the observations. This function can be defined directly within the python file or can be provided from an other program (only other python modules so far; \textbf{future extension to external program such as Argo or PATO}) in which case the \texttt{fun\_x} method needs to point towards the execution of the program. In the case where the program is external, the model will write at every iterations a temporary input file (\texttt{write\_tmp\_input\_file}) that automatically updates the inputs of the model according to the Markov chain.
+The Bayesian posterior definition needs to be complemented by the definition of the data and the physical model, for which we have two separated python classes, \texttt{Data} and \texttt{Model} respectively. The \texttt{Data} class contains the abscissa and ordinates (the observations) of the problem. We can specify as much data sets as we want. Those are specified in the input file using the list \texttt{Data : [ { dataSet1 }, { dataSet2 }, etc, ]}. The different data sets are then concatenated in a single one dimensional \texttt{numpy} array in memory. The \texttt{Model} class contains the information about the physical model (and not the statistical model). There must be as much model delimiters in the input file as data sets, even if the model is the same to represent all data sets. The \texttt{Model} class can incorporate change of variable (used for example for the Ito-SDE algorithm of for reparametrizing the model) and is optional (default is $\mathbf{p} = \tilde{\mathbf{p}}$). There is not pre-implemented models within pybitup and the user must specified its model in a separated python file following the \texttt{Model} class structure. The \texttt{fun\_x} method is mandatory and specifies the function that is used to reproduce the observations. This function can be defined directly within the python file or can be provided from an other program (only other python modules so far; \textbf{future extension to external program such as Argo or PATO}) in which case the \texttt{fun\_x} method needs to point towards the execution of the program. In the case where the program is external, the model will write at every iterations a temporary input file (\texttt{write\_tmp\_input\_file}) that automatically updates the inputs of the model according to the Markov chain.
 
 
 
@@ -77,7 +77,7 @@ or by specifying the target distribution in terms of Bayesian posterior
 & \quad - \log(\pi(\mathbf{d} | \mathbf{p}_{i-1}))  - \log(\pi_0(\mathbf{p}_{i-1})) - \log(J(\mathbf{p}_{i-1} | \cdot) ) 
 \label{eq:LogAcceptanceRatioBayesian}
 \end{align}
-Thus, for Gaussian likelihood, the log-likelihood function is the $\text{L}_2$ distance between the data and the model. In pybit, the log value of a distribution can be accessed through the \texttt{compute\_log\_value} method that is implemented within every \texttt{ProbabilityDistribution} class. The final value of the acceptance ratio $r$ after the sum Eq.~\ref{eq:LogAcceptanceRatioBayesian} is performed.
+Thus, for Gaussian likelihood, the log-likelihood function is the $\text{L}_2$ distance between the data and the model. In pybitup, the log value of a distribution can be accessed through the \texttt{compute\_log\_value} method that is implemented within every \texttt{ProbabilityDistribution} class. The final value of the acceptance ratio $r$ after the sum Eq.~\ref{eq:LogAcceptanceRatioBayesian} is performed.
 
 \subsection{Ito-SDE algorithm}
 

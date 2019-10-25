@@ -5,7 +5,7 @@ import math
 from pyrolysis_general.src.pyrolysis import PyrolysisParallel 
 
 # Packages for stochastic inference
-from pybit import bayesian_inference as bi
+from pybitup import bayesian_inference as bi
 
 # Python packages 
 

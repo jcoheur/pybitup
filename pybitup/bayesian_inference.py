@@ -2,6 +2,12 @@ import numpy as np
 from scipy import stats
 import random
 
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+
+
+
 import pybitup.distributions
 
 class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):  
@@ -253,7 +259,7 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
     with open(input_file_name) as json_file:
 
         # Create the new file where we replace the uncertain variables by their values
-        with open("tmp_" + input_file_name, "w") as new_input_file: 
+        with open("tmp_proc_"+str(rank)+'_' + input_file_name, "w") as new_input_file: 
         
             # Read json file line by line
             for num_line, line in enumerate(json_file.readlines()):

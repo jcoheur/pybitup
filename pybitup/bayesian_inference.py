@@ -122,6 +122,10 @@ class Model:
         # Parameters
         self._param = param
 
+    def size_x(self):
+        """Return the length of the i-th data x"""
+        return len(self._x) 
+
     def _get_param(self):
         """Method that is called when we want to read the attribute 'param' """
 

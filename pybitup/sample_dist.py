@@ -38,23 +38,11 @@ class SolveProblem():
         # Create the output folder
         os.system("mkdir output")
 
-    def get_model_id(self, c_model, num_model):
-        """ Get the id of the current model c_model corresponding to num_model.
-        c_model is the model specification from the input file."""
-
-        if (c_model.get("model_id") is not None):
-            model_id = c_model["model_id"]
-        else: 
-            model_id = num_model
-        return model_id 
-
-
-    def f_X(self, var_param, model, model_inputs, unpar_name, design_points): 
+    def f_X(self, var_param, model, model_inputs, unpar_name): 
         """ Define the vector of model evaluation."""
         
         param_names = model_inputs['param_names']
         param_nom = np.array(model_inputs['param_values'])
-        model.x = design_points
 
         if model_inputs['input_file'] == "None": 
 
@@ -95,10 +83,10 @@ class SolveProblem():
         
             #model_eval = np.concatenate((model_eval, my_model.fun_x(c_model['input_file'], unpar_name,var_param)))
             model_eval = model.fun_x(model_inputs['input_file'], unpar_name, var_param)
-                     
+
         return model_eval
 
-    def sample(self, my_model=[]): 
+    def sample(self, models={}): 
 
         if (self.user_inputs.get("Sampling") is not None):
             self.input_sampling = self.user_inputs["Sampling"] 
@@ -131,26 +119,22 @@ class SolveProblem():
             # Get the data sets from file or generate it from the model 
             # ----------------------------------------------------------
             BP_inputs = self.user_inputs["Sampling"]["BayesianPosterior"]
-            n_data_set = len(BP_inputs['Data']) # data that can be reproduced using different models
-            models = {} # Initialise dictionnary of models 
-            design_points = {} # Initialise dictionnary of models 
-            for data_set in range(n_data_set):
+            design_points = {} # Initialise dictionnary of design points 
+            for data_set, model_id in enumerate(models.keys()):
             
+                model_id_reparam = model_id # To be changed. See later in "Posterior computation"
+
                 # Load current data and model properties 
                 c_data = BP_inputs['Data'][data_set]
                 c_model = BP_inputs['Model'][data_set]
-            
-                model_id = self.get_model_id(c_model, data_set)
-                models[model_id] = my_model
-
-                 
+              
                 # Model 
                 # ------
                 #if c_model['input_file'] == "None": 
                 #param_names = c_model['param_names']
                 param_nom = np.array(c_model['param_values'])
                 #n_param_model = len(param_nom)
-                my_model.param = param_nom
+                models[model_id].param = param_nom
 
                 # Data 
                 # -----
@@ -161,17 +145,17 @@ class SolveProblem():
                     std_y = reader[c_data['sigmaField']].values.T[0,:]
                     dataName = c_data['yField'][0]+"_"+c_data['FileName']
                     
-                    my_model.x = x 
+                    models[model_id].x = x 
                 elif c_data['Type'] == "GenerateSynthetic": 	
                     if  c_data['x']['Type'] == "range": 
                         x = np.array(np.arange(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
                     elif  c_data['x']['Type'] == "linspace": 
                         x = np.array(np.linspace(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
 
-                    my_model.x = x 
+                    models[model_id].x = x 
 
                     std_y = np.array(c_data['y']['Sigma'])
-                    y = np.array(pybitup.bayesian_inference.generate_synthetic_data(my_model, c_data['y']['Sigma'], c_data['y']['Error']))
+                    y = np.array(pybitup.bayesian_inference.generate_synthetic_data(models[model_id], c_data['y']['Sigma'], c_data['y']['Error']))
                     dataName = c_data['y']['Name']
                     std_y = np.ones(len(y))*std_y
 
@@ -190,7 +174,7 @@ class SolveProblem():
                 #if c_model['input_file'] != "None": 
                 # Design points for the model need to be specified explicitely 
                 #models[model_id].x = data.x[data.index_data_set[data_set,0]:data.index_data_set[data_set,1]+1]
-                design_points[model_id] = data.x[data.index_data_set[model_id,0]:data.index_data_set[model_id,1]+1]
+                design_points[model_id] = data.x[data.index_data_set[data_set,0]:data.index_data_set[data_set,1]+1]
 
             # Write the data in output data file 
             with open('output/data', 'wb') as file_data_exp: 
@@ -216,7 +200,7 @@ class SolveProblem():
                 unpar_init_val.append(param_val['initial_val'])
                 unpar_prior_name.append(param_val['prior_name']) 
                 unpar_prior_param.append(param_val['prior_param'])
-            unpar_init_val = np.array(my_model.parametrization_forward(unpar_init_val))
+            unpar_init_val = np.array(models[model_id].parametrization_forward(unpar_init_val))
 
             # Prior 
             # ------ 
@@ -229,8 +213,8 @@ class SolveProblem():
             def vec_model_eval(var_param): 
                 model_eval = []
                 for num_model, model_id in enumerate(models.keys()):
-                    model_id_eval = self.f_X(var_param, models[model_id], BP_inputs['Model'][num_model], unpar_name, design_points[model_id])
-                    model_eval=np.concatenate((model_eval, model_id_eval))
+                    model_id_eval = self.f_X(var_param, models[model_id], BP_inputs['Model'][num_model], unpar_name)
+                    model_eval = np.concatenate((model_eval, model_id_eval))
 
                 return model_eval
             
@@ -241,7 +225,9 @@ class SolveProblem():
             # ----------------------
             # Posterior computation 
             # ----------------------
-            sample_dist = pybitup.bayesian_inference.BayesianPosterior(prior_dist, likelihood_fun, my_model, unpar_init_val) 
+            sample_dist = pybitup.bayesian_inference.BayesianPosterior(prior_dist, likelihood_fun, models[model_id_reparam], unpar_init_val) 
+            # the model provided here in input is only because it contains the parametrization. They should be the same for all
+            # models. Here, we provide the one with model_id = 0 as it is always present. 
 
 
         else:
@@ -275,16 +261,14 @@ class SolveProblem():
         pybitup.post_process.post_process_data(self.pp)
 
 
-    def propagate(self, my_model=[]): 
+    def propagate(self, models=[]): 
 
             if (self.user_inputs.get("Propagation") is not None):
                 self.input_propagation = self.user_inputs["Propagation"] 
             else: 
                 raise ValueError('Ask for uncertainty propagation but no Propagation inputs were provided')
 
-
             propagation_inputs = self.user_inputs["Propagation"]
-            n_design_exp = len(propagation_inputs["Model"])
 
             # Get uncertain parameters 
             # -------------------------
@@ -317,34 +301,21 @@ class SolveProblem():
             # -----------------------
             # Get the design points (variable input) for each model provided
 
-            design_points = {} 
             n_points = {}
-            models = {}
-            model_id_list_2 = {}
-            model_num_to_id = {} # Number to id 
-            model_id_to_num = {} # Id to number 
-            for design_exp in range(n_design_exp):
-                c_model = propagation_inputs["Model"][design_exp]
-                model_id = self.get_model_id(c_model, design_exp)
+            model_id_to_num = {}
+            for model_num, model_id in enumerate(models.keys()): 
+                c_model = propagation_inputs["Model"][model_num]
 
                 design_point_input = c_model["design_points"]
                 reader = pd.read_csv(design_point_input["filename"])
             
-                design_points[model_id] = reader.values[:,design_point_input["field"]]
-                n_points[model_id] = len(design_points[model_id])
+                c_design_points = reader.values[:,design_point_input["field"]]
 
-                # For now, we only have one "my_model". So all the models[model_id] are linked. 
-                # Ideally, should be changed so that we have my_model[model_id] that can thus allow 
-                # to have different model 
-                models[model_id] = my_model[design_exp]
+                model_id_to_num[model_id] = model_num
 
-                model_id_list_2[design_exp] = model_id 
-
-                
-                model_num_to_id[design_exp] = model_id
-                model_id_to_num[model_id] = design_exp
-
-            model_id_list = design_points.keys()
+                # Set the evaluation of the model at the design points 
+                models[model_id].x = c_design_points
+                n_points[model_id] = models[model_id].size_x()
 
             # Run propagation 
             # ---------------
@@ -356,7 +327,7 @@ class SolveProblem():
                 
                 # Initialize output files 
                 output_file_model_eval = {}
-                for model_id in model_id_list: 
+                for model_id in models.keys(): 
                     output_file_model_eval[model_id]=open('output/'+model_id+'_eval.csv','ab')
 
                 # Print current time and start clock count
@@ -382,8 +353,8 @@ class SolveProblem():
 
 
             # Fill the list 
-            for i, model_id in enumerate(model_id_list): 
-                model_rank_list[i%mce].append(model_id)
+            for model_num, model_id in enumerate(models.keys()): 
+                model_rank_list[model_num%mce].append(model_id)
 
             # If concurrent sample evaluation are asked, we divide
             n_sample_per_proc = int(np.floor(n_sample_param / sce))
@@ -427,9 +398,10 @@ class SolveProblem():
                     c_param[j] = unpar[name][sample_num]
 
                 # Each proc evaluates the models attributed
+                #model_list_per_rank 
                 for model_id in model_rank_list[rank]:                 
                     model_num = model_id_to_num[model_id]
-                    fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys(), design_points[model_id])
+                    fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
 
                     c_eval = fun_eval[model_id][i, :]
                     data_hist[model_id][i, :] = c_eval 
@@ -457,7 +429,7 @@ class SolveProblem():
                 data_ij_min = {}
                 data_ij_mean = {}
                 data_ij_var = {}
-                for model_id in model_id_list: 
+                for model_id in models.keys(): 
                     data_ij_max[model_id] = -1e5*np.ones(n_points[model_id])
                     data_ij_min[model_id] = 1e5*np.ones(n_points[model_id])
                     data_ij_mean[model_id] = np.zeros(n_points[model_id])
@@ -465,7 +437,7 @@ class SolveProblem():
 
                 # Iterate over the propagated sample to compute statistics 
                 for i in range(n_sample_param):
-                    for model_id in model_id_list: 
+                    for model_id in models.keys(): 
                         # Write the csv for the function evaluation 
                         np.savetxt(output_file_model_eval[model_id], np.array([fun_eval[model_id][i,:]]), fmt="%f", delimiter=",")
 
@@ -485,7 +457,7 @@ class SolveProblem():
                     "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
                 
                 # Save results in output files 
-                for i, model_id in enumerate(model_id_list): 
+                for model_id in models.keys(): 
 
                     # Divide by the number of sample to compute the final mean  
                     data_ij_mean[model_id][:] = data_ij_mean[model_id][:]/n_sample_param

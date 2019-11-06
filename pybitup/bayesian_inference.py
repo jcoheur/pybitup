@@ -1,6 +1,7 @@
 import numpy as np 
 from scipy import stats
 import random
+import matplotlib.pyplot as plt 
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -54,9 +55,9 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
         self.likelihood.update_eval() 
 
-    def save_value(self, name_file): 
+    def save_value(self, current_it): 
 
-        self.likelihood.write_fun_eval(name_file)
+        self.likelihood.write_fun_eval(current_it)
 
     def save_sample(self, fileID_sample, value):
 
@@ -108,6 +109,47 @@ class Data:
         # Increase the number of dataset
         self.n_data_set += 1
 
+class Data_2:
+
+    def __init__(self, x=np.array([1]), y=np.array([1]), std_y=np.array([1])):
+        self._x=x
+        self._y=x
+        self._std_y=std_y
+
+    def _get_x(self):
+
+        return self._x
+
+    def _set_x(self, new_x):
+
+        self._x = new_x
+
+    x = property(_get_x, _set_x)
+
+    def _get_y(self):
+
+        return self._y
+
+    def _set_y(self, new_y):
+
+        self._y = new_y
+
+    y = property(_get_y, _set_y)
+
+    def _get_std_y(self):
+
+        return self._std_y
+
+    def _set_std_y(self, new_std_y):
+
+        self._std_y = new_std_y
+
+    std_y = property(_get_std_y, _set_std_y)
+
+    
+
+
+
 
 class Model:
     """ Class defining the model function and its reparametrization if specified."""
@@ -121,6 +163,13 @@ class Model:
 
         # Parameters
         self._param = param
+        self.param_nom = []
+        self.param_names = []
+        self.input_file_name = [] 
+        self.unpar_name = {}
+
+        # Value of the model f(param, x) 
+        self.model_eval = 0
 
     def size_x(self):
         """Return the length of the i-th data x"""
@@ -151,7 +200,7 @@ class Model:
     x = property(_get_x, _set_x)
 
 
-    def fun_x(self, val_x, val_param): 
+    def fun_x(self, *ext_parameters): 
 
         return 1
 
@@ -173,43 +222,108 @@ class Model:
 
         return det_jac
 
+    def run_model(self, var_param): 
+        """ Define the vector of model evaluation."""
+        
+
+        if not self.input_file_name: 
+            # In this case, the model parameters are not in an input file. They are all specified 
+            # in param_names. Some of them are uncertain (specified in the Prior inputs) and we therefore 
+            # need to define which are uncertain and which are not. 
+
+            n_param_model = len(self.param_nom)
+
+            self.param = self.param_nom
+        
+            var_param_index = []
+            char_name = " ".join(self.unpar_name)
+
+            n_unpar = len(self.unpar_name.keys())
+
+            for idx, name in enumerate(self.param_names):
+                is_name = char_name.find(name)
+                if is_name >= 0: 
+                    var_param_index.append(idx)
+
+            if n_unpar < n_param_model: # Only a subset of parameters is uncertain
+                vec_param = self.param_nom 
+                for n in range(0, n_unpar): 
+                    vec_param[var_param_index[n]] = var_param[n]
+
+                self.param = vec_param
+
+            else: # All parameters are uncertain
+                self.param = var_param
+
+            self.model_eval = self.fun_x()
+            
+            
+        else: 
+            # Model is build based on a given input file. 
+            # If an input file is provided, the uncertain parameters are specified within the file. 
+            # The uncertain parameters is identified by the keyword "$", e.g. "$myParam$". 
+            # The input file read by the model is in user_inputs['Model']['input_file']. 
+        
+            #model_eval = np.concatenate((model_eval, my_model.fun_x(c_model['input_file'], unpar_name, var_param)))
+
+            self.model_eval = self.fun_x(self.input_file_name, self.unpar_name, var_param)
+
+
 
 
 class Likelihood: 
     """"Class defining the function and the properties of the likelihood function."""
 
-    def __init__(self, exp_data, model_fun): 
+    def __init__(self, exp_data, model_list): 
         self.data = exp_data
-        self.model_fun = model_fun
-        self.model_eval = 0
+        self.model_eval = []
+        self.models = model_list 
 
     def compute_value(self, X):
         """ Compute value of the likelihood at the current point X.
         Only gaussian likelihood so far."""
 
-        self.model_eval_X = self.model_fun(X)
-        like_val = np.exp(self.sum_of_square(self.data, self.model_eval_X)) 
-
+        # self.model_eval_X = self.model_fun(X)
+        # like_val = np.exp(self.sum_of_square(self.data, self.model_eval_X)) 
+        
+        like_val = np.exp(self.sum_of_square2(X))
         return like_val
 
     def compute_log_value(self, X): 
         
-        self.model_eval_X = self.model_fun(X)
-        log_like_val = self.sum_of_square(self.data, self.model_eval_X)
+        # self.model_eval_X = self.model_fun(X)
+        # log_like_val = self.sum_of_square(self.data, self.model_eval_X)
+
+        log_like_val = self.sum_of_square2(X)
 
         return log_like_val
 
     def update_eval(self): 
 
         # We want to save model evaluation for time saving 
-        self.model_eval = self.model_eval_X 
+        #self.model_eval = self.model_eval_X 
 
-    def write_fun_eval(self, name_file):
+        self.model_eval = []
+        for model_id in self.models.keys(): 
+            self.model_eval = np.concatenate((self.model_eval, self.models[model_id].model_eval))
+
+    def write_fun_eval(self, num_it):
         """ Save the function evaluation at every save_freq evaluation. """ 
 
         # We want to save model evaluation for time saving 
-        np.save(name_file, self.model_eval)
-            
+        #np.save(name_file, self.model_eval)
+        for model_id in self.models.keys(): 
+            np.save('output/'+model_id+'_fun_eval.'+str(num_it), self.models[model_id].model_eval) 
+
+            # n_x = len(self.data[model_id].x)
+            # n_data_set = int(len(self.data[model_id].y)/n_x)
+
+            # for i in range(n_data_set): 
+            #     plt.figure(i)
+            #     plt.plot(self.data[model_id].x, self.data[model_id].y[i*n_x:(i+1)*n_x], '--')
+            #     plt.plot(self.data[model_id].x, self.models[model_id].model_eval[i*n_x:(i+1)*n_x])  
+
+        #plt.show()
 
     def compute_ratio(self): 
         """ Compute the ratio of likelihood function"""
@@ -221,6 +335,33 @@ class Likelihood:
 
         J = - 1/2 * np.sum(((data1.y-data2)/data1.std_y)**2, axis=0)
 
+        return J
+
+
+    def sum_of_square2(self, X):
+        """ Compute the sum of square used in the likelihood function.
+        data1 is a Data class. 
+        data2 is a numpy array. """
+
+        J = 0 
+        for model_id in self.models.keys(): 
+
+            # Compute value for the model at X 
+            self.models[model_id].run_model(X)
+
+            # n_x = len(self.data[model_id].x)
+            # n_data_set = int(len(self.data[model_id].y)/n_x)
+
+            # for i in range(n_data_set): 
+            #     plt.figure(i)
+            #     plt.plot(self.data[model_id].x, self.data[model_id].y[i*n_x:(i+1)*n_x], '--')
+            #     plt.plot(self.data[model_id].x, self.models[model_id].model_eval[i*n_x:(i+1)*n_x])
+
+            # Compute the sum of square 
+            arg_exp = (self.data[model_id].y - self.models[model_id].model_eval)/self.data[model_id].std_y
+            J = J - (1/2)*np.sum(arg_exp**2, axis=0)
+
+        #plt.show()
         return J
 
 

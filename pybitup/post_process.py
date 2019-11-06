@@ -29,11 +29,32 @@ def post_process_data(inputFields):
                 n_iterations = int(c_chain)
 
         n_unpar = len(unpar_name)
-        n_samples = n_iterations + 2
+        n_samples = n_iterations + 1
 
     # -------------------------------------------
     # --------- Plot experimental data ----------
     # -------------------------------------------
+
+    # if (inputFields.get("Data") is not None):
+    #     # Load experimental data
+    #     with open('output/data', 'rb') as file_data_exp:
+    #         pickler_data_exp = pickle.Unpickler(file_data_exp)
+    #         data_exp = pickler_data_exp.load()
+
+    #     if inputFields["Data"]["display"] == "yes":
+    #         for i in range(data_exp.n_data_set):
+
+    #             ind_1 = data_exp.index_data_set[i, 0]
+    #             ind_2 = data_exp.index_data_set[i, 1]
+
+    #             plt.figure(inputFields["Data"]["num_plot"])
+    #             plt.plot(data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1],
+    #                     'o', color=lineColor[i][0], mfc='none')
+
+    #             error_bar (data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1], 
+    #                     data_exp.std_y[ind_1:ind_2+1], lineColor[i][0])
+
+    #             #, edgecolors='r'
 
     if (inputFields.get("Data") is not None):
         # Load experimental data
@@ -42,19 +63,22 @@ def post_process_data(inputFields):
             data_exp = pickler_data_exp.load()
 
         if inputFields["Data"]["display"] == "yes":
-            for i in range(data_exp.n_data_set):
+            for num_data_set, data_id in enumerate(data_exp.keys()):
 
-                ind_1 = data_exp.index_data_set[i, 0]
-                ind_2 = data_exp.index_data_set[i, 1]
+                n_x = len(data_exp[data_id].x)
+                n_data_set = int(len(data_exp[data_id].y)/n_x)
+ 
+                for i in range(n_data_set): 
 
-                plt.figure(inputFields["Data"]["num_plot"])
-                plt.plot(data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1],
-                        'o', color=lineColor[i][0], mfc='none')
+                    plt.figure(i)
+                    plt.plot(data_exp[data_id].x, data_exp[data_id].y[i*n_x:(i+1)*n_x],
+                            'o', color=lineColor[num_data_set][0], mfc='none')
 
-                error_bar (data_exp.x[ind_1:ind_2+1], data_exp.y[ind_1:ind_2+1], 
-                        data_exp.std_y[ind_1:ind_2+1], lineColor[i][0])
+                    error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
+                            data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
+
 
     # -------------------------------------------
     # --------- Plot initial guess --------------
@@ -62,16 +86,20 @@ def post_process_data(inputFields):
 
     if (inputFields.get("InitialGuess") is not None):
         if inputFields["InitialGuess"]["display"] == "yes":
-            data_init = np.load("output/fun_eval.{}.npy".format(0))
 
-            for i in range(data_exp.n_data_set):
+            for num_data_set, data_id in enumerate(data_exp.keys()):
+                data_init = np.load("output/{}_fun_eval.{}.npy".format(data_id, 0))
 
-                ind_1 = data_exp.index_data_set[i, 0]
-                ind_2 = data_exp.index_data_set[i, 1]
+                n_x = len(data_exp[data_id].x)
+                n_data_set = int(len(data_exp[data_id].y)/n_x)
 
-                plt.figure(inputFields["InitialGuess"]["num_plot"])
-                plt.plot(data_exp.x[ind_1:ind_2+1],
-                        data_init[ind_1:ind_2+1], '--', color=lineColor[i][0])
+
+                for i in range(n_data_set): 
+
+                    plt.figure(i)
+
+                    plt.plot(data_exp[data_id].x,
+                            data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
 
 
 
@@ -216,7 +244,6 @@ def post_process_data(inputFields):
 
     if (inputFields.get("Propagation") is not None):
         if inputFields["Propagation"]["display"] == "yes":
-            plt.figure(inputFields["Propagation"]["num_plot"])
 
             # By default, we have saved 100 function evaluations
             n_fun_eval = 100
@@ -227,84 +254,89 @@ def post_process_data(inputFields):
             # By default, the last function evaluation to be plotted is equal to the number of iterations
             end_val = int(n_samples)
 
-            for i in range(data_exp.n_data_set):
+            #for i in range(data_exp.n_data_set):
+            for num_data_set, data_id in enumerate(data_exp.keys()):
+                print(data_id)
+                n_x = len(data_exp[data_id].x)
+                n_data_set = int(len(data_exp[data_id].y)/n_x)
+ 
+                for i in range(n_data_set): 
+                    plt.figure(i)
 
-                data_ij_max = np.zeros(data_exp.size_x(i))
-                data_ij_min = np.zeros(data_exp.size_x(i))
-                ind_1 = data_exp.index_data_set[i, 0]
-                ind_2 = data_exp.index_data_set[i, 1]
+                    # Initialise bounds
+                    data_ij_max = -1e5*np.ones(n_x)
+                    data_ij_min = 1e5*np.ones(n_x)
+                    data_ij_mean = np.zeros(n_x)
+                    data_ij_var = np.zeros(n_x)
 
-                # Histogram 
-                data_hist = np.zeros([n_fun_eval, data_exp.size_x(i)])
+                    ind_1 = i*n_x
+                    ind_2 =(i+1)*n_x
 
-                # Initialise bounds
-                data_ij_max = -1e5*np.ones(data_exp.size_x(i))
-                data_ij_min = 1e5*np.ones(data_exp.size_x(i))
-                data_ij_mean = np.zeros(data_exp.size_x(i))
-                data_ij_var = np.zeros(data_exp.size_x(i))
+                    # Histogram 
+                    data_hist = np.zeros([n_fun_eval, n_x])
 
-                for c_eval, j in enumerate(range(start_val+delta_it, end_val, delta_it)):
+                    for c_eval, j in enumerate(range(start_val+delta_it, end_val, delta_it)):
 
-                    # Load current data
-                    data_ij = np.load("output/fun_eval.{}.npy".format(j))
-                    data_set_n = data_ij[ind_1:ind_2+1]
+                        # Load current data
+                        data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
+                        data_set_n = data_ij[ind_1:ind_2]
 
-                    # Update bounds
-                    for k in range(data_exp.size_x(i)):
-                        if data_ij_max[k] < data_set_n[k]:
-                            data_ij_max[k] = data_set_n[k]
-                        elif data_ij_min[k] > data_set_n[k]:
-                            data_ij_min[k] = data_set_n[k]
+                        # Update bounds
+                        for k in range(n_x):
+                            if data_ij_max[k] < data_set_n[k]:
+                                data_ij_max[k] = data_set_n[k]
+                            elif data_ij_min[k] > data_set_n[k]:
+                                data_ij_min[k] = data_set_n[k]
 
-                    data_hist[c_eval, :] = data_set_n[:]  
+                        data_hist[c_eval, :] = data_set_n[:]  
 
-                    # Update mean 
-                    data_ij_mean[:] = data_ij_mean[:] + data_set_n[:]
+                        # Update mean 
+                        data_ij_mean[:] = data_ij_mean[:] + data_set_n[:]
 
-                    # Plot all realisation (modify alpha value to see something)
-                    #plt.plot(data_exp.x[ind_1:ind_2+1], data_set_n[:], alpha=0.)
+                        # Plot all realisation (modify alpha value to see something)
+                        #plt.plot(data_exp.x[ind_1:ind_2+1], data_set_n[:], alpha=0.)
 
-                # Compute mean 
-                data_ij_mean = data_ij_mean[:]/n_fun_eval
+                    # Compute mean 
+                    data_ij_mean = data_ij_mean[:]/n_fun_eval
 
-                # Identical loop to compute the variance 
-                for j in range(start_val+delta_it, end_val, delta_it):
+                    # Identical loop to compute the variance 
+                    for j in range(start_val+delta_it, end_val, delta_it):
 
-                    # Load current data
-                    data_ij = np.load("output/fun_eval.{}.npy".format(j))
-                    data_set_n = data_ij[ind_1:ind_2+1]
+                        # Load current data
+                        data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
+                        data_set_n = data_ij[ind_1:ind_2]
 
-                    # Compute variance
-                    data_ij_var = data_ij_var[:] + (data_set_n[:] - data_ij_mean[:])**2
+                        # Compute variance
+                        data_ij_var = data_ij_var[:] + (data_set_n[:] - data_ij_mean[:])**2
 
-                data_ij_var = data_ij_var[:]/(n_fun_eval - 1) 
-            
-                # # Plot median and all results from propagation
-                # plt.plot(data_exp.x[ind_1:ind_2+1], (data_ij_min +
-                #                                     data_ij_max)/2, color=lineColor[i][0], alpha=0.5)
-                # plt.fill_between(data_exp.x[ind_1:ind_2+1], data_ij_min[:],
-                #                 data_ij_max[:], facecolor=lineColor[i][0], alpha=0.1)
+                    data_ij_var = data_ij_var[:]/(n_fun_eval - 1) 
+                
+                    # # Plot median and all results from propagation
+                    # plt.plot(data_exp.x[ind_1:ind_2+1], (data_ij_min +
+                    #                                     data_ij_max)/2, color=lineColor[i][0], alpha=0.5)
+                    # plt.fill_between(data_exp.x[ind_1:ind_2+1], data_ij_min[:],
+                    #                 data_ij_max[:], facecolor=lineColor[i][0], alpha=0.1)
 
-                # Plot mean and 95% confidence interval for the mean 
-                # CI_lowerbound = data_ij_mean - 1.96*np.sqrt(data_ij_var/n_fun_eval)
-                # CI_upperbound = data_ij_mean + 1.96*np.sqrt(data_ij_var/n_fun_eval)
-                # plt.plot(data_exp.x[ind_1:ind_2+1], data_ij_mean, color=lineColor[i][0], alpha=0.5)
-                # plt.fill_between(data_exp.x[ind_1:ind_2+1],  CI_lowerbound, CI_upperbound, facecolor=lineColor[i][0], alpha=0.1)
+                    # Plot mean and 95% confidence interval for the mean 
+                    # CI_lowerbound = data_ij_mean - 1.96*np.sqrt(data_ij_var/n_fun_eval)
+                    # CI_upperbound = data_ij_mean + 1.96*np.sqrt(data_ij_var/n_fun_eval)
+                    # plt.plot(data_exp.x[ind_1:ind_2+1], data_ij_mean, color=lineColor[i][0], alpha=0.5)
+                    # plt.fill_between(data_exp.x[ind_1:ind_2+1],  CI_lowerbound, CI_upperbound, facecolor=lineColor[i][0], alpha=0.1)
 
-                # Plot mean 
-                # ---------
-                plt.plot(data_exp.x[ind_1:ind_2+1], data_ij_mean, color=lineColor[i][0], alpha=0.5)
-                # Plot 95% credible interval
-                # ---------------------------
-                plt.fill_between(data_exp.x[ind_1:ind_2+1],  np.percentile(data_hist, 2.5, axis=0), 
-                                np.percentile(data_hist, 97.5, axis=0), facecolor=lineColor[i][0], alpha=0.3)
-                # Plot 95% prediction interval
-                # -----------------------------
-                # For the prediction interval, we add the std to the result
+                    # Plot mean 
+                    # ---------
+                    plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5)
+                    # Plot 95% credible interval
+                    # ---------------------------
+                    plt.fill_between(data_exp[data_id].x,  np.percentile(data_hist, 2.5, axis=0), 
+                                    np.percentile(data_hist, 97.5, axis=0), facecolor=lineColor[num_data_set][0], alpha=0.3)
+                    # Plot 95% prediction interval
+                    # -----------------------------
+                    # For the prediction interval, we add the std to the result
 
-                plt.fill_between(data_exp.x[ind_1:ind_2+1],  np.percentile(data_hist, 2.5, axis=0)-data_exp.std_y[ind_1:ind_2+1], 
-                                np.percentile(data_hist, 97.5, axis=0)+data_exp.std_y[ind_1:ind_2+1], facecolor=lineColor[i][0], alpha=0.1)
-                del data_ij_max, data_ij_min, data_set_n
+                    plt.fill_between(data_exp[data_id].x,  np.percentile(data_hist, 2.5, axis=0)-data_exp[data_id].std_y[ind_1:ind_2], 
+                                    np.percentile(data_hist, 97.5, axis=0)+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+                    del data_ij_max, data_ij_min, data_set_n
 
     # Show plot   
     #saveToTikz('propagation.tex')

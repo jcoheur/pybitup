@@ -119,7 +119,7 @@ class SolveProblem():
             # Get the data sets from file or generate it from the model 
             # ----------------------------------------------------------
             BP_inputs = self.user_inputs["Sampling"]["BayesianPosterior"]
-            design_points = {} # Initialise dictionnary of design points 
+            data = {}
             for data_set, model_id in enumerate(models.keys()):
             
                 model_id_reparam = model_id # To be changed. See later in "Posterior computation"
@@ -130,22 +130,35 @@ class SolveProblem():
               
                 # Model 
                 # ------
-                #if c_model['input_file'] == "None": 
-                #param_names = c_model['param_names']
-                param_nom = np.array(c_model['param_values'])
-                #n_param_model = len(param_nom)
-                models[model_id].param = param_nom
+                # Check if there is an input file for the model 
+                if (c_model.get("input_file") is not None): 
+                    models[model_id].input_file_name = c_model['input_file'] 
+
+                models[model_id].param = np.array(c_model['param_values'])
+                models[model_id].param_nom = np.array(c_model['param_values'])
+                models[model_id].param_names = c_model['param_names'] 
 
                 # Data 
                 # -----
                 if c_data['Type'] == "ReadFromFile": 
                     reader = pd.read_csv(c_data['FileName'])
-                    x = reader[c_data['xField']].values.T[0,:]		
-                    y = reader[c_data['yField']].values.T[0,:]
-                    std_y = reader[c_data['sigmaField']].values.T[0,:]
-                    dataName = c_data['yField'][0]+"_"+c_data['FileName']
-                    
-                    models[model_id].x = x 
+
+                    # From the same model (same xField), there can be several yFields for the
+                    x = np.array([])
+                    y = np.array([])
+                    std_y = np.array([])
+
+                    # There is only one xField
+                    x = reader[c_data['xField'][0]].values
+                    models[model_id].x = x
+
+                    # For a given model_id, there can be several outputs (several yField) for the inference (e.g. output and its derivative(s))
+                    # for the same design points x. We put those outputs in a large array of dimension 1 x (n*x)  
+                    for nfield, yfield in enumerate(c_data['yField']):     
+                        y = np.concatenate((y, reader[yfield].values))
+                        std_y = np.concatenate((std_y, reader[c_data['sigmaField'][nfield]].values))
+                        dataName = c_data['yField'][0]+"_"+c_data['FileName']
+
                 elif c_data['Type'] == "GenerateSynthetic": 	
                     if  c_data['x']['Type'] == "range": 
                         x = np.array(np.arange(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
@@ -162,19 +175,16 @@ class SolveProblem():
                 else: 
                     raise ValueError("Invalid DataType {}".format(c_data['Type'])) 
 
-                # Initialise data set
-                if data_set == 0: 
-                    data = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
-                    
-                # When there are more than one data set, add them to previous data
-                else: 
-                    data.add_data_set(dataName, x, y, std_y)	
 
-                # When the model comes from external routine, we specify the design points 
-                #if c_model['input_file'] != "None": 
-                # Design points for the model need to be specified explicitely 
-                #models[model_id].x = data.x[data.index_data_set[data_set,0]:data.index_data_set[data_set,1]+1]
-                design_points[model_id] = data.x[data.index_data_set[data_set,0]:data.index_data_set[data_set,1]+1]
+                data[model_id] = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
+                
+                # # Initialise data set
+                # if data_set == 0: 
+                #     data = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
+                    
+                # # When there are more than one data set, add them to previous data
+                # else: 
+                #     data.add_data_set(dataName, x, y, std_y)	
 
             # Write the data in output data file 
             with open('output/data', 'wb') as file_data_exp: 
@@ -186,10 +196,12 @@ class SolveProblem():
 
             # Get uncertain parameters 
             # -------------------------
-            n_unpar = len(BP_inputs['Prior']['Param'])
             unpar_name = {} #unpar_name = {}
             for names in BP_inputs['Prior']['Param'].keys():
                 unpar_name[names] = [] #unpar_name.append(names)
+
+            for model_id in models.keys(): 
+                models[model_id].unpar_name = unpar_name
 
             # Get a priori information on the uncertain parameters
             # ----------------------------------------------------
@@ -220,7 +232,7 @@ class SolveProblem():
             
             # Likelihood 
             # -----------
-            likelihood_fun = pybitup.bayesian_inference.Likelihood(data, vec_model_eval)
+            likelihood_fun = pybitup.bayesian_inference.Likelihood(data, models)
 
             # ----------------------
             # Posterior computation 

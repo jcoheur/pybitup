@@ -9,7 +9,10 @@ class MetropolisHastings:
     def __init__(self, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        self.save_freq = nIterations/100
+        if nIterations < 100:
+            self.save_freq = 1
+        else:
+            self.save_freq = nIterations/100
         self.param_init = param_init
         self.V = V
         self.prob_distr = prob_distr 
@@ -54,8 +57,7 @@ class MetropolisHastings:
 
     def run_algorithm(self):
 
-        for i in range(self.nIterations+1):
-
+        for i in range(1, self.nIterations+1):
             self.compute_new_val()
             self.compute_acceptance_ratio()
             self.accept_reject()
@@ -138,7 +140,11 @@ class MetropolisHastings:
         print("End time {}" .format(time.asctime(time.localtime())))
         print("Elapsed time: {} sec".format(time.strftime(
             "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
-        print("Rejection rate is {} %".format(self.n_rejected/self.nIterations*100))
+        if self.nIterations == 0: 
+            rejection_rate = 0
+        else: 
+            rejection_rate = self.n_rejected/self.nIterations*100
+            print("Rejection rate is {} %".format(rejection_rate))
 
         with open("output/output.dat", 'w') as output_file:
             output_file.write("$RandomVarName$\n")
@@ -146,8 +152,7 @@ class MetropolisHastings:
                 output_file.write("X{} ".format(i))
             output_file.write("\n$IterationNumber$\n{}\n".format(self.nIterations))
             
-            output_file.write("\nRejection rate is {} % \n".format(
-                self.n_rejected/self.nIterations*100))
+            output_file.write("\nRejection rate is {} % \n".format(rejection_rate))
             output_file.write("Maximum Likelihood Estimator (MLE) \n")
             #output_file.write("{} \n".format(self.arg_max_LL))
             output_file.write("Log-likelihood value \n")
@@ -177,8 +182,8 @@ class MetropolisHastings:
 
     def write_fun_distr_val(self, current_it):
         if current_it % (self.save_freq) == 0:
-            self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
-
+            #self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
+            self.prob_distr.save_value(current_it)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
 

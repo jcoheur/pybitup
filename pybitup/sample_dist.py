@@ -329,6 +329,16 @@ class SolveProblem():
                 models[model_id].x = c_design_points
                 n_points[model_id] = models[model_id].size_x()
 
+                # Set the model parameter values 
+                # Check if there is an input file for the model 
+                if (c_model.get("input_file") is not None): 
+                    models[model_id].input_file_name = c_model['input_file'] 
+
+                models[model_id].param = np.array(c_model['param_values'])
+                models[model_id].param_nom = np.array(c_model['param_values'])
+                models[model_id].param_names = c_model['param_names']
+                models[model_id].unpar_name = unpar.keys()
+
             # Run propagation 
             # ---------------
             # Evaluate the model at the parameter values
@@ -399,9 +409,9 @@ class SolveProblem():
 
                 if rank==0: 
                     # We estimate time after a hundred iterations
-                    if i == 10:
+                    if i == 100:
                         print("Estimated time: {}".format(time.strftime("%H:%M:%S",
-                                                        time.gmtime((time.clock()-self.t1) / 10.0 * n_sample_per_rank[rank]))))
+                                                        time.gmtime((time.clock()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
                         sys.stdout.flush()
 
                 # Get the parameter values 
@@ -413,7 +423,13 @@ class SolveProblem():
                 #model_list_per_rank 
                 for model_id in model_rank_list[rank]:                 
                     model_num = model_id_to_num[model_id]
-                    fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
+
+                    # Update model evaluation 
+                    models[model_id].run_model(c_param)
+
+                    # Get model evaluations
+                    fun_eval[model_id][i, :] = models[model_id].model_eval 
+                    #fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
 
                     c_eval = fun_eval[model_id][i, :]
                     data_hist[model_id][i, :] = c_eval 

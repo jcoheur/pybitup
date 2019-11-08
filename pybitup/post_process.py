@@ -31,6 +31,12 @@ def post_process_data(inputFields):
         n_unpar = len(unpar_name)
         n_samples = n_iterations + 1
 
+        unpar_name_list = {}
+        for i, name_param in enumerate(unpar_name):
+            unpar_name_list[name_param] = i
+
+        num_fig = 0
+
     # -------------------------------------------
     # --------- Plot experimental data ----------
     # -------------------------------------------
@@ -70,7 +76,7 @@ def post_process_data(inputFields):
  
                 for i in range(n_data_set): 
 
-                    plt.figure(i)
+                    plt.figure(num_fig+i)
                     plt.plot(data_exp[data_id].x, data_exp[data_id].y[i*n_x:(i+1)*n_x],
                             'o', color=lineColor[num_data_set][0], mfc='none')
 
@@ -96,18 +102,15 @@ def post_process_data(inputFields):
 
                 for i in range(n_data_set): 
 
-                    plt.figure(i)
+                    plt.figure(num_fig+i)
 
                     plt.plot(data_exp[data_id].x,
                             data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
 
-
-
-
     if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None) or  (inputFields.get("Propagation") is not None):
 
         # Load the samples of the distribution                        
-        param_value_raw = np.zeros((n_iterations+2, n_unpar))
+        param_value_raw = np.zeros((n_samples, n_unpar))
         with open('output/mcmc_chain.dat', 'r') as file_param:
             i = 0
             for line in file_param:
@@ -121,9 +124,9 @@ def post_process_data(inputFields):
         # -------------------------------------------
 
         if inputFields.get("MarkovChain") is not None and inputFields["MarkovChain"]["display"] == "yes":
-
+            num_fig = 100
             for i in range(n_unpar):
-                plt.figure(100+i)
+                plt.figure(num_fig+i)
                 plt.plot(range(n_samples), param_value_raw[:, i])
                 plt.xlabel("Number of iterations")
                 plt.ylabel(unpar_name[i])
@@ -138,6 +141,8 @@ def post_process_data(inputFields):
 
             burnin_it = inputFields["Posterior"]["burnin"]
             param_value = param_value_raw[range(burnin_it, n_samples), :]
+
+            num_fig = 200
 
             if inputFields["Posterior"]["distribution"] == "marginal":
 
@@ -167,13 +172,13 @@ def post_process_data(inputFields):
 
                         data_i = param_value[:, i]
 
-                        plt.figure(200+i)
+                        plt.figure(num_fig+i)
                         plt.hist(data_i, bins='auto', density=True)
                
 
             if inputFields["Posterior"]["distribution"] == "bivariate":
                 # Compute bivariate marginal pdf 
-                numFig = 200
+
                 if  "scatter" in inputFields["Posterior"]["estimation"]: 
                     for i in range(n_unpar):
                         range_data = range(1,len(param_value[:,i]), 10)
@@ -182,11 +187,64 @@ def post_process_data(inputFields):
                         for j in range(i+1, n_unpar):
                             data_j = param_value[range_data, j]
 
-                            plt.figure(numFig)
+                            plt.figure(num_fig)
                             plt.scatter(data_j, data_i, c=['C2'], s=10)
-                            numFig += 1 
+                            num_fig += 1 
 
-                saveToTikz('no_reparam.tex')
+                if "contour" in inputFields ["Posterior"]["estimation"]:
+
+                    for i, var_name in enumerate(unpar_name):
+
+                        # Get first coordinate param values
+                        x = param_value[:, i]
+                        xmin = np.min(x) 
+                        xmax = np.max(x) 
+
+                        # Get second coordinatee param values
+                        for var_name_2 in unpar_name[i+1:len(unpar_name)]:
+                            # Number of the corresponding parameter name 
+                            k = unpar_name_list[var_name_2]
+
+                            y = param_value[:, k]
+                            ymax = np.max(y)
+                            ymin = np.min(y)
+
+                            # Peform the kernel density estimate
+                            xx, yy = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+           
+                            positions = np.vstack([xx.ravel(), yy.ravel()])
+                            values = np.vstack([x, y])
+
+                            kernel = stats.gaussian_kde(values)
+                            f = np.reshape(kernel(positions).T, xx.shape)
+
+                            fig = plt.figure(num_fig)
+                            ax = fig.gca()
+
+                            ax.set_xlim(xmin, xmax)
+                            ax.set_ylim(ymin, ymax)
+                            # Contourf plot
+                            cfset = ax.contourf(xx, yy, f, cmap='Blues')
+                            ## Or kernel density estimate plot instead of the contourf plot
+                            #ax.imshow(np.rot90(f), cmap='Blues', extent=[xmin, xmax, ymin, ymax])
+                            # Contour plot
+                            cset = ax.contour(xx, yy, f, colors='k')
+                            # Label plot
+                            ax.clabel(cset, inline=1, fontsize=10)
+                            plt.xlabel(var_name)
+                            plt.ylabel(var_name_2)
+
+                            num_fig = num_fig + 1
+
+                            plt.figure(num_fig)
+                            plt.scatter(np.log(x), np.log(y), c=['C2'], s=10)
+                            plt.xlabel(var_name)
+                            plt.ylabel(var_name_2)
+
+                            num_fig = num_fig + 1
+                        
+
+                #saveToTikz('no_reparam.tex')
 
 
         # ----- Bivariate probability distribution functions ----- 

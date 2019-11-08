@@ -9,7 +9,7 @@ class MetropolisHastings:
     def __init__(self, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        if nIterations < 100:
+        if self.nIterations < 100:
             self.save_freq = 1
         else:
             self.save_freq = nIterations/100
@@ -26,19 +26,22 @@ class MetropolisHastings:
         self.distr_fun_current_val = self.distr_fun(self.current_val)
 
         # Create the output file mcmc_chain.dat and close it
+        # This will erase already existing file and avoid appending values 
         tmp_fileID = open("output/mcmc_chain.dat", "w")
         tmp_fileID.close()
         tmp_fileID2 = open("output/mcmc_chain2.dat", "w")
         tmp_fileID2.close()
         tmp_file_gp = open("output/gp.dat", "w") # Gaussian proposal
         tmp_file_gp.close()
+        tmp_fileID3 = open('output/mcmc_chain.csv','w') # Gaussian proposal
+        tmp_fileID3.close()
+
 
         # Re-open it in read and write mode (option r+ cannot create non existing file)
         self.fileID = open("output/mcmc_chain.dat", "r+")
         self.fileID2 = open("output/mcmc_chain2.dat", "r+")
         self.file_gp = open("output/gp.dat", "r+")
-
-        self.fileID3=open('output/mcmc_chain.csv','ab')
+        self.fileID3 = open('output/mcmc_chain.csv','r+')
 
         self.distr_output_file_name = "output/fun_eval."
         self.write_val(self.current_val)
@@ -137,6 +140,7 @@ class MetropolisHastings:
     def terminate_loop(self):
         self.fileID.close()
         self.fileID3.close()
+        self.file_gp.close()
         print("End time {}" .format(time.asctime(time.localtime())))
         print("Elapsed time: {} sec".format(time.strftime(
             "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
@@ -197,7 +201,7 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
     def run_algorithm(self):
 
-        for i in range(self.nIterations+1):
+        for i in range(1, self.nIterations+1):
 
             self.compute_new_val()
             self.compute_acceptance_ratio()
@@ -361,7 +365,7 @@ class ito_SDE(MetropolisHastings):
 
     def run_algorithm(self):
 
-        for i in range(self.nIterations+1):
+        for i in range(1, self.nIterations+1):
 
             # Solve Ito-SDE using Stormer-Verlet scheme
             WP_np = np.sqrt(self.h) * self.compute_multivariate_normal()

@@ -18,7 +18,6 @@
             ],
             "Model": [
                 {
-                    "input_file": "None", 
                     "param_names": ["A", "B", "C", "D"],
                     "param_values": [-333.33, 4095.83, -2553.33, 570.83],
                     "parametrization" : "no"

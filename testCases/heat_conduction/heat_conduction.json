@@ -13,7 +13,6 @@
             ],
             "Model": [
                 {
-                    "input_file": "None",
                     "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
                     "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
                     "parametrization" : "no"
@@ -70,7 +69,7 @@
             "display": "yes", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 100
+            "burnin": 10
         },
         "Propagation": {
 		    "display": "yes",

@@ -6,10 +6,13 @@ import pandas as pd
 
 class MetropolisHastings:
 
-    def __init__(self, caseName, nIterations, param_init, V, prob_distr):
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        self.save_freq = nIterations/100
+        if self.nIterations < 100:
+            self.save_freq = 1
+        else:
+            self.save_freq = nIterations/100
         self.param_init = param_init
         self.V = V
         self.prob_distr = prob_distr 
@@ -22,22 +25,15 @@ class MetropolisHastings:
         self.z_k = np.zeros(self.n_param)
         self.distr_fun_current_val = self.distr_fun(self.current_val)
 
-        # Create the output file mcmc_chain.dat and close it
-        tmp_fileID = open("output/mcmc_chain.dat", "w")
-        tmp_fileID.close()
-        tmp_fileID2 = open("output/mcmc_chain2.dat", "w")
-        tmp_fileID2.close()
-        tmp_file_gp = open("output/gp.dat", "w") # Gaussian proposal
-        tmp_file_gp.close()
-
-        # Re-open it in read and write mode (option r+ cannot create non existing file)
-        self.fileID = open("output/mcmc_chain.dat", "r+")
-        self.fileID2 = open("output/mcmc_chain2.dat", "r+")
-        self.file_gp = open("output/gp.dat", "r+")
-
-        self.fileID3=open('output/mcmc_chain.csv','ab')
-
+        # Outputs 
+        self.IO_fileID = IO_fileID
+        # Ensure that we start the files at 0 (due to the double initialisation of DRAM)
+        self.IO_fileID['MChains'].seek(0) 
+        self.IO_fileID['MChains_reparam'].seek(0)
+        self.IO_fileID['MChains_csv'].seek(0)
         self.distr_output_file_name = "output/fun_eval."
+
+        # Write initial values 
         self.write_val(self.current_val)
         self.prob_distr.update_eval()
         self.write_fun_distr_val(0)
@@ -54,8 +50,7 @@ class MetropolisHastings:
 
     def run_algorithm(self):
 
-        for i in range(self.nIterations+1):
-
+        for i in range(1, self.nIterations+1):
             self.compute_new_val()
             self.compute_acceptance_ratio()
             self.accept_reject()
@@ -112,17 +107,17 @@ class MetropolisHastings:
         # Load all the previous iterations
         param_values = np.zeros((self.nIterations+2, self.n_param))
         j = 0
-        self.fileID.seek(0)
-        for line in self.fileID:
+        self.IO_fileID['MChains'].seek(0)
+        for line in self.IO_fileID['MChains']:
             c_chain = line.strip()
             param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
             j += 1
 
         # Compute sample mean and covariance
         #mean_c = np.mean(param_values, axis=0)
-        cov_c = np.cov(param_values, rowvar=False)
+        self.cov_c = np.cov(param_values, rowvar=False)
         print("Final chain Covariance is")
-        print(cov_c)
+        print(self.cov_c)
 
     def compute_multivariate_normal(self):
 
@@ -133,25 +128,27 @@ class MetropolisHastings:
         return mv_norm
 
     def terminate_loop(self):
-        self.fileID.close()
-        self.fileID3.close()
+
         print("End time {}" .format(time.asctime(time.localtime())))
         print("Elapsed time: {} sec".format(time.strftime(
             "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
-        print("Rejection rate is {} %".format(self.n_rejected/self.nIterations*100))
-
-        with open("output/output.dat", 'w') as output_file:
-            output_file.write("$RandomVarName$\n")
-            for i in range(self.n_param): 
-                output_file.write("X{} ".format(i))
-            output_file.write("\n$IterationNumber$\n{}\n".format(self.nIterations))
-            
-            output_file.write("\nRejection rate is {} % \n".format(
-                self.n_rejected/self.nIterations*100))
-            output_file.write("Maximum Likelihood Estimator (MLE) \n")
-            #output_file.write("{} \n".format(self.arg_max_LL))
-            output_file.write("Log-likelihood value \n")
-            #output_file.write("{}".format(self.max_LL))
+        if self.nIterations == 0: 
+            rejection_rate = 0
+        else: 
+            rejection_rate = self.n_rejected/self.nIterations*100
+            print("Rejection rate is {} %".format(rejection_rate))
+      
+        self.IO_fileID['out_data'].write("$RandomVarName$\n")
+        for i in range(self.n_param): 
+            self.IO_fileID['out_data'].write("X{} ".format(i))
+        self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
+        
+        self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
+        self.IO_fileID['out_data'].write("Maximum Likelihood Estimator (MLE) \n")
+        #self.IO_fileID['out_data'].write("{} \n".format(self.arg_max_LL))
+        self.IO_fileID['out_data'].write("Log-likelihood value \n")
+        #self.IO_fileID['out_data'].write("{}".format(self.max_LL))
+        self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
@@ -162,29 +159,29 @@ class MetropolisHastings:
 
     def write_val(self, value):
         # Write the new current val parameter values
-        self.fileID.write("{}\n".format(str(value).replace('\n', '')))
+        self.IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
         # replace is used to remove the end of lines in the arrays
         
         #Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
-        self.file_gp.write("{}\n".format(str(self.z_k).replace('\n', '')))
+        self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))
 
         # Write also the sample in the initial parameter space
-        #self.prob_distr.save_sample(self.fileID2, value)
+        #self.prob_distr.save_sample(self.IO_fileID['MChains_reparam'], value)
 
         # df = pd.DataFrame(value)
         # df.to_csv('my_csv.csv', header=None, index=None, mode='a')
-        np.savetxt(self.fileID3, np.array([value]), fmt="%f", delimiter=",")
+        np.savetxt(self.IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
 
     def write_fun_distr_val(self, current_it):
         if current_it % (self.save_freq) == 0:
-            self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
-
+            #self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
+            self.prob_distr.save_value(current_it)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
 
-    def __init__(self, caseName, nIterations, param_init, V, prob_distr,
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, 
             starting_it, updating_it, eps_v):
-        MetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr)
+        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
         self.starting_it = starting_it
         self.updating_it = updating_it
         self.S_d = 2.38**2/self.n_param
@@ -192,7 +189,7 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
     def run_algorithm(self):
 
-        for i in range(self.nIterations+1):
+        for i in range(1, self.nIterations+1):
 
             self.compute_new_val()
             self.compute_acceptance_ratio()
@@ -219,8 +216,8 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
                 # Load all the previous iterations
                 param_values = np.zeros((self.starting_it+1, self.n_param))
                 j = 0
-                self.fileID.seek(0)
-                for line in self.fileID:
+                self.IO_fileID['MChains'].seek(0)
+                for line in self.IO_fileID['MChains']:
                     c_chain = line.strip()
                     param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
                     j += 1
@@ -252,8 +249,8 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
 class DelayedRejectionMetropolisHastings(MetropolisHastings):
 
-    def __init__(self, caseName, nIterations, param_init, V, prob_distr, gamma):
-        MetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr)
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, gamma):
+        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
         self.gamma = gamma
 
         # Compute inverse of covariance
@@ -305,12 +302,12 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
 
 class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, DelayedRejectionMetropolisHastings):
 
-    def __init__(self, caseName, nIterations, param_init, V, prob_distr,
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr,
             starting_it, updating_it, eps_v, gamma):
         # There is still a problem here as we initialize two times the mother class MetropolisHastings, while once is enough. Don't know yet how to do.
-        AdaptiveMetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr,
+        AdaptiveMetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr,
                                             starting_it, updating_it, eps_v)
-        DelayedRejectionMetropolisHastings.__init__(self, caseName, nIterations, param_init, V, prob_distr,
+        DelayedRejectionMetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, 
                                                     gamma)
 
     def update_covariance(self):
@@ -323,8 +320,8 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
 class ito_SDE(MetropolisHastings):
     """Implementation of the Ito-SDE (Arnst et al.) mcmc methods. Joffrey Coheur 17-04-19."""
 
-    def __init__(self, caseName, nIterations, param_init, prob_distr, h, f0):
-        MetropolisHastings.__init__(self, caseName, nIterations, param_init, np.ones([1,1]), prob_distr)
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, h, f0):
+        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr)
 
         # Time step h and free parameter f0 for the ito-sde resolution
         self.h = h
@@ -356,7 +353,7 @@ class ito_SDE(MetropolisHastings):
 
     def run_algorithm(self):
 
-        for i in range(self.nIterations+1):
+        for i in range(1, self.nIterations+1):
 
             # Solve Ito-SDE using Stormer-Verlet scheme
             WP_np = np.sqrt(self.h) * self.compute_multivariate_normal()

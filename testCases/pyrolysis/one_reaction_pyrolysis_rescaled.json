@@ -18,7 +18,7 @@
             ],
             "Model": [
                 { 
-                    "input_file": "None", 
+                    "model_id": "one_reaction_pyrolysis_rescaled", 
                     "param_names": ["A", "E", "n", "m", "F", "tau"],
                     "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
                     "parametrization" : "yes"
@@ -68,12 +68,12 @@
             "display": "yes", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 100
+            "burnin": 1
         },
         "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "burnin": 10,
+		    "burnin": 1,
 		    "num_plot": 1
 		}
     }

@@ -18,7 +18,7 @@
             ],
             "Model": [ 
                 {
-                    "input_file": "None", 
+                    "model_id": "one_reaction_pyrolysis", 
                     "param_names": ["A", "E", "n", "m", "F", "tau"],
                     "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
                     "parametrization" : "no"
@@ -45,7 +45,7 @@
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-				    "value": [1e-3, 1e-3, 1e-3, 1e-4]
+				    "value": [1e-3, 1e-3, 1e-3, 1e-5]
 				}
 			}
         }
@@ -56,7 +56,6 @@
             {
                 // Emulator ? 
                 "model_id": "6.1_K_per_Min", // Optional
-                "input_file": "None",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
@@ -68,7 +67,6 @@
             {
                 // Emulator ? 
                 "model_id": "366_K_per_Min", // Optional
-                "input_file": "None",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
@@ -84,6 +82,12 @@
             "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
             "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
             "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
+        },
+        "Model_evaluation": {
+            "Parallel_evaluation": {
+                "model_concurrency_evaluation" : 1, 
+                "sample_concurrency_evaluation" : 1
+            }
         }
     },
 
@@ -102,14 +106,14 @@
 		},
         "Posterior": {
             "display": "no", 
-            "distribution": "marginal", // marginal, bivariate
-            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 100
+            "distribution": "bivariate", // marginal, bivariate
+            "estimation": "contour", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 1
         },
         "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "burnin": 10,
+		    "burnin": 1,
 		    "num_plot": 1
 		}
     }

@@ -19,7 +19,6 @@
     
             "Model": [
                 {
-                    "input_file": "None", 
                     "param_names": ["C", "K"],
                     "param_values": [1.5, 20.5],
                     "parametrization" : "no"

@@ -8,6 +8,8 @@ input_file_name = "sampling_multivariate_gaussian.json"
 
 my_dist = pybitup.sample_dist.SolveProblem(input_file_name)
 my_dist.sample()
-my_dist.post_process_dist()
+my_dist.__del__()
+
+pybitup.post_process.post_process_data(input_file_name)
 
 

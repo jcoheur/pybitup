@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 case_name = "one_reaction_pyrolysis"
 input_file_name = "{}.json".format(case_name) 
 
-pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
+pyro_model = {}
+pyro_model["one_reaction_pyrolysis"] = one_reaction_pyrolysis.OneReactionPyrolysis()
 
 #param_values = np.array([1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1])
 #T = np.array([np.linspace(300.0, 1400.0, 100)])
@@ -25,7 +26,9 @@ pyro_model = one_reaction_pyrolysis.OneReactionPyrolysis()
 
 post_dist = pybitup.sample_dist.SolveProblem(input_file_name)
 post_dist.sample(pyro_model)
-#post_dist.post_process_dist()
+#post_dist.propagate(pyro_model)
+post_dist.__del__()
 
-post_dist.propagate(pyro_model)
+pybitup.post_process.post_process_data(input_file_name)
+
 

@@ -32,7 +32,10 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
         X = self.model.parametrization_backward(Y) 
         
-        bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(Y) * self.likelihood.compute_value(X) 
+                
+        # For ito SDE to work for pyro parallel (to be changed ... )
+        #bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(Y) * self.likelihood.compute_value(X) 
+        bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(X) * self.likelihood.compute_value(X) 
 
         return bayes_post 
 
@@ -42,12 +45,15 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
         prior_log_value = self.prior.compute_log_value(X)
         log_like_val = self.likelihood.compute_log_value(X)
+
         if prior_log_value is -np.inf or log_like_val is np.nan:
             # Avoid computation of likelihood if prior is zero 
             log_bayes_post = -np.inf
         else: 
-            log_bayes_post = prior_log_value + np.log(self.model.parametrization_det_jac(Y)) + log_like_val
-
+            # For ito SDE to work for pyro parallel (to be changed ... )
+            # log_bayes_post = prior_log_value + np.log(self.model.parametrization_det_jac(Y)) + log_like_val
+            log_bayes_post = prior_log_value + np.log(self.model.parametrization_det_jac(X)) + log_like_val
+ 
 
         return log_bayes_post
 
@@ -238,7 +244,7 @@ class Model:
             var_param_index = []
             char_name = " ".join(self.unpar_name)
 
-            n_unpar = len(self.unpar_name.keys())
+            n_unpar = len(self.unpar_name)
 
             for idx, name in enumerate(self.param_names):
                 is_name = char_name.find(name)

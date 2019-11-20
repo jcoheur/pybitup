@@ -12,9 +12,10 @@ class Sampler:
 
     algo : dict containing the sampling algorithm specifications """ 
 
-    def __init__(self, prob_dist, algo):
+    def __init__(self, IO_fileID, prob_dist, algo):
         self.prob_dist = prob_dist 
         self.algo = algo
+        self.IO_fileID = IO_fileID
 
         # List of implemented algorithms 
         av_algo = ['RWMH', 'AMH', 'DR', 'DRAM', 'Ito-SDE']
@@ -43,18 +44,19 @@ class Sampler:
 
         if self.algo_name == "RWMH": 
             print("Using random-walk Metropolis-Hastings algorithm.")
-            run_MCMCM = mha.MetropolisHastings("sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist)  
+            run_MCMCM = mha.MetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist)  
         elif self.algo_name == "AMH": 
             print("Using adaptive random-walk Metropolis-Hastings algorithm.")
             starting_it = int(self.algo['AMH']['starting_it'])
             updating_it = int(self.algo['AMH']['updating_it'])
             eps_v = self.algo['AMH']['eps_v']
-            run_MCMCM = mha.AdaptiveMetropolisHastings("sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
-                                                         starting_it, updating_it, eps_v)
+            run_MCMCM = mha.AdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
+                                                        starting_it, updating_it, eps_v)
         elif self.algo_name == "DR": 
             print("Using delayed-rejection random-walk Metropolis-Hastings algorithm.")
             gamma = self.algo['DR']['gamma']
-            run_MCMCM = mha.DelayedRejectionMetropolisHastings("sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist, gamma)
+            run_MCMCM = mha.DelayedRejectionMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
+                                                        gamma)
 
         elif self.algo_name == "DRAM": 
             print("Using delayed-rejection adaptive random-walk Metropolis-Hastings algorithm.")
@@ -62,12 +64,13 @@ class Sampler:
             updating_it = int(self.algo['DRAM']['updating_it'])
             eps_v = self.algo['DRAM']['eps_v']
             gamma = self.algo['DRAM']['gamma']
-            run_MCMCM = mha.DelayedRejectionAdaptiveMetropolisHastings("sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist, 
+            run_MCMCM = mha.DelayedRejectionAdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
                                                                         starting_it, updating_it, eps_v, gamma)
         elif self.algo_name == "Ito-SDE": 
             print("Running Ito-SDE algorithm.")
             h = self.algo['Ito-SDE']['h']
             f0 = self.algo['Ito-SDE']['f0']
-            run_MCMCM = mha.ito_SDE("sampling", self.n_iterations, sample_init, self.prob_dist, h, f0)
+            run_MCMCM = mha.ito_SDE(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
+                                    h, f0)
         
         run_MCMCM.run_algorithm()

@@ -23,7 +23,7 @@ class SolveProblem():
 
     def __init__(self, input_file_name): 
 
-         # -------------------------
+        # -------------------------
         # Open and read input file 
         # -------------------------
 
@@ -35,56 +35,43 @@ class SolveProblem():
         #with open("heat_capacity.json", 'r') as input_file:
         #user_inputs = json.load(input_file)
 
+        # Define the Input-Output utilities 
+        #----------------------------------
+
+        # Initialise
+        self.IO_path = {}
+        self.IO_fileID = {}
+
+        # Define the file names 
+        self.IO_path['out_folder'] = "output"
+        self.IO_path['out_data'] = self.IO_path['out_folder']+"/output.dat"
+        self.IO_path['MChains'] = self.IO_path['out_folder']+"/mcmc_chain.dat"
+        self.IO_path['MChains_reparam'] = self.IO_path['out_folder']+"/mcmc_chain2.dat"
+        self.IO_path['MChains_csv'] = self.IO_path['out_folder']+"/mcmc_chain.csv"
+        self.IO_path['gp'] = self.IO_path['out_folder']+"/gp.dat" # Gaussian proposal 
+
         # Create the output folder
-        os.system("mkdir output")
+        os.system("mkdir " + self.IO_path['out_folder'])
 
-    def f_X(self, var_param, model, model_inputs, unpar_name): 
-        """ Define the vector of model evaluation."""
-        
-        param_names = model_inputs['param_names']
-        param_nom = np.array(model_inputs['param_values'])
+        # Create and open output files  
+        for file_keys in self.IO_path.keys():
 
-        if model_inputs['input_file'] == "None": 
+            # We open all files except the output folder
+            if file_keys is not 'out_folder': 
+                # First, we create the output files by opening them in write mode and close them
+                # This will erase already existing file and avoid appending values
+                tmp_fileID = open(self.IO_path[file_keys], "w")
+                tmp_fileID.close()
 
-            n_param_model = len(param_nom)
+                # Then, we re-open it in read and write mode (option r+ cannot create non existing file)
+                # This defines the files IDs
+                self.IO_fileID[file_keys] = open(self.IO_path[file_keys], "r+")
 
-            model.param = param_nom
-        
-            var_param_index = []
-            char_name = " ".join(unpar_name)
+    def __del__(self):
+        """ The destructeur defined here is used to ensure that all outputs files are properly closed """ 
 
-            n_unpar = len(unpar_name.keys())
-
-            for idx, name in enumerate(param_names):
-                is_name = char_name.find(name)
-                if is_name >= 0: 
-                    var_param_index.append(idx)
-
-            if n_unpar < n_param_model: # Only a subset of parameters is uncertain
-                vec_param = param_nom 
-                for n in range(0, n_unpar): 
-                    vec_param[var_param_index[n]] = var_param[n]
-
-                model.param = vec_param
-
-            else: # All parameters are uncertain
-                model.param = var_param
-
-            model_eval=model.fun_x()
-            
-            
-        else: 
-            # Model is build based on a given input file. 
-            # If an input file is provided, the uncertain parameters are specified within the file. 
-            # The uncertain parameters is identified by the keyword "$", e.g. "$myParam$". 
-            # The input file read by the model is in user_inputs['Model']['input_file']. 
-
-            model.param = param_nom
-        
-            #model_eval = np.concatenate((model_eval, my_model.fun_x(c_model['input_file'], unpar_name,var_param)))
-            model_eval = model.fun_x(model_inputs['input_file'], unpar_name, var_param)
-
-        return model_eval
+        for fileID in self.IO_fileID.values():
+            fileID.close()
 
     def sample(self, models={}): 
 
@@ -177,14 +164,6 @@ class SolveProblem():
 
 
                 data[model_id] = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
-                
-                # # Initialise data set
-                # if data_set == 0: 
-                #     data = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
-                    
-                # # When there are more than one data set, add them to previous data
-                # else: 
-                #     data.add_data_set(dataName, x, y, std_y)	
 
             # Write the data in output data file 
             with open('output/data', 'wb') as file_data_exp: 
@@ -201,7 +180,7 @@ class SolveProblem():
                 unpar_name[names] = [] #unpar_name.append(names)
 
             for model_id in models.keys(): 
-                models[model_id].unpar_name = unpar_name
+                models[model_id].unpar_name = unpar_name.keys()
 
             # Get a priori information on the uncertain parameters
             # ----------------------------------------------------
@@ -219,17 +198,7 @@ class SolveProblem():
             distr_name = [BP_inputs['Prior']['Distribution']]
             hyperparam = [unpar_prior_name, unpar_prior_param]
             prior_dist = pybitup.distributions.set_probability_dist(distr_name, hyperparam)
-
-            # Function evaluation from the model as a function of the uncertain parameters only 
-            # ----------------------------------------------------------------------------------			
-            def vec_model_eval(var_param): 
-                model_eval = []
-                for num_model, model_id in enumerate(models.keys()):
-                    model_id_eval = self.f_X(var_param, models[model_id], BP_inputs['Model'][num_model], unpar_name)
-                    model_eval = np.concatenate((model_eval, model_id_eval))
-
-                return model_eval
-            
+           
             # Likelihood 
             # -----------
             likelihood_fun = pybitup.bayesian_inference.Likelihood(data, models)
@@ -241,14 +210,13 @@ class SolveProblem():
             # the model provided here in input is only because it contains the parametrization. They should be the same for all
             # models. Here, we provide the one with model_id = 0 as it is always present. 
 
-
         else:
             raise ValueError('No samling distribution provided or invalid name.')
 
         # Run sampling of the distribution
         if (self.user_inputs["Sampling"].get('Algorithm') is not None): 
             algo = self.user_inputs["Sampling"]["Algorithm"]
-            sampling_dist = pybitup.inference_problem.Sampler(sample_dist, algo) 
+            sampling_dist = pybitup.inference_problem.Sampler(self.IO_fileID, sample_dist, algo) 
             sampling_dist.sample(unpar_init_val) 
 
         # Compute the posterior directly from analytical formula (bayes formula in case of Bayesian inference)
@@ -261,17 +229,6 @@ class SolveProblem():
             else:
                 posterior = sample_dist.compute_density()
                             
-
-
-    def post_process_dist(self):
-
-        if (self.user_inputs.get("PostProcess") is not None):
-            self.pp = self.user_inputs["PostProcess"] 
-        else: 
-            raise ValueError('Ask for post processing data but no inputs were provided')
-
-        pybitup.post_process.post_process_data(self.pp)
-
 
     def propagate(self, models=[]): 
 
@@ -338,6 +295,7 @@ class SolveProblem():
                 models[model_id].param_nom = np.array(c_model['param_values'])
                 models[model_id].param_names = c_model['param_names']
                 models[model_id].unpar_name = unpar.keys()
+
 
             # Run propagation 
             # ---------------

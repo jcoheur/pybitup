@@ -8,13 +8,26 @@ from scipy import stats
 from tikzplotlib import save as tikz_save
 
 
-def post_process_data(inputFields):
+def post_process_data(input_file_name):
        
     # Colors
     lineColor = [['C0'], ['C1'], ['C2'], [
         'C3'], ['C4'], ['C5'], ['C6'], ['C7']]
 
-    
+    # -------------------------
+    # Open and read input file 
+    # -------------------------
+
+    # First, remove comments from the file with jsmin because json doesn't allow it
+    with open("{}".format(input_file_name)) as js_file:
+        minified = jsmin(js_file.read())
+    user_inputs = json.loads(minified)
+
+    if (user_inputs.get("PostProcess") is not None):
+        inputFields = user_inputs["PostProcess"] 
+    else: 
+        raise ValueError('Ask for post processing data but no inputs were provided')
+
     with open('output/output.dat', 'r') as file_param:
 
         for ind, line in enumerate(file_param):
@@ -131,6 +144,14 @@ def post_process_data(inputFields):
                 plt.xlabel("Number of iterations")
                 plt.ylabel(unpar_name[i])
 
+                saveToTikz('markov_chain_'+unpar_name[i]+'.tex')
+
+                c_mean_val = np.mean(param_value_raw[:, i])
+                c_std_val = np.std(param_value_raw[:, i])
+                print("{}. Mean value: {}; standard dev.: {}.".format(unpar_name[i], c_mean_val, c_std_val))
+
+
+
 
 
         # -------------------------------------------
@@ -156,7 +177,7 @@ def post_process_data(inputFields):
                         p = kde(x)
 
                         # Plot 
-                        plt.figure(200+i)
+                        plt.figure(num_fig+i)
                         plt.plot(x, p)
                         plt.xlabel(unpar_name[i])
                         plt.ylabel("Probability density")
@@ -175,6 +196,9 @@ def post_process_data(inputFields):
                         plt.figure(num_fig+i)
                         plt.hist(data_i, bins='auto', density=True)
                
+                for i in range(n_unpar): 
+                    plt.figure(num_fig+i)
+                    saveToTikz('marginal_pdf_'+inputFields["Posterior"]["estimation"]+'_'+unpar_name[i]+'.tex')
 
             if inputFields["Posterior"]["distribution"] == "bivariate":
                 # Compute bivariate marginal pdf 
@@ -236,12 +260,14 @@ def post_process_data(inputFields):
 
                             num_fig = num_fig + 1
 
-                            plt.figure(num_fig)
-                            plt.scatter(np.log(x), np.log(y), c=['C2'], s=10)
-                            plt.xlabel(var_name)
-                            plt.ylabel(var_name_2)
+                            saveToTikz('bivariate_contour_'+var_name+'_'+var_name_2+'.tex')
 
-                            num_fig = num_fig + 1
+                            # plt.figure(num_fig)
+                            # plt.scatter(np.log(x), np.log(y), c=['C2'], s=10)
+                            # plt.xlabel(var_name)
+                            # plt.ylabel(var_name_2)
+
+                            # num_fig = num_fig + 1
                         
 
                 #saveToTikz('no_reparam.tex')
@@ -314,7 +340,6 @@ def post_process_data(inputFields):
 
             #for i in range(data_exp.n_data_set):
             for num_data_set, data_id in enumerate(data_exp.keys()):
-                print(data_id)
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y)/n_x)
  

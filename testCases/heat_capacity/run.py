@@ -9,5 +9,7 @@ heat_capacity_model[case_name] = heat_capacity.HeatCapacity()
 
 post_dist = pybitup.sample_dist.SolveProblem(input_file_name)
 post_dist.sample(heat_capacity_model)
-post_dist.post_process_dist()
+post_dist.__del__()
+
+pybitup.post_process.post_process_data(input_file_name)
 

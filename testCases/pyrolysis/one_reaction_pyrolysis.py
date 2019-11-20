@@ -15,8 +15,6 @@ class OneReactionPyrolysis(bi.Model):
         
         self.xi_init = 0
 
-        self.P = np.array([1.0, 113000, 2.0, 0.04])
-                
     def set_param_values(self):
 
         # Parameters
@@ -40,7 +38,7 @@ class OneReactionPyrolysis(bi.Model):
         
         # Exponential integral function 
         ei = special.expi
-
+                
         # Analytical solution
         C = (1 - self.xi_init)**(1 - self.n)/(1 - self.n) + (self.A / self.tau) * self.T_0 * np.exp(-self.E / (R * self.T_0)) \
             + ei(-self.E / (R * self.T_0)) * self.E * (self.A / self.tau) / R
@@ -61,39 +59,4 @@ class OneReactionPyrolysis(bi.Model):
     def fun_x(self): 
         return self.compute_gas_prod()
 
-    # def parametrization_forward(self, X):
-
-    #     X1 = self.P[1] / (OneReactionPyrolysis.R * 800)
-
-    #     Y = np.zeros(len(X[:]))
-
-    #     Y[0] = np.log(X[0]) - X[1] / self.P[1] * X1
-
-    #     Y[1] =  X[1] / self.P[1]
-
-    #     Y[2] = X[2] / self.P[2]
-
-    #     Y[3] = X[3] / self.P[3]
-
-    #     return Y
-        
-    # def parametrization_backward(self, Y):
-            
-    #     X1 = self.P[1] / (OneReactionPyrolysis.R * 800)
-        
-    #     X = np.zeros(len(Y[:]))
-        
-    #     X[0] = np.exp(Y[0] + Y[1]*X1)
-        
-    #     X[1] = Y[1] * self.P[1]
-        
-    #     X[2] = Y[2] * self.P[2]
-        
-    #     X[3] = Y[3] * self.P[3]
-        
-    #     return X
-        
-    # def parametrization_det_jac(self, X):
-
-    #     return X[0]
 

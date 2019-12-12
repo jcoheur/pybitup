@@ -6,7 +6,7 @@ from scipy.integrate import simps
 import matplotlib.pyplot as plt
 
 
-def set_probability_dist(name_list, hyperparam): 
+def set_probability_dist(name_list, hyperparam, n_rand_var): 
     """ Set the probability distribution. """
 
     # Check that the function provided in names are implemented 
@@ -18,11 +18,11 @@ def set_probability_dist(name_list, hyperparam):
                 "Implemented prior functions are {}.".format(name,implemented_functions))
 
     if name == 'Gaussian':
-        prob_dist = Gaussian(hyperparam)
+        prob_dist = Gaussian(hyperparam, n_rand_var)
     elif name == 'Uniform': 
-        prob_dist = Uniform(hyperparam)
+        prob_dist = Uniform(hyperparam, n_rand_var)
     elif name == 'Mixture': 
-        prob_dist = Mixture(hyperparam)
+        prob_dist = Mixture(hyperparam, n_rand_var)
 
     return prob_dist
 
@@ -30,10 +30,15 @@ def set_probability_dist(name_list, hyperparam):
 
 class ProbabilityDistribution: 
 
-    def __init__(self, hyperparam):
+    def __init__(self, hyperparam, n_rand_var):
         self.hyperparam = hyperparam 
-        self.dim = []
+        self.dim = n_rand_var
         self.distr_support = np.zeros([1,1]) 
+
+        self.name_random_var = []
+        for i in range(self.dim):
+            self.name_random_var.append("X{} ".format(i))
+
 
     def compute_value(self, X): 
         return 0
@@ -89,6 +94,14 @@ class ProbabilityDistribution:
 
         return f_post 
 
+
+    def save_sample(self, IO_fileID, value): 
+        """ Save the sample vaue in a text file""" 
+
+        # Write the Markov chain file 
+        IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
+        np.savetxt(IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
+        
     def update_eval(self): 
         """ For Bayesian posterior only """
         pass
@@ -98,39 +111,42 @@ class ProbabilityDistribution:
         pass
 
 
+
+
 class Gaussian(ProbabilityDistribution): 
 
-    def __init__(self, hyperparam): 
-        ProbabilityDistribution.__init__(self, hyperparam)
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
 
-        self.mean = np.array(hyperparam[0][0]) 
-        self.cov = np.array(hyperparam[0][1])
-    
+        self.mean = np.array(hyperparam[0]).T
+        self.cov = np.array(hyperparam[1])
+
         # Support of the distribution in each dimension as mean +- 4 sigma 
-        self.dim = len(self.mean)
         self.distr_support = np.zeros([self.dim, 2])
         for i in range(self.dim): 
             var_ii = self.cov[i,i]
             # lower bound 
-            self.distr_support[i,0] = self.mean[i] - 4 * np.sqrt(var_ii)
+            self.distr_support[i,0] = self.mean[0][i] - 4 * np.sqrt(var_ii)
             # upper bound 
-            self.distr_support[i,1] = self.mean[i] + 4 * np.sqrt(var_ii)
+            self.distr_support[i,1] = self.mean[0][i] + 4 * np.sqrt(var_ii)
 
         if self.dim < 2: 
             self.inv_cov = 1 / self.cov
+            det_cov = self.cov
         else: 
             self.inv_cov = linalg.inv(self.cov)
+            det_cov = linalg.det(self.cov)
 
-        det_cov = linalg.det(self.cov)
         self.gauss_coeff = 1/np.sqrt((2 * np.pi) ** self.dim * det_cov)
-
+        self.log_gauss_coeff = np.log(self.gauss_coeff)
         
 
     def compute_exp_arg(self, X): 
        
-        diff_x = (X-self.mean)
+        diff_x = (X-self.mean[0][:]) 
         M1 = np.matmul(self.inv_cov, np.transpose(diff_x))
         M2 = np.matmul(diff_x, M1) 
+
 
         return M2
 
@@ -144,14 +160,18 @@ class Gaussian(ProbabilityDistribution):
     def compute_log_value(self, X):
 
         exp_arg = self.compute_exp_arg(X)   
-        log_val = np.log(self.gauss_coeff) - 1/2*exp_arg
+        log_val = self.log_gauss_coeff - 1/2*exp_arg
 
         return log_val
 
+        # rv = stats.multivariate_normal(self.mean[0][:], self.cov)
+        # return rv.logpdf(X)
+
+
 class Uniform(ProbabilityDistribution):  
 
-    def __init__(self, hyperparam): 
-        ProbabilityDistribution.__init__(self, hyperparam)
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
 
         self.lb = hyperparam[0]
         self.ub = hyperparam[1]
@@ -171,8 +191,8 @@ class Uniform(ProbabilityDistribution):
 
 class Mixture(ProbabilityDistribution):
         
-    def __init__(self, hyperparam): 
-        ProbabilityDistribution.__init__(self, hyperparam)
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
 
         self.distr_names = hyperparam[0]
         self.distr_param = hyperparam[1]
@@ -184,7 +204,7 @@ class Mixture(ProbabilityDistribution):
         # Initialize distributions 
         self.mixture_components = []
         for i in range(self.n_components): 
-            c_mixt = set_probability_dist([self.distr_names[i]], self.distr_param[i])
+            c_mixt = set_probability_dist([self.distr_names[i]], self.distr_param[i], n_rand_var)
             self.mixture_components.append(c_mixt)
 
             self.distr_support[i,0] = c_mixt.distr_support[0]

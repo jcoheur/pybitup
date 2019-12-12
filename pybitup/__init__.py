@@ -2,5 +2,5 @@ import pybitup.metropolis_hastings_algorithms
 import pybitup.post_process
 import pybitup.inference_problem
 import pybitup.distributions
-import pybitup.sample_dist
+import pybitup.solve_problem
 import pybitup.bayesian_inference

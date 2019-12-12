@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import scipy
 from scipy import linalg
 import time
 import pandas as pd 
@@ -25,6 +26,13 @@ class MetropolisHastings:
         self.z_k = np.zeros(self.n_param)
         self.distr_fun_current_val = self.distr_fun(self.current_val)
 
+        # # Initial variance estiamte 
+        # prob_distr.likelihood.sum_of_square(self.current_val)
+        # for model_id in prob_distr.likelihood.data.keys():
+        #     sigma_k_square = prob_distr.likelihood.SS_X / (prob_distr.likelihood.data[model_id].num_points - self.n_param)
+        #     prob_distr.likelihood.data[model_id].std_y = np.sqrt(sigma_k_square)
+
+
         # Outputs 
         self.IO_fileID = IO_fileID
         # Ensure that we start the files at 0 (due to the double initialisation of DRAM)
@@ -34,11 +42,12 @@ class MetropolisHastings:
         self.distr_output_file_name = "output/fun_eval."
 
         # Write initial values 
-        self.write_val(self.current_val)
+        self.prob_distr.save_sample(self.IO_fileID, self.current_val)
         self.prob_distr.update_eval()
         self.write_fun_distr_val(0)
 
         # Cholesky decomposition of V. Constant if MCMC is not adaptive
+        self.V_0 = V 
         self.R = linalg.cholesky(V)
 
         # Monitoring the chain
@@ -48,20 +57,28 @@ class MetropolisHastings:
         print("Start time {}" .format(time.asctime(time.localtime())))
         self.t1 = time.clock()
 
+        self.it = 0 
+
+        # Monitoring acceptation rate 
+        self.mean_r = 0
+
     def run_algorithm(self):
 
-        for i in range(1, self.nIterations+1):
+        for self.it in range(1, self.nIterations+1):
             self.compute_new_val()
             self.compute_acceptance_ratio()
             self.accept_reject()
+            # self.update_sigma() 
 
-            # We estimate time after a hundred iterations
-            if i == 100:
+            # We estimate time and monitor acceptance ratio 
+            self.mean_r = self.mean_r + self.r 
+            if self.it % (self.nIterations/1000) == 0:
                 self.compute_time(self.t1)
 
-            # Save the next current value
-            self.write_val(self.current_val)
-            self.write_fun_distr_val(i)
+            # Write the sample values and function evaluation in a file 
+            self.prob_distr.save_sample(self.IO_fileID, self.current_val)
+            self.write_fun_distr_val(self.it)
+
 
         self.compute_covariance()
 
@@ -71,6 +88,9 @@ class MetropolisHastings:
 
         # Guess parameter (candidate or proposal)
         self.z_k = self.compute_multivariate_normal()
+
+        # Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
+        # self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))
 
         # Compute new value 
         self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(self.z_k)))
@@ -85,7 +105,6 @@ class MetropolisHastings:
             #self.r = self.distr_fun_new_val/self.distr_fun_current_val
             self.r = np.exp(self.distr_fun_new_val - self.distr_fun_current_val)
 
-    
         self.alpha = min(1, self.r)
         
     def accept_reject(self):
@@ -99,10 +118,18 @@ class MetropolisHastings:
         else:  # Rejected, current val remains the same
             self.n_rejected += 1
 
-    def compute_covariance(self):
+    def update_sigma(self): 
+        ns = .01
+        self.prob_distr.likelihood.sum_of_square(self.current_val)
+        for model_id in self.prob_distr.likelihood.data.keys():
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+            a = 0.5 * (ns + self.prob_distr.likelihood.data[model_id].num_points) 
+            b = 0.5 * (ns * 0.2604**2 +  self.prob_distr.likelihood.SS_X)
 
-        print("Initial covariance matrix is :")
-        print(self.V)
+            self.prob_distr.likelihood.data[model_id].std_y = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b))
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+
+    def compute_covariance(self):
 
         # Load all the previous iterations
         param_values = np.zeros((self.nIterations+2, self.n_param))
@@ -113,11 +140,9 @@ class MetropolisHastings:
             param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
             j += 1
 
-        # Compute sample mean and covariance
-        #mean_c = np.mean(param_values, axis=0)
+        # Compute sample covariance (to be written in output.dat)
         self.cov_c = np.cov(param_values, rowvar=False)
-        print("Final chain Covariance is")
-        print(self.cov_c)
+  
 
     def compute_multivariate_normal(self):
 
@@ -125,11 +150,16 @@ class MetropolisHastings:
         for j in range(self.n_param):
             mv_norm[j] = random.gauss(0, 1)
 
+        # Using scipy multivariate is slower 
+        # mv_norm = scipy.stats.multivariate_normal.rvs(np.zeros(self.n_param), np.eye(self.n_param))
+
         return mv_norm
+
+
 
     def terminate_loop(self):
 
-        print("End time {}" .format(time.asctime(time.localtime())))
+        print("\nEnd time {}" .format(time.asctime(time.localtime())))
         print("Elapsed time: {} sec".format(time.strftime(
             "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
         if self.nIterations == 0: 
@@ -140,7 +170,9 @@ class MetropolisHastings:
       
         self.IO_fileID['out_data'].write("$RandomVarName$\n")
         for i in range(self.n_param): 
-            self.IO_fileID['out_data'].write("X{} ".format(i))
+            #self.IO_fileID['out_data'].write("X{} ".format(i))
+            self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
+
         self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
@@ -153,24 +185,9 @@ class MetropolisHastings:
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
 
-        print("Estimated time: {}".format(time.strftime("%H:%M:%S",
-                                                time.gmtime((time.clock()-t1) / 100.0 * self.nIterations))))
+        print("Estimated time: {}; accptance ratio: {}".format(time.strftime("%H:%M:%S",
+                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='\r', flush=True)
 
-
-    def write_val(self, value):
-        # Write the new current val parameter values
-        self.IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
-        # replace is used to remove the end of lines in the arrays
-        
-        #Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
-        self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))
-
-        # Write also the sample in the initial parameter space
-        #self.prob_distr.save_sample(self.IO_fileID['MChains_reparam'], value)
-
-        # df = pd.DataFrame(value)
-        # df.to_csv('my_csv.csv', header=None, index=None, mode='a')
-        np.savetxt(self.IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
 
     def write_fun_distr_val(self, current_it):
         if current_it % (self.save_freq) == 0:
@@ -186,62 +203,85 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
         self.updating_it = updating_it
         self.S_d = 2.38**2/self.n_param
         self.eps_Id = eps_v*np.eye(self.n_param)
+        self.V_i = self.V_0 
+        self.X_av_i = self.param_init 
 
     def run_algorithm(self):
 
-        for i in range(1, self.nIterations+1):
+        for self.it in range(1, self.nIterations+1):
 
             self.compute_new_val()
             self.compute_acceptance_ratio()
             self.accept_reject()
-            self.adapt_covariance(i)
-
-            # We estimate time after a hundred iterations
-            if i == 100:
+            self.adapt_covariance(self.it)
+            # self.update_sigma()
+            
+            # We estimate time and monitor acceptance ratio 
+            self.mean_r = self.mean_r + self.r 
+            if self.it % (self.nIterations/100) == 0:
                 self.compute_time(self.t1)
 
-            # Save the next current value
-            self.write_val(self.current_val)
-            self.write_fun_distr_val(i)
+            # Write the sample values and function evaluation in a file 
+            self.prob_distr.save_sample(self.IO_fileID, self.current_val)
+            self.write_fun_distr_val(self.it)
 
         self.compute_covariance()
 
         self.terminate_loop()
 
     def adapt_covariance(self, i):
+        
+        # if i >= self.starting_it:
+        #     # Initialisation
+        #     if i == self.starting_it:
+        #         # Load all the previous iterations
+        #         param_values = np.zeros((self.starting_it, self.n_param))
+        #         j = 0
+        #         self.IO_fileID['MChains'].seek(0)
+        #         for line in self.IO_fileID['MChains']:
+        #             c_chain = line.strip()
+        #             param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
+        #             j += 1
 
-        if i >= self.starting_it:
-            # Initialisation
-            if i == self.starting_it:
-                # Load all the previous iterations
-                param_values = np.zeros((self.starting_it+1, self.n_param))
-                j = 0
-                self.IO_fileID['MChains'].seek(0)
-                for line in self.IO_fileID['MChains']:
-                    c_chain = line.strip()
-                    param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
-                    j += 1
+        #         # Compute current sample mean and covariance
+        #         self.X_av_i = np.mean(param_values, axis=0)
+        #         self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
 
-                # Compute current sample mean and covariance
-                self.X_av_i = np.mean(param_values, axis=0)
-                self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
+        X_i = self.current_val
 
-            X_i = self.current_val
+        # Recursion formula to compute the mean based on previous value
+        # X_av_ip = (1/(i+2))*((i+1)*self.X_av_i + X_i)
+        # Formula from smith 
+        X_av_ip = X_i + (i)/(i+1) * (self.X_av_i - X_i) 
+        # # Mine 
+        # X_av_ip = 1/(i+1) * (X_i + self.X_av_i * i)
 
-            # Recursion formula to compute the mean based on previous value
-            X_av_ip = (1/(i+2))*((i+1)*self.X_av_i + X_i)
+        # Recursion formula to compute the covariance V (Haario, Saksman, Tamminen, 2001)
+        #V_ip = (i/(i+1))*self.V_i + (self.S_d/(i+1))*(self.eps_Id + (i+1)*(np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)) -
+              #                              (i+2)*(np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)) + np.tensordot(np.transpose(X_i), X_i, axes=0))
+        # Formula from smith 
+        V_ip = (i - 1)/i * self.V_i + self.S_d/i * (i*np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (i + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
 
-            # Recursion formula to compute the covariance V (Haario, Saksman, Tamminen, 2001)
-            V_ip = (i/(i+1))*self.V_i + (self.S_d/(i+1))*(self.eps_Id + (i+1)*(np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)) -
-                                                (i+2)*(np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)) + np.tensordot(np.transpose(X_i), X_i, axes=0))
+        # Update mean and covariance
+        self.V_i = V_ip
+        self.X_av_i = X_av_ip
 
-            # Update mean and covariance
-            self.V_i = V_ip
-            self.X_av_i = X_av_ip
+        # The new value for the covariance is updated only every updating_it iterations
+        if i % (self.updating_it) == 0:
+        #Load all the previous iterations
+            # param_values = np.zeros((i, self.n_param))
+            # j = 0
+            # self.IO_fileID['MChains'].seek(0)
+            # for line in self.IO_fileID['MChains']:
+            #     c_chain = line.strip()
+            #     param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
+            #     j += 1
 
-            # The new value for the covariance is updated only every updating_it iterations
-            if i % (self.updating_it) == 0:
-                self.update_covariance()
+            # Compute current sample mean and covariance
+            # self.X_av_i = np.mean(param_values, axis=0)
+            # self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
+
+            self.update_covariance()
 
     def update_covariance(self):
         self.R = linalg.cholesky(self.V_i)
@@ -282,11 +322,14 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
         DR_distr_fun_new_eval = self.distr_fun(DR_new_val)
         r_12 = np.exp(self.distr_fun_new_val - DR_distr_fun_new_eval)
         alpha_12 = min(1, r_12)
-        diff_estimates = self.current_val - DR_new_val
-        M1 = np.matmul(diff_estimates, self.inv_V)
-        M2 = np.matmul(M1, np.transpose(diff_estimates))
+        diff1 = self.new_val - DR_new_val 
+        diff2 = self.new_val - self.current_val 
+        M1 = np.matmul(diff1, self.inv_V)
+        M2 = np.matmul(M1, np.transpose(diff1))
+        M3 = np.matmul(diff2, self.inv_V)
+        M4 = np.matmul(M3, np.transpose(diff2))
         r_2 = np.exp(DR_distr_fun_new_eval - self.distr_fun_current_val) * \
-                        np.exp(-1/2*M2) * (1 - alpha_12) / (1 - self.alpha)
+                        (np.exp(-1/2*M2) / np.exp(-1/2*M4)) * (1 - alpha_12) / (1 - self.alpha)
         #print(alpha_12, self.alpha )
         alpha_2 = min(1, r_2)
 
@@ -314,7 +357,7 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
         self.R = linalg.cholesky(self.V_i)
         # The inverse of the covariance must be update accordingly for the DRAM
         inv_R = linalg.inv(self.R)
-        self.inv_V = inv_R*np.transpose(inv_R)
+        self.inv_V = np.transpose(inv_R)*inv_R
 
 
 class ito_SDE(MetropolisHastings):
@@ -353,7 +396,7 @@ class ito_SDE(MetropolisHastings):
 
     def run_algorithm(self):
 
-        for i in range(1, self.nIterations+1):
+        for self.it in range(1, self.nIterations+1):
 
             # Solve Ito-SDE using Stormer-Verlet scheme
             WP_np = np.sqrt(self.h) * self.compute_multivariate_normal()
@@ -371,15 +414,20 @@ class ito_SDE(MetropolisHastings):
             self.P_nm = P_np
             self.xi_nm = xi_np
 
-            # We estimate time after a hundred iterations
-            if i == 100:
+            # We estimate time and monitor acceptance ratio 
+            self.mean_r = self.it
+            if self.it % (self.nIterations/100) == 0:
                 self.compute_time(self.t1)
 
-            # Save the next current value
-            self.z_k=P_np
-            self.write_val(xi_n)
+            # Update values 
+            self.z_k=P_np 
             self.prob_distr.update_eval()
-            self.write_fun_distr_val(i)
+
+            # Write the sample values and function evaluation in a file 
+            self.prob_distr.save_sample(self.IO_fileID, xi_n)
+            self.write_fun_distr_val(self.it)
+            # Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
+            # self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))
 
         self.compute_covariance()
 

@@ -50,8 +50,8 @@ class SetParallelReaction(bi.Model):
         self.set_param_values(input_file_name, param_names, param_values) 
 
         # Solve the system  
-        self.pyro_model.solve_system()
-        #self.pyro_model.compute_analytical_solution()
+        #self.pyro_model.solve_system()
+        self.pyro_model.compute_analytical_solution()
 
 
     def fun_x(self, input_file_name, param_names, param_values):

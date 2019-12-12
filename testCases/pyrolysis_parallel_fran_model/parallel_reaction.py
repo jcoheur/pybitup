@@ -40,9 +40,8 @@ class SetParallelReaction(bi.Model):
         self.pyro_model = PyrolysisParallel(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
 		
 		# Read the parameters from the temporary file 
-        self.pyro_model.react_reader("tmp_"+input_file_name)
-        self.pyro_model.param_reader("tmp_"+input_file_name)
-		
+        self.pyro_model.react_reader("tmp_proc_0_"+input_file_name)
+        self.pyro_model.param_reader("tmp_proc_0_"+input_file_name)		
 		
     def solve_system(self, input_file_name, param_names, param_values): 
 		
@@ -80,6 +79,11 @@ class SetParallelReaction(bi.Model):
 
 
     #     return X 
+
+
+    # def parametrization_det_jac(self, X):
+
+    #     return np.exp(X[0])
 
 
 

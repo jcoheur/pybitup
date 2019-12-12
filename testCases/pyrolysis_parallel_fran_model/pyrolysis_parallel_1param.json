@@ -46,13 +46,15 @@
 				}
 			}
         },
-        "ComputeAnalyticalDistribution": "yes"
+        "ComputeAnalyticalDistribution": { // [[11.55, 12.75]] [[109000, 125000]]
+            "DistributionSupport" :[[11.625, 11.650]] 
+        }
     }, 
     	
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes",
-		    "num_plot": 1
+		    "num_plot": [1]
 		},
 	    "InitialGuess": {
 		    "display": "yes",
@@ -66,7 +68,7 @@
             "display": "yes", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 100
+            "burnin": 1
 		},
 	    "Propagation": {
 		    "display": "yes",

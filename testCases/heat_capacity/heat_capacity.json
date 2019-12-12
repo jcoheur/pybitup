@@ -56,7 +56,7 @@
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes", 
-		    "num_plot": 1
+		    "num_plot": [1]
 	    },
 	    "InitialGuess": {
 		    "display": "yes",

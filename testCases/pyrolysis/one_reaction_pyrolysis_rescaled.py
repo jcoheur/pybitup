@@ -44,4 +44,4 @@ class OneReactionPyrolysisRescaled(OneReactionPyrolysis):
         
     def parametrization_det_jac(self, X):
 
-        return X[0] 
+        return 1/X[0] 

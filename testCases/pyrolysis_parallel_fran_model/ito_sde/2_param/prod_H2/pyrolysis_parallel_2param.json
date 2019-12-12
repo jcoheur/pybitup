@@ -23,8 +23,8 @@
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A1": {"initial_val" : 4.95173490e+04,    "prior_name" : "Uniform", "prior_param" : [100, 1e10]}, // [0, 1e10]
-                    "E1": {"initial_val" : 1.14254610e+05,    "prior_name" : "Uniform", "prior_param" : [100, 1e10]} // [0, 1e10]   
+                    "A1": {"initial_val" : 4.694757385901201,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
+                    "E1": {"initial_val" : 1.14254610e+05,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]} // [0, 1e10]   
                 }
             },
             "Likelihood": {
@@ -58,7 +58,7 @@
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes",
-		    "num_plot": 1
+		    "num_plot": [1]
 		},
 	    "InitialGuess": {
 		    "display": "yes",
@@ -72,12 +72,12 @@
             "display": "yes", 
             "distribution": "bivariate", // marginal, bivariate
             "estimation": "scatter+ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 100
+            "burnin": 1
 		},
 	    "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "burnin": 60,
+		    "burnin": 1,
 		    "num_plot": 1
 		}
 	}

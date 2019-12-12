@@ -1,4 +1,4 @@
-# pybitupup
+# pybitup
 Python Bayesian Inference Toolbox and Uncertainty Propagation 
 
 Installation : 

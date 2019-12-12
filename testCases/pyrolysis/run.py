@@ -24,7 +24,7 @@ pyro_model["one_reaction_pyrolysis"] = one_reaction_pyrolysis.OneReactionPyrolys
 # X must be equal to param_values
 # print(X) 
 
-post_dist = pybitup.sample_dist.SolveProblem(input_file_name)
+post_dist = pybitup.solve_problem.Sampling(input_file_name)
 post_dist.sample(pyro_model)
 #post_dist.propagate(pyro_model)
 post_dist.__del__()

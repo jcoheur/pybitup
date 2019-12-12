@@ -21,6 +21,8 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         self.model = class_model
 
         self.dim = len(param_init)
+        self.name_random_var = self.model.unpar_name 
+        
         # for the verification of ito-sde for the 1param (E) pyro model
         #self.distr_support = np.array([[self.model.parametrization_forward(np.array([1e5])), self.model.parametrization_forward(np.array([2e5]))]])
         #self.distr_support = np.array([[np.array([4]), np.array([15])], [np.array([11.3]), np.array([12.95])]])
@@ -31,11 +33,8 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
     def compute_value(self, Y):
 
         X = self.model.parametrization_backward(Y) 
-        
-                
-        # For ito SDE to work for pyro parallel (to be changed ... )
-        #bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(Y) * self.likelihood.compute_value(X) 
-        bayes_post = self.prior.compute_value(X) * self.model.parametrization_det_jac(X) * self.likelihood.compute_value(X) 
+           
+        bayes_post = self.prior.compute_value(X) * (1/self.model.parametrization_det_jac(X)) * self.likelihood.compute_value(X) 
 
         return bayes_post 
 
@@ -50,9 +49,8 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
             # Avoid computation of likelihood if prior is zero 
             log_bayes_post = -np.inf
         else: 
-            # For ito SDE to work for pyro parallel (to be changed ... )
-            # log_bayes_post = prior_log_value + np.log(self.model.parametrization_det_jac(Y)) + log_like_val
-            log_bayes_post = prior_log_value + np.log(self.model.parametrization_det_jac(X)) + log_like_val
+            log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val
+            # log(1/det_jac) = - log(det_jac)
  
 
         return log_bayes_post
@@ -65,11 +63,16 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
         self.likelihood.write_fun_eval(current_it)
 
-    def save_sample(self, fileID_sample, value):
+    def save_sample(self, IO_fileID, value):
 
-        X = self.model.parametrization_backward(value) 
-        fileID_sample.write("{}\n".format(str(X).replace('\n', '')))
+        # Write the value in the sampling space 
+        IO_fileID['MChains_reparam'].write("{}\n".format(str(value).replace('\n', '')))
 
+        # Write the value in the initial space 
+        X = self.model.parametrization_backward(value)
+        IO_fileID['MChains'].write("{}\n".format(str(X).replace('\n', '')))
+
+        np.savetxt(IO_fileID['MChains_csv'], np.array([X]), fmt="%f", delimiter=",")
 
 class Data:
     """Class defining the data in the inference problem and contains all the information"""
@@ -284,6 +287,8 @@ class Likelihood:
         self.data = exp_data
         self.model_eval = []
         self.models = model_list 
+        self.SS_X = 0 # sum of square 
+        self.arg_LL = 0 # Arg of the likelihood function 
 
     def compute_value(self, X):
         """ Compute value of the likelihood at the current point X.
@@ -291,16 +296,19 @@ class Likelihood:
 
         # self.model_eval_X = self.model_fun(X)
         # like_val = np.exp(self.sum_of_square(self.data, self.model_eval_X)) 
-        
-        like_val = np.exp(self.sum_of_square2(X))
+
+        self.arg_gauss_likelihood(X)
+        like_val = np.exp(- (1/2) * self.arg_LL) 
+
         return like_val
 
     def compute_log_value(self, X): 
         
         # self.model_eval_X = self.model_fun(X)
         # log_like_val = self.sum_of_square(self.data, self.model_eval_X)
-
-        log_like_val = self.sum_of_square2(X)
+        
+        self.arg_gauss_likelihood(X)
+        log_like_val = - (1/2) * self.arg_LL
 
         return log_like_val
 
@@ -334,20 +342,9 @@ class Likelihood:
     def compute_ratio(self): 
         """ Compute the ratio of likelihood function"""
         
-    def sum_of_square(self, data1, data2):
-        """ Compute the sum of square used in the likelihood function.
-        data1 is a Data class. 
-        data2 is a numpy array. """
-
-        J = - 1/2 * np.sum(((data1.y-data2)/data1.std_y)**2, axis=0)
-
-        return J
-
-
-    def sum_of_square2(self, X):
-        """ Compute the sum of square used in the likelihood function.
-        data1 is a Data class. 
-        data2 is a numpy array. """
+    def sum_of_square(self, X):
+        """ Compute the sum of square in the least square sense. 
+        X is the value at which we evaluate the model. """
 
         J = 0 
         for model_id in self.models.keys(): 
@@ -364,11 +361,26 @@ class Likelihood:
             #     plt.plot(self.data[model_id].x, self.models[model_id].model_eval[i*n_x:(i+1)*n_x])
 
             # Compute the sum of square 
-            arg_exp = (self.data[model_id].y - self.models[model_id].model_eval)/self.data[model_id].std_y
-            J = J - (1/2)*np.sum(arg_exp**2, axis=0)
+            arg_exp = (self.data[model_id].y - self.models[model_id].model_eval)
+            J = J  + np.sum(arg_exp**2, axis=0)
 
         #plt.show()
-        return J
+        self.SS_X = J
+
+    def arg_gauss_likelihood(self, X):
+        """ Compute the weighted sum of square which is the argument of the gaussian likelihood. """ 
+
+        J = 0 
+        for model_id in self.models.keys(): 
+
+            # Compute value for the model at X 
+            self.models[model_id].run_model(X)
+
+            # Compute the weighted sum of square 
+            arg_exp = (self.data[model_id].y - self.models[model_id].model_eval)/(self.data[model_id].std_y)
+            J = J  + np.sum(arg_exp**2, axis=0)
+
+        self.arg_LL = J
 
 
 def generate_synthetic_data(my_model, std_y, type_pert):

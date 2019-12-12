@@ -3,7 +3,8 @@
     "Sampling": {
         "Distribution": {
             "name": "Gaussian", 
-            "hyperparameters" : [[113000], [[122500]]],
+            "n_rand_var" : 1, 
+            "hyperparameters" : [[[113000]], [[[122500]]]],
             "init_val" : [113000]
         }, 
         "Algorithm": {

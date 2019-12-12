@@ -16,7 +16,7 @@ model_def.param = param
 model_def.x = x
 
 
-std_y=0.2504
+std_y=0.2604
 array_std_y = np.ones(len(x))
 array_std_y *= std_y
 

@@ -1,9 +1,12 @@
 import matplotlib.pyplot as plt
+from matplotlib import colors 
 import pickle
+import pandas as pd 
 import json
 from jsmin import jsmin
 import numpy as np
 from scipy import stats
+import seaborn as sns
 
 from tikzplotlib import save as tikz_save
 
@@ -82,6 +85,7 @@ def post_process_data(input_file_name):
             data_exp = pickler_data_exp.load()
 
         if inputFields["Data"]["display"] == "yes":
+            num_plot = inputFields["Data"]["num_plot"]
             for num_data_set, data_id in enumerate(data_exp.keys()):
 
                 n_x = len(data_exp[data_id].x)
@@ -89,7 +93,7 @@ def post_process_data(input_file_name):
  
                 for i in range(n_data_set): 
 
-                    plt.figure(num_fig+i)
+                    plt.figure(num_plot[num_data_set])
                     plt.plot(data_exp[data_id].x, data_exp[data_id].y[i*n_x:(i+1)*n_x],
                             'o', color=lineColor[num_data_set][0], mfc='none')
 
@@ -115,7 +119,7 @@ def post_process_data(input_file_name):
 
                 for i in range(n_data_set): 
 
-                    plt.figure(num_fig+i)
+                    plt.figure(num_plot[num_data_set])
 
                     plt.plot(data_exp[data_id].x,
                             data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
@@ -138,6 +142,7 @@ def post_process_data(input_file_name):
 
         if inputFields.get("MarkovChain") is not None and inputFields["MarkovChain"]["display"] == "yes":
             num_fig = 100
+            vec_std = np.zeros(n_unpar)
             for i in range(n_unpar):
                 plt.figure(num_fig+i)
                 plt.plot(range(n_samples), param_value_raw[:, i])
@@ -148,7 +153,145 @@ def post_process_data(input_file_name):
 
                 c_mean_val = np.mean(param_value_raw[:, i])
                 c_std_val = np.std(param_value_raw[:, i])
-                print("{}. Mean value: {}; standard dev.: {}.".format(unpar_name[i], c_mean_val, c_std_val))
+                vec_std[i] = c_std_val
+                cv = c_std_val / c_mean_val
+                Q1 = np.percentile(param_value_raw[:, i], 25, axis=0)
+                Q3 = np.percentile(param_value_raw[:, i], 75, axis=0)
+                cqv = (Q3 - Q1)/(Q3 + Q1)
+
+                print("{}: mean value = {}; standard dev. = {}; cv = {}; cqv = {}".format(unpar_name[i], c_mean_val, c_std_val, cv, cqv))
+            """
+            cov_c = np.cov(param_value_raw, rowvar=False)
+            print("Final chain covariance matrix:")
+            print(cov_c)
+
+            corr_c = cov_c 
+            for i in range(n_unpar):
+                corr_c[i][i] = cov_c[i][i] / (vec_std[i] * vec_std[i])
+                for j in range(i+1, n_unpar):
+                    corr_c[i][j] = cov_c[i][j] / (vec_std[i] * vec_std[j])
+                    corr_c[j][i] = corr_c[i][j]
+
+            print("Final chain correlation matrix:")
+            print(corr_c)
+
+            fig = plt.figure(400, figsize=(16, 12))
+            ax = sns.heatmap(
+            corr_c, 
+            vmin=-1, vmax=1, center=0,
+            cmap=sns.diverging_palette(20, 220, n=200),
+            square=True, 
+         
+            )
+            ax.set_xticklabels(
+                ax.get_xticklabels(),
+                rotation=45,
+                horizontalalignment='right'
+            )
+
+            # From https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
+            def heatmap(x, y, size):
+                plot_grid = plt.GridSpec(1, 15, hspace=0.2, wspace=0.1) # Setup a 1x15 grid
+                ax = plt.subplot(plot_grid[:,:-1]) # Use the leftmost 14 columns of the grid for the main plot
+
+                
+                # Mapping from column names to integer coordinates
+                x_labels = x
+                y_labels = y
+
+                x_to_num = []
+                y_to_num=[]
+                for i, name in enumerate(x_labels):
+                    for j, name in enumerate(x_labels):
+                        x_to_num.append(j)
+                        y_to_num.append(i)
+
+                size_scale = 500
+                m = np.abs(size.flatten())
+
+                n_colors = 256 # Use 256 colors for the diverging color palette
+                palette = sns.diverging_palette(20, 220, n=n_colors) # Create the palette
+                color_min, color_max = [-1, 1] # Range of values that will be mapped to the palette, i.e. min and max possible correlation
+
+                def value_to_color(val):
+                    val_position = float((val - color_min)) / (color_max - color_min) # position of value in the input range, relative to the length of the input range
+                    ind = int(val_position * (n_colors - 1)) # target index in the color palette
+                    return palette[ind]
+
+                color_vec = []
+                for i, val in enumerate(size.flatten()):
+                    color_vec.append(value_to_color(val))
+                #print(color_vec)
+
+                ax.scatter(
+                    x=x_to_num, # Use mapping for x
+                    y=y_to_num, # Use mapping for y
+                    s=m*size_scale, # Vector of square sizes, proportional to size parameter
+                    c=color_vec, 
+                    marker='s' # Use square as scatterplot marker
+                )
+                
+                # Show column labels on the axes
+                ax.set_xticks([v for v in range(len(x_labels))])
+                ax.set_xticklabels(x_labels, rotation=45, horizontalalignment='right', fontsize=20)
+                ax.set_yticks([v for v in range(len(x_labels))])
+                ax.set_yticklabels(y_labels, fontsize=20)
+
+                ax.grid(False, 'major')
+                ax.grid(True, 'minor')
+                ax.set_xticks([t + 0.5 for t in ax.get_xticks()], minor=True)
+                ax.set_yticks([t + 0.5 for t in ax.get_yticks()], minor=True)
+
+                # ax.set_xlim([-0.5, max([v for v in x_to_num.values()]) + 0.5]) 
+                # ax.set_ylim([-0.5, max([v for v in y_to_num.values()]) + 0.5])
+
+
+
+
+                # Add color legend on the right side of the plot
+                ax = plt.subplot(plot_grid[:,-1]) # Use the rightmost column of the plot
+
+                col_x = [0]*len(palette) # Fixed x coordinate for the bars
+                bar_y=np.linspace(color_min, color_max, n_colors) # y coordinates for each of the n_colors bars
+
+                bar_height = bar_y[1] - bar_y[0]
+                ax.barh(
+                    y=bar_y,
+                    width=[5]*len(palette), # Make bars 5 units wide
+                    left=col_x, # Make bars start at 0
+                    height=bar_height,
+                    color=palette,
+                    linewidth=0.0, 
+                )
+                ax.set_xlim(1, 2) # Bars are going from 0 to 5, so lets crop the plot somewhere in the middle
+                ax.grid(False) # Hide grid
+                ax.set_facecolor('white') # Make background white
+                ax.set_xticks([]) # Remove horizontal ticks
+                ax.tick_params(axis="y", labelsize=20)
+                ax.set_yticks(np.linspace(min(bar_y), max(bar_y), 3)) # Show vertical ticks for min, middle and max
+                ax.yaxis.tick_right() # Show vertical ticks on the right 
+
+
+
+            unpar_name_real = ["$\\log_{10} (\\mathcal{A}_{1,1})$", "$\\log_{10} (\\mathcal{A}_{1,2})$", "$\\log_{10} (\\mathcal{A}_{2,1})$", "$\\log_{10} (\\mathcal{A}_{3,1})$", 
+                               "$\\mathcal{E}_{1,1}$", "$\\mathcal{E}_{1,2}$", "$\\mathcal{E}_{2,1}$", "$\\mathcal{E}_{3,1}$", 
+                               "$\\gamma_{2,1,5}$", "$\\gamma_{3,1,7}$"]
+            heatmap(
+                x=unpar_name_real,
+                y=unpar_name_real,
+                size=corr_c
+            )
+
+            fig.savefig('correlation_matrix.pdf')
+            # Savetotikz not good for this 
+            # saveToTikz('correlation_matrix.tex')
+            """
+
+
+ 
+
+
+
 
 
 
@@ -260,7 +403,7 @@ def post_process_data(input_file_name):
 
                             num_fig = num_fig + 1
 
-                            saveToTikz('bivariate_contour_'+var_name+'_'+var_name_2+'.tex')
+                            #saveToTikz('bivariate_contour_'+var_name+'_'+var_name_2+'.tex')
 
                             # plt.figure(num_fig)
                             # plt.scatter(np.log(x), np.log(y), c=['C2'], s=10)
@@ -344,7 +487,7 @@ def post_process_data(input_file_name):
                 n_data_set = int(len(data_exp[data_id].y)/n_x)
  
                 for i in range(n_data_set): 
-                    plt.figure(i)
+                    plt.figure(num_plot[num_data_set])
 
                     # Initialise bounds
                     data_ij_max = -1e5*np.ones(n_x)
@@ -411,14 +554,28 @@ def post_process_data(input_file_name):
                     plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5)
                     # Plot 95% credible interval
                     # ---------------------------
-                    plt.fill_between(data_exp[data_id].x,  np.percentile(data_hist, 2.5, axis=0), 
-                                    np.percentile(data_hist, 97.5, axis=0), facecolor=lineColor[num_data_set][0], alpha=0.3)
+                    low_cred_int = np.percentile(data_hist, 2.5, axis=0)
+                    high_cred_int = np.percentile(data_hist, 97.5, axis=0)
+                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3)
                     # Plot 95% prediction interval
                     # -----------------------------
                     # For the prediction interval, we add the std to the result
 
-                    plt.fill_between(data_exp[data_id].x,  np.percentile(data_hist, 2.5, axis=0)-data_exp[data_id].std_y[ind_1:ind_2], 
-                                    np.percentile(data_hist, 97.5, axis=0)+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+                    plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
+                                    high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+
+                    # Values are saved in csv format using Panda dataframe  
+                    df = pd.DataFrame({"x": data_exp[data_id].x,
+                                    "mean" : data_ij_mean, 
+                                    "lower_bound": data_ij_min, 
+                                    "upper_bound": data_ij_max})
+                    df.to_csv('output/'+data_id+"_posterior_pred_check_interval.csv", index=None)
+
+                    df_CI = pd.DataFrame({"x": data_exp[data_id].x, 
+                                          "CI_lb": low_cred_int, 
+                                          "CI_ub": high_cred_int})
+                    df_CI.to_csv('output/'+data_id+"_posterior_pred_check_CI.csv", index=None) 
+
                     del data_ij_max, data_ij_min, data_set_n
 
     # Show plot   

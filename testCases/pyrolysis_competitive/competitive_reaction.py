@@ -3,7 +3,6 @@ import math
 
 # Packages for the pyrolysis model
 from pyrolysis_general.src.pyrolysis import PyrolysisCompetitive 
-from pyrolysis_general.src.read_experiments import ReadExperiments
 
 # Packages for stochastic inference
 from pybitup import bayesian_inference as bi
@@ -48,8 +47,8 @@ class SetCompetitiveReaction(bi.Model):
         self.pyro_model = PyrolysisCompetitive(temp_0=self.T_0, temp_end=self.T_end, time=self.time, beta=self.tau, n_points=self.n_T_steps)
 		
 		# Read the parameters from the temporary file 
-        self.pyro_model.react_reader("tmp_"+input_file_name)
-        self.pyro_model.param_reader("tmp_"+input_file_name)
+        self.pyro_model.react_reader("tmp_proc_0_"+input_file_name)
+        self.pyro_model.param_reader("tmp_proc_0_"+input_file_name)
 		
     def solve_system(self, input_file_name, param_names, param_values): 
 		

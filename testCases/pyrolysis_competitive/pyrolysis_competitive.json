@@ -71,21 +71,21 @@
     "PostProcess": { 
         "Data": { 
             "display": "yes",
-            "num_plot": 1
+            "num_plot": [0, 1]
         },
         "InitialGuess": {
             "display": "yes",
             "num_plot": 1
         },
         "MarkovChain": {
-            "display": "yes",
+            "display": "no",
             "thinning": 1
         },
         "Posterior": {
             "display": "no", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 100
+            "burnin": 1
         },
         "Propagation": {
             "display": "yes",

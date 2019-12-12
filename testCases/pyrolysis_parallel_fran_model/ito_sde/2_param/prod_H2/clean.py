@@ -16,3 +16,10 @@ class CleanDir():
     # Remove all tmp_files 
     for tmp_filename in tmp_files: 
         os.remove(tmp_filename)
+
+    # Remove all tex files 
+    tmp_files = glob.glob('*.tex')
+
+    # Remove all tmp_files 
+    for tmp_filename in tmp_files: 
+        os.remove(tmp_filename)

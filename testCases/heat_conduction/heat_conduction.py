@@ -21,9 +21,9 @@ class HeatConduction(bi.Model):
         self.phi = self._param[4]
         self.h = self._param[5]
         
-        self.x0 = self._x[0]
-        self.L = self._x[-1]
-
+        #self.x0 = self._x[0]
+        #self.L = self._x[-1]
+        self.L  = 70
     def fun_x(self):
         """ Compute the temperature""" 
 

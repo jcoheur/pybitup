@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd 
 import pybitup.metropolis_hastings_algorithms as mha
 
 
@@ -28,7 +28,12 @@ class Sampler:
         if self.algo_name == "RWMH" or self.algo_name == "AMH" or self.algo_name == "DR" or self.algo_name == "DRAM": 
             # Proposal function need to be defined for these algorithms
             if self.algo['proposal']['covariance']['type'] == "diag": 
-                self.proposal_cov = np.diag(self.algo['proposal']['covariance']['value'])
+                if isinstance(self.algo['proposal']['covariance']['value'], str):  
+                    reader = pd.read_csv(self.algo['proposal']['covariance']['value'], header=None)
+                    A = np.transpose(reader.values)
+                    self.proposal_cov = np.diag(A[0])
+                else:
+                    self.proposal_cov = np.diag(self.algo['proposal']['covariance']['value'])
             elif self.algo['proposal']['covariance']['type'] == "full":
                 self.proposal_cov = np.array(self.algo['proposal']['covariance']['value']) 
             else: 

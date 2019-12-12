@@ -37,7 +37,12 @@
             }
         },
 	    "Algorithm": {
-		    "name": "RWMH", 
+            "name": "AMH", 
+            "AMH": {
+                "starting_it": 1e2, 
+				"updating_it": 1e1, 
+				"eps_v": 0.0
+			},
 		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
@@ -52,7 +57,7 @@
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes", 
-		    "num_plot": 1
+		    "num_plot": [1]
 		},
 	    "InitialGuess": {
 		    "display": "yes",

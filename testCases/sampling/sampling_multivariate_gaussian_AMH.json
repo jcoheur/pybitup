@@ -2,29 +2,26 @@
 {  
     "Sampling": {
         "Distribution": {
-            "name": "Gaussian",
-            "n_rand_var" : 2,  
-            "hyperparameters" : [[[16630], [113000]], [[1e4, 0], [0, 122500]]],
-            "init_val" : [16630, 113000]
+            "name": "Gaussian", 
+            "n_rand_var": 100,
+            "hyperparameters" : ["mean.csv", "cov.csv"], 
+            "init_val" : "init_val.csv"
         }, 
         "Algorithm": {
-            "name": "Ito-SDE", 
-            "Ito-SDE" : {
-                "h" : 60, 
-                "f0" : 1.4
-            },
+            "name": "AMH", 
+            "AMH": {
+                "starting_it": 2e2, 
+				"updating_it": 2e2, 
+				"eps_v": 0.0
+			},
             "n_iterations": 1e5, 
-            // Proposal is not read for Ito-SDE. We keep it for easily switching between the two for comparison
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-				    "value": [1e4, 122500]
+				    "value": "prop_cov.csv"
                 }
             }
-        },
-        "ComputeAnalyticalDistribution": {
-            "compute" : "yes"
         }
     }, 
     "PostProcess": { 
@@ -33,7 +30,7 @@
 		    "thinning": 1
         },
         "Posterior": {
-            "display": "yes", 
+            "display": "no", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin" : 0

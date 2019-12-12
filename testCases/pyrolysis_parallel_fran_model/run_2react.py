@@ -5,10 +5,7 @@ import parallel_reaction
 
 # Packages for stochastic inference
 import pybitup
-import matplotlib.pyplot as plt
 
-# Python packages
-from scipy import linalg, stats
 
 case_name = "pyrolysis_parallel_2react"
 input_file_name = "{}.json".format(case_name) 

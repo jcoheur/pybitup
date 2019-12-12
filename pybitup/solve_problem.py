@@ -5,6 +5,7 @@ import pandas as pd
 import pickle
 import time
 import sys
+import shutil 
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -43,35 +44,58 @@ class SolveProblem():
         self.IO_fileID = {}
 
         # Define the file names 
-        self.IO_path['out_folder'] = "output"
+        path = os.getcwd()
+        print("The current working directory is "+path)
+        self.IO_path['out_folder'] = path+"/output"
         self.IO_path['out_data'] = self.IO_path['out_folder']+"/output.dat"
-        self.IO_path['MChains'] = self.IO_path['out_folder']+"/mcmc_chain.dat"
-        self.IO_path['MChains_reparam'] = self.IO_path['out_folder']+"/mcmc_chain2.dat"
-        self.IO_path['MChains_csv'] = self.IO_path['out_folder']+"/mcmc_chain.csv"
-        self.IO_path['gp'] = self.IO_path['out_folder']+"/gp.dat" # Gaussian proposal 
-
+        
         # Create the output folder
-        os.system("mkdir " + self.IO_path['out_folder'])
+        try:
+            os.mkdir(self.IO_path['out_folder'])
+        except OSError:
+            print(self.IO_path['out_folder']+" already exists.")
+        else:
+            print("Creating output directory "+self.IO_path['out_folder'])
 
+        # Output file 
+        # 'a+': append mode with creation if does not exists  
+        self.IO_fileID['out_data'] = open(self.IO_path['out_data'], 'a+')
+
+         # Copy input file in the output folder to keep track of it 
+        print("Copying input file in output folder ... ")
+        shutil.copy(input_file_name, self.IO_path['out_folder'])
+
+    def create_output_file(self, IO_path_keys):
+       
         # Create and open output files  
-        for file_keys in self.IO_path.keys():
+        for file_keys in IO_path_keys:
+            self.IO_fileID[file_keys] = open(self.IO_path[file_keys], "w+")
 
-            # We open all files except the output folder
-            if file_keys is not 'out_folder': 
-                # First, we create the output files by opening them in write mode and close them
-                # This will erase already existing file and avoid appending values
-                tmp_fileID = open(self.IO_path[file_keys], "w")
-                tmp_fileID.close()
-
-                # Then, we re-open it in read and write mode (option r+ cannot create non existing file)
-                # This defines the files IDs
-                self.IO_fileID[file_keys] = open(self.IO_path[file_keys], "r+")
 
     def __del__(self):
         """ The destructeur defined here is used to ensure that all outputs files are properly closed """ 
 
         for fileID in self.IO_fileID.values():
             fileID.close()
+
+class Sampling(SolveProblem):
+
+
+    def __init__(self, input_file_name): 
+
+        SolveProblem.__init__(self, input_file_name)
+
+        new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'gp']
+        # Define output file for sampling 
+        self.IO_path[new_file_keys[0]] = self.IO_path['out_folder']+"/mcmc_chain.dat"
+        self.IO_path[new_file_keys[1]] = self.IO_path['out_folder']+"/mcmc_chain_reparam.dat"
+        self.IO_path[new_file_keys[2]] = self.IO_path['out_folder']+"/mcmc_chain.csv"
+        self.IO_path[new_file_keys[3]] = self.IO_path['out_folder']+"/gp.dat" # Gaussian proposal 
+
+        # Create and open files in read-write ('+') mode (w mode erase previous existing files) 
+        for file_keys in new_file_keys:
+            self.IO_fileID[file_keys] = open(self.IO_path[file_keys], "w+")
+
 
     def sample(self, models={}): 
 
@@ -90,11 +114,30 @@ class SolveProblem():
             distr_param = []
             distr_init_val = []
             distr_name.append(self.user_inputs['Sampling']['Distribution']['name']) 
-            distr_param.append(self.user_inputs['Sampling']['Distribution']['hyperparameters'])
-            distr_init_val.append(self.user_inputs["Sampling"]["Distribution"]["init_val"])
-            sample_dist = pybitup.distributions.set_probability_dist(distr_name, distr_param)
+        
+            # Get hyperparameters 
+            n_hyperp = len(self.user_inputs['Sampling']['Distribution']['hyperparameters'])
+            n_rand_var = self.user_inputs['Sampling']['Distribution']['n_rand_var']
 
-            unpar_init_val = np.array(self.user_inputs["Sampling"]["Distribution"]["init_val"])
+            for i in range(n_hyperp): 
+                if isinstance(self.user_inputs['Sampling']['Distribution']['hyperparameters'][i], str):
+                    # Read from file 
+                    reader = pd.read_csv(self.user_inputs['Sampling']['Distribution']['hyperparameters'][i], header=None)
+                    distr_param.append(reader.values)
+                else:
+                    distr_param.append(self.user_inputs['Sampling']['Distribution']['hyperparameters'][i])
+
+            if isinstance(self.user_inputs["Sampling"]["Distribution"]["init_val"], str):  
+                reader = pd.read_csv(self.user_inputs["Sampling"]["Distribution"]["init_val"], header=None)
+                distr_init_val.append(reader.values)
+                A = np.transpose(reader.values)
+                unpar_init_val = A[0]
+            else: 
+                distr_init_val.append(self.user_inputs["Sampling"]["Distribution"]["init_val"])
+                unpar_init_val = np.array(self.user_inputs["Sampling"]["Distribution"]["init_val"])
+
+            sample_dist = pybitup.distributions.set_probability_dist(distr_name, distr_param, n_rand_var)
+
             
         elif (self.user_inputs["Sampling"].get("BayesianPosterior") is not None):
             # ----------------------------------------------------------
@@ -175,12 +218,12 @@ class SolveProblem():
 
             # Get uncertain parameters 
             # -------------------------
-            unpar_name = {} #unpar_name = {}
-            for names in BP_inputs['Prior']['Param'].keys():
-                unpar_name[names] = [] #unpar_name.append(names)
+            unpar_name = []
+            for name in BP_inputs['Prior']['Param'].keys():
+                unpar_name.append(name)
 
             for model_id in models.keys(): 
-                models[model_id].unpar_name = unpar_name.keys()
+                models[model_id].unpar_name = unpar_name
 
             # Get a priori information on the uncertain parameters
             # ----------------------------------------------------
@@ -192,12 +235,13 @@ class SolveProblem():
                 unpar_prior_name.append(param_val['prior_name']) 
                 unpar_prior_param.append(param_val['prior_param'])
             unpar_init_val = np.array(models[model_id].parametrization_forward(unpar_init_val))
+            n_uncertain_param = len(unpar_init_val)
 
             # Prior 
             # ------ 
             distr_name = [BP_inputs['Prior']['Distribution']]
             hyperparam = [unpar_prior_name, unpar_prior_param]
-            prior_dist = pybitup.distributions.set_probability_dist(distr_name, hyperparam)
+            prior_dist = pybitup.distributions.set_probability_dist(distr_name, hyperparam, n_uncertain_param)
            
             # Likelihood 
             # -----------
@@ -229,6 +273,8 @@ class SolveProblem():
             else:
                 posterior = sample_dist.compute_density()
                             
+
+class Propagation(SolveProblem): 
 
     def propagate(self, models=[]): 
 

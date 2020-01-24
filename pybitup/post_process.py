@@ -93,7 +93,8 @@ def post_process_data(input_file_name):
  
                 for i in range(n_data_set): 
 
-                    plt.figure(num_plot[num_data_set])
+                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(i)
                     plt.plot(data_exp[data_id].x, data_exp[data_id].y[i*n_x:(i+1)*n_x],
                             'o', color=lineColor[num_data_set][0], mfc='none')
 
@@ -119,12 +120,18 @@ def post_process_data(input_file_name):
 
                 for i in range(n_data_set): 
 
-                    plt.figure(num_plot[num_data_set])
+                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(i)
 
                     plt.plot(data_exp[data_id].x,
                             data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
 
     if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None) or  (inputFields.get("Propagation") is not None):
+
+
+        reader = pd.read_csv('output/mcmc_chain.csv')
+        param_value_raw = reader.values
+        n_samples = len(param_value_raw[:, 0]) + 1
 
         # Load the samples of the distribution                        
         param_value_raw = np.zeros((n_samples, n_unpar))
@@ -135,7 +142,6 @@ def post_process_data(input_file_name):
                 param_value_raw[i, :] = np.fromstring(
                     c_chain[1:len(c_chain)-1], sep=' ')
                 i += 1
-
         # -------------------------------------------
         # --------- Plot markov chains --------------
         # -------------------------------------------
@@ -149,7 +155,7 @@ def post_process_data(input_file_name):
                 plt.xlabel("Number of iterations")
                 plt.ylabel(unpar_name[i])
 
-                saveToTikz('markov_chain_'+unpar_name[i]+'.tex')
+                #saveToTikz('markov_chain_'+unpar_name[i]+'.tex')
 
                 c_mean_val = np.mean(param_value_raw[:, i])
                 c_std_val = np.std(param_value_raw[:, i])
@@ -160,6 +166,8 @@ def post_process_data(input_file_name):
                 cqv = (Q3 - Q1)/(Q3 + Q1)
 
                 print("{}: mean value = {}; standard dev. = {}; cv = {}; cqv = {}".format(unpar_name[i], c_mean_val, c_std_val, cv, cqv))
+
+
             """
             cov_c = np.cov(param_value_raw, rowvar=False)
             print("Final chain covariance matrix:")
@@ -287,7 +295,21 @@ def post_process_data(input_file_name):
             # saveToTikz('correlation_matrix.tex')
             """
 
+      
+            """ 
+            #  2D MCMC iterations
+            #---------------
 
+            num_fig = 500
+            for i in range(n_unpar):
+                for j in range(i+1, n_unpar):
+                    plt.figure(num_fig+i)
+                    plt.plot(param_value_raw[:, i], param_value_raw[:, j])
+                    plt.xlabel(unpar_name[i])
+                    plt.ylabel(unpar_name[j])
+
+                    num_fig += 1 
+            """
  
 
 
@@ -487,7 +509,8 @@ def post_process_data(input_file_name):
                 n_data_set = int(len(data_exp[data_id].y)/n_x)
  
                 for i in range(n_data_set): 
-                    plt.figure(num_plot[num_data_set])
+                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(i)
 
                     # Initialise bounds
                     data_ij_max = -1e5*np.ones(n_x)

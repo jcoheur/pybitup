@@ -1,0 +1,42 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{  
+    "Sampling": {
+        "Distribution": {
+            "name": "Gaussian",
+            "n_rand_var" : 2,  
+            "hyperparameters" : [[[0.0], [0.0]], [[1.0, 0.98], [0.98, 1.0]]],
+            "init_val" : [0.0, 0.0]
+        }, 
+        "Algorithm": {
+            "name": "RWMH", 
+            "Ito-SDE" : {
+                "h" : 60, 
+                "f0" : 1.4
+            },
+            "n_iterations": 400, 
+            // Proposal is not read for Ito-SDE. We keep it for easily switching between the two for comparison
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+				    "type": "diag", 
+				    "value": [0.0324, 0.0324]
+                }
+            }
+        }
+        // "ComputeAnalyticalDistribution": {
+        //     "DistributionSupport" : [[-3, 3], [-3, 3]]
+        // }
+    }, 
+    "PostProcess": { 
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+        },
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin" : 0
+		}
+	}
+}

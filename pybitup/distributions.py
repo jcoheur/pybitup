@@ -9,8 +9,15 @@ import matplotlib.pyplot as plt
 def set_probability_dist(name_list, hyperparam, n_rand_var): 
     """ Set the probability distribution. """
 
+    IMPLEMENTED_PDFS = ["Gaussian", 
+                        "Uniform", 
+                        "Gamma", 
+                        "Mixture", 
+                        "SoizePDF"]
+
+
     # Check that the function provided in names are implemented 
-    implemented_functions = " ".join(["Gaussian", "Uniform", "Gamma", "Mixture"])
+    implemented_functions = " ".join(IMPLEMENTED_PDFS)
     for name in name_list: 
             idx = implemented_functions.find(name)
             if idx < 0: 
@@ -23,6 +30,9 @@ def set_probability_dist(name_list, hyperparam, n_rand_var):
         prob_dist = Uniform(hyperparam, n_rand_var)
     elif name == 'Mixture': 
         prob_dist = Mixture(hyperparam, n_rand_var)
+    elif name == 'SoizePDF':
+        prob_dist = SoizePDF(hyperparam, n_rand_var=2)
+        # No hyperparam and dimension fixed to two 
 
     return prob_dist
 
@@ -71,10 +81,10 @@ class ProbabilityDistribution:
 
 
         elif self.dim == 2:
-            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 100)
-            delta_param_i = np.exp(vec_param_i[1] - vec_param_i[0])
-            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], 100)
-            delta_param_j = np.exp(vec_param_j[1] - vec_param_j[0])
+            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 200)
+            delta_param_i = vec_param_i[1] - vec_param_i[0]
+            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], 200)
+            delta_param_j = vec_param_j[1] - vec_param_j[0]
             f_post = np.zeros([vec_param_i.size, vec_param_j.size])
             for i, param_i in np.ndenumerate(vec_param_i): 
                 for j, param_j in np.ndenumerate(vec_param_j): 
@@ -88,9 +98,11 @@ class ProbabilityDistribution:
             marginal_post_norm_1 = np.sum(norm_f_post*delta_param_j, axis=1)
             marginal_post_norm_2 = np.sum(norm_f_post*delta_param_i, axis=0)
             plt.figure(200)
-            plt.plot(np.exp(vec_param_i), marginal_post_norm_1)
+            plt.plot(vec_param_i, marginal_post_norm_1)
             plt.figure(201)
-            plt.plot(np.exp(vec_param_j), marginal_post_norm_2)
+            plt.plot(vec_param_j, marginal_post_norm_2)
+
+            np.save("output/2d_post.npy", f_post)
 
         return f_post 
 
@@ -162,10 +174,15 @@ class Gaussian(ProbabilityDistribution):
         exp_arg = self.compute_exp_arg(X)   
         log_val = self.log_gauss_coeff - 1/2*exp_arg
 
-        return log_val
+        #return log_val
 
-        # rv = stats.multivariate_normal(self.mean[0][:], self.cov)
-        # return rv.logpdf(X)
+        rv = stats.multivariate_normal(self.mean[0][:], self.cov)
+        return rv.logpdf(X)
+
+    def compute_grad_log_value(self, X):
+
+        return 1
+
 
 
 class Uniform(ProbabilityDistribution):  
@@ -229,3 +246,26 @@ class Mixture(ProbabilityDistribution):
         Y = self.compute_value(X)
 
         return np.log(Y)
+
+
+
+class SoizePDF(ProbabilityDistribution): 
+    """ Test case PDF for comparing RMWH, ito-SDE, etc. 
+    From Soize 2017, Uncertainty Quantification, An accelerated Course ... pp. 65 """
+
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
+
+        self.c0 = 1 
+
+    def compute_value(self, X): 
+
+        val = self.c0 * np.exp( -15 * (X[0]**3 - X[1])**2 - (X[1] - 0.3)**4) 
+
+        return val 
+
+    def compute_log_value(self, X):
+    
+        log_val = np.log(self.c0) - 15 * (X[0]**3 - X[1])**2 - (X[1] - 0.3)**4
+
+        return log_val 

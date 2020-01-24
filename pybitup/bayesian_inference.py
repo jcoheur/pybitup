@@ -23,9 +23,11 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         self.dim = len(param_init)
         self.name_random_var = self.model.unpar_name 
         
-        # for the verification of ito-sde for the 1param (E) pyro model
-        #self.distr_support = np.array([[self.model.parametrization_forward(np.array([1e5])), self.model.parametrization_forward(np.array([2e5]))]])
-        #self.distr_support = np.array([[np.array([4]), np.array([15])], [np.array([11.3]), np.array([12.95])]])
+        self.bayes_post = 0
+        self.log_bayes_post = 0
+
+
+
        
     def get_dim(self): 
         return len(self.param_init)
@@ -35,6 +37,8 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         X = self.model.parametrization_backward(Y) 
            
         bayes_post = self.prior.compute_value(X) * (1/self.model.parametrization_det_jac(X)) * self.likelihood.compute_value(X) 
+
+        self.bayes_post = bayes_post
 
         return bayes_post 
 
@@ -52,12 +56,53 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
             log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val
             # log(1/det_jac) = - log(det_jac)
  
+        # Update value
+        self.log_bayes_post = log_bayes_post
 
         return log_bayes_post
+
+    # def compute_log_like(self, Y): 
+
+    #     X = self.model.parametrization_backward(Y)
+        
+    #     log_like_val = self.likelihood.compute_log_value(X)
+
+    #     return log_like_val
+
+    def compute_grad_log_value(self, Y): 
+
+        X = self.model.parametrization_backward(Y)
+
+        grad_log_like = self.likelihood.compute_grad_log_value(X)
+
+        return grad_log_like
+
+    def estimate_hessian_model(self, Y): 
+        """ Estimate the Hessian of the model using its analytical gradeints. """ 
+
+        X = self.model.parametrization_backward(Y)
+
+        hess_psd = self.likelihood.compute_hess_PSD(X)
+
+        return hess_psd
+
+
+    def estimate_init_val(self, Y): 
+        """ Estimate initial value using optimization algorithm of the local gradient likelihood.""" 
+        
+        X = self.model.parametrization_backward(Y)
+
+        X_est = self.likelihood.gradient_descent(X, self.likelihood.compute_grad_log_value)
+
+        return self.model.parametrization_forward(X_est)
 
     def update_eval(self): 
 
         self.likelihood.update_eval() 
+
+    # def save_log_post(self, IO_fileID): 
+
+    #     IO_fileID['Distribution_values'].write("{}\n".format(str(self.log_bayes_post).replace('\n', '')))
 
     def save_value(self, current_it): 
 
@@ -73,6 +118,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         IO_fileID['MChains'].write("{}\n".format(str(X).replace('\n', '')))
 
         np.savetxt(IO_fileID['MChains_csv'], np.array([X]), fmt="%f", delimiter=",")
+
 
 class Data:
     """Class defining the data in the inference problem and contains all the information"""
@@ -180,6 +226,8 @@ class Model:
         # Value of the model f(param, x) 
         self.model_eval = 0
 
+        self.model_grad = 0
+
     def size_x(self):
         """Return the length of the i-th data x"""
         return len(self._x) 
@@ -213,6 +261,10 @@ class Model:
 
         return 1
 
+    def d_fx_dparam(self, *ext_parameters): 
+
+        return 1 
+        
     def parametrization_forward(self, X=1, P=1):
         
         Y = X
@@ -230,6 +282,12 @@ class Model:
         det_jac = 1 
 
         return det_jac
+
+    def parametrization_inv_jac(self, X=1):
+
+        inv_jac = X
+
+        return inv_jac 
 
     def run_model(self, var_param): 
         """ Define the vector of model evaluation."""
@@ -278,6 +336,11 @@ class Model:
             self.model_eval = self.fun_x(self.input_file_name, self.unpar_name, var_param)
 
 
+
+    def get_gradient_model(self, var_param): 
+        """ Evaluate the gradient of the model with respect to its parameter at var_param""" 
+
+        self.model_grad = self.d_fx_dparam()
 
 
 class Likelihood: 
@@ -381,6 +444,129 @@ class Likelihood:
             J = J  + np.sum(arg_exp**2, axis=0)
 
         self.arg_LL = J
+
+
+    # Implementation of the 15-01-20 
+    # def compute_grad_log_value(self, X): 
+
+    #     grad = np.zeros(len(X))
+    #     for model_id in self.models.keys(): 
+
+    #         # Compute gradient of the model 
+    #         self.models[model_id].run_model(X)
+    #         self.models[model_id].get_gradient_model(X)
+    #         inv_jac = self.models[model_id].parametrization_inv_jac(X)
+
+    #         # Compute grad log LL 
+    #         ss_x = (self.data[model_id].y - self.models[model_id].model_eval)/(self.data[model_id].std_y**2) 
+    #         for i, pn in enumerate(self.models[model_id].unpar_name):
+
+    #             # grad_model_i = self.models[model_id].model_grad[0, pn]
+    #             grad_model_i = []
+    #             nspecies = 1 #14, 2, 1
+    #             for j in range(nspecies): 
+    #                 grad_model_i = np.concatenate((grad_model_i, self.models[model_id].model_grad[j, pn]))
+                
+    #             prod_i = ss_x * grad_model_i * inv_jac[i, i]
+
+    #             grad[i] = np.sum(prod_i, axis=0)
+
+    #     return grad
+
+
+    def compute_grad_log_value(self, X): 
+
+        grad = np.zeros(len(X))
+        for model_id in self.models.keys(): 
+
+            # Compute gradient of the model 
+            self.models[model_id].run_model(X)
+            self.models[model_id].get_gradient_model(X)
+            inv_jac = self.models[model_id].parametrization_inv_jac(X)
+
+            # Compute grad log LL 
+            ss_x = (self.data[model_id].y - self.models[model_id].model_eval)/(self.data[model_id].std_y**2) 
+
+            for i, pn in enumerate(self.models[model_id].unpar_name):
+
+                # grad_model_i = self.models[model_id].model_grad[0, pn]
+                grad_model_i = []
+                nspecies = 1 #14, 2, 1
+                for j in range(nspecies): 
+                    grad_model_i = np.concatenate((grad_model_i, self.models[model_id].model_grad[j, pn]))
+                
+                for k, pn2 in enumerate(self.models[model_id].unpar_name):
+                    prod_i_k = ss_x * grad_model_i * inv_jac[i, k]
+
+                    grad[k] = grad[k] + np.sum(prod_i_k, axis=0)
+
+        return grad
+
+
+
+    def compute_hess_PSD(self, X): 
+
+        hess_PSD = np.zeros((len(X), len(X)))
+        for model_id in self.models.keys(): 
+
+            # Compute gradient of the model 
+            self.models[model_id].run_model(X)
+            self.models[model_id].get_gradient_model(X)
+            inv_jac = self.models[model_id].parametrization_inv_jac(X)
+
+            for i, pn_i in enumerate(self.models[model_id].unpar_name):
+
+                # grad_model_i = self.models[model_id].model_grad[0, pn]
+                grad_model_i = []
+                nspecies = 14 #14, 2, 1
+                for ns in range(nspecies): 
+                    grad_model_i = np.concatenate((grad_model_i, self.models[model_id].model_grad[ns, pn_i]))
+                prod_i = grad_model_i * inv_jac[i] 
+
+                for j, pn_j in enumerate(self.models[model_id].unpar_name):
+                    if j < i: 
+                        continue
+                    else: 
+                        grad_model_j = []
+                        for ns in range(nspecies):     
+                            grad_model_j = np.concatenate((grad_model_j, self.models[model_id].model_grad[ns, pn_j]))
+                        prod_j = grad_model_j * inv_jac[j] 
+                    prod_ij = prod_i * prod_j / self.data[model_id].std_y**2 
+
+                    hess_PSD[i, j] = np.sum(prod_ij, axis=0) 
+                    hess_PSD[j, i] = hess_PSD[i, j]
+
+        return hess_PSD
+
+
+        
+    def gradient_descent(self, X, grad_X):
+        """ First attempt to use optimization algorithm to find an estimate. 
+        Gradient descent algorithm. """ 
+
+        X_n = X
+        X_n_p = X
+
+        vec_grad = grad_X(X_n)
+        gamma = 1
+
+        max_iter = 1000
+        for i in range(max_iter):
+            
+            X_n_p = X_n + gamma *  vec_grad
+
+            # Updates
+            X_n = X_n_p
+            vec_grad = grad_X(X_n)
+            #norm_grad = np.linalg.norm(vec_grad)
+
+        self.arg_gauss_likelihood(X_n)
+
+        return X_n
+
+
+
+
 
 
 def generate_synthetic_data(my_model, std_y, type_pert):

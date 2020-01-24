@@ -1,0 +1,43 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{  
+    "Sampling": {
+        "Distribution": {
+            "name": "SoizePDF",
+            "n_rand_var" : 2,  
+            "hyperparameters" : [],
+            "init_val" : [1.4, -0.75]
+        }, 
+        "Algorithm": {
+            "name": "Ito-SDE", 
+            "Ito-SDE" : {
+                "h" : 0.025, 
+                "f0" : 1.5, 
+                "C_matrix": "Identity"
+            },
+            "n_iterations": 1e4, 
+            // Proposal is not read for Ito-SDE. We keep it for easily switching between the two for comparison
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+				    "type": "diag", 
+				    "value": [0.0625, 0.0625]
+                }
+            }
+        }
+        // "ComputeAnalyticalDistribution": {
+        //     "DistributionSupport" : [[-1.5, 1.5], [-1.5, 2]]
+        // }
+    }, 
+    "PostProcess": { 
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+        },
+        "Posterior": {
+            "display": "no", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin" : 0
+		}
+	}
+}

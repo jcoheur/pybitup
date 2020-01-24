@@ -14,10 +14,22 @@ class MetropolisHastings:
             self.save_freq = 1
         else:
             self.save_freq = nIterations/100
-        self.param_init = param_init
         self.V = V
         self.prob_distr = prob_distr 
         self.distr_fun = prob_distr.compute_log_value
+        self.grad_log_like = prob_distr.compute_grad_log_value
+
+        # ------------
+        # Optimization 
+        # ------------
+        #
+        # Start with an optimization problem to improve initial guess. So far, gradients must be available and only Gradient-Descent method
+        # Future developments : use numerical computation of gradients, more efficient algorithm (genetic), interface with optimizer in python (SPOTPY?)
+        optim = False
+        if optim == "Gradient-Descent": 
+            self.param_init = self.prob_distr.estimate_init_val(param_init)  
+        else: 
+            self.param_init = param_init
 
         # Initialize parameters and functions
         self.n_param = self.param_init.size
@@ -25,8 +37,15 @@ class MetropolisHastings:
         self.new_val = np.zeros(self.n_param)
         self.z_k = np.zeros(self.n_param)
         self.distr_fun_current_val = self.distr_fun(self.current_val)
+        self.distr_grad_log_like_current_val = 1 
+        self.distr_grad_log_like_new_val = 1
 
-        # # Initial variance estiamte 
+
+        # -------------------------
+        # Initial variance estimate 
+        # ------------------------- 
+        # 
+        # See Smith. 
         # prob_distr.likelihood.sum_of_square(self.current_val)
         # for model_id in prob_distr.likelihood.data.keys():
         #     sigma_k_square = prob_distr.likelihood.SS_X / (prob_distr.likelihood.data[model_id].num_points - self.n_param)
@@ -39,6 +58,7 @@ class MetropolisHastings:
         self.IO_fileID['MChains'].seek(0) 
         self.IO_fileID['MChains_reparam'].seek(0)
         self.IO_fileID['MChains_csv'].seek(0)
+        self.IO_fileID['Distribution_values'].seek(0)
         self.distr_output_file_name = "output/fun_eval."
 
         # Write initial values 
@@ -61,6 +81,7 @@ class MetropolisHastings:
 
         # Monitoring acceptation rate 
         self.mean_r = 0
+        self.r = 0
 
     def run_algorithm(self):
 
@@ -76,6 +97,7 @@ class MetropolisHastings:
                 self.compute_time(self.t1)
 
             # Write the sample values and function evaluation in a file 
+            #self.prob_distr.save_log_post(self.IO_fileID)
             self.prob_distr.save_sample(self.IO_fileID, self.current_val)
             self.write_fun_distr_val(self.it)
 
@@ -106,7 +128,7 @@ class MetropolisHastings:
             self.r = np.exp(self.distr_fun_new_val - self.distr_fun_current_val)
 
         self.alpha = min(1, self.r)
-        
+
     def accept_reject(self):
 
         # Update
@@ -114,6 +136,7 @@ class MetropolisHastings:
         if u < self.alpha:  # Accepted
             self.current_val[:] = self.new_val[:]
             self.distr_fun_current_val = self.distr_fun_new_val
+            self.distr_grad_log_like_current_val = self.distr_grad_log_like_new_val
             self.prob_distr.update_eval()
         else:  # Rejected, current val remains the same
             self.n_rejected += 1
@@ -222,6 +245,7 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
                 self.compute_time(self.t1)
 
             # Write the sample values and function evaluation in a file 
+            #self.prob_distr.save_log_post(self.IO_fileID)
             self.prob_distr.save_sample(self.IO_fileID, self.current_val)
             self.write_fun_distr_val(self.it)
 
@@ -360,11 +384,148 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
         self.inv_V = np.transpose(inv_R)*inv_R
 
 
-class ito_SDE(MetropolisHastings):
-    """Implementation of the Ito-SDE (Arnst et al.) mcmc methods. Joffrey Coheur 17-04-19."""
+class GradientBasedMCMC(MetropolisHastings): 
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, h, f0):
-        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr)
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, C_matrix, gradient):
+
+        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
+
+        # Definition of the log-distribution function 
+        self.log_like = self.distr_fun 
+        
+        #---------------
+        # Hessian matrix
+        # --------------
+        #  
+        # Estimation of the normalisation matrix. Type of approx for C is either Hessian, Hessian_diag or Identity matrices 
+        self.C_matrix = C_matrix 
+        # Check for Hessian numerical computation : LL = x^2 + y^2 
+        # LL = lambda Z: Z[0]**2 + Z[1]**2 
+        # hess_FD = computeHessianFD(LL, np.array([1., 1.]), eps=0.001)
+        # print(hess_FD)
+
+        # Compute matrix C for precondictioning (scaling and correlation)
+        if C_matrix == "Hessian": 
+            print('Computing full Hessian for scaling and correlation.')
+            hess_FD = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
+            self.C_approx = linalg.inv(hess_FD)  # np.array([np.log(1e4)**2])
+        elif C_matrix == "Hessian_diag": 
+            print('Computing diagonal of Hessian for scaling and correlation.')
+            hess_FD = -computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False)
+            self.C_approx = linalg.inv(hess_FD)  # np.array([np.log(1e4)**2])
+        elif C_matrix == "Identity": 
+            print('Using identity matrix for Hessian approxiation')
+            self.C_approx = np.identity(self.n_param)
+        elif C_matrix == "PSD": 
+            print('Positive semi-definite approximation of the Hessian. Didn''t prove to be correct so far.')
+            # Positive semi-definitive approximation. Approximation not accurate so far. 
+            hess_FD = self.prob_distr.estimate_hessian_model(self.param_init)
+            self.C_approx = linalg.inv(hess_FD)
+            print(self.C_approx)
+        else: 
+            raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix))
+        print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
+        print(self.C_approx)
+        #print(hess_FD)
+
+        # --------------------
+        # Gradient computation 
+        # --------------------
+        # 
+        # Computation of the gradient for the direction in the Ito-SDE
+        # Estimation of the gradient : either Analytical or Numerical 
+        if gradient == "Numerical": 
+            # Numerical computation of the gradient using finite differences  
+            self.computeGrad = lambda xi_n: computeGradientFD(self.log_like, xi_n, eps=0.0000000001)
+        elif gradient == "Analytical": 
+            # Analytical formula for the computation of gradient specified 
+            self.computeGrad = self.grad_log_like
+        else: 
+            raise ValueError('Unknown gradient type "{}" for estimating gradients.'.format(gradient))
+
+        self.L_c = linalg.cholesky(self.C_approx)
+        self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+
+class HamiltonianMonteCarlo(GradientBasedMCMC):
+    """ Hamiltonian Monte Carlo alrogithm. 
+    From Neal, R. M. (2010) MCMC using Hamiltonian dynamics. In Handbook of Markov Chain Monte Carlo (eds
+    S. Brooks, A. Gelman, G. Jones and X.-L Meng). Boca Raton: Chapman and Hall–CRC Press. 
+    Implementation: Joffrey Coheur 14-01-20.""" 
+
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, 
+                 step_size, num_steps):
+
+        GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
+
+        # HMC tuning parameters 
+        self.epsilon = step_size 
+        self.L = num_steps 
+
+        # Initial parameters
+        self.current_val = self.param_init 
+        self.distr_fun_current_val = self.distr_fun(self.current_val)
+        self.distr_grad_log_like_current_val = self.computeGrad(self.current_val)
+        print(self.distr_grad_log_like_current_val)
+
+    def compute_new_val(self):
+        """ Solve Hamiltonian dynamics using leapfrog discretization. """
+
+        #Initialise 
+        self.new_val[:] = self.current_val[:]
+        self.p = self.compute_multivariate_normal() # independent standard normal variates
+        self.p = np.matmul(self.p, self.L_c)
+        self.current_p = self.p
+
+        # Make a half step for momentum at the beginning
+        self.p = self.p - self.epsilon * ( -self.distr_grad_log_like_current_val) / 2
+
+        # Alternate full steps for position and momentum 
+        for i in range(self.L):
+            # Make a full step for the position 
+            self.new_val = self.new_val + self.epsilon * (np.matmul(self.p, linalg.inv(self.C_approx)))
+            self.distr_grad_log_like_new_val = self.computeGrad(self.new_val)
+            # Make a full step for the momentum, except at end of trajectory 
+            if i!=(self.L-1): 
+                self.p = self.p - self.epsilon * (-self.distr_grad_log_like_new_val)
+
+        # Make a half step for momentum at the end.
+        self.p = self.p - self.epsilon * (-self.distr_grad_log_like_new_val) / 2
+        # Negate momentum at end of trajectory to make the proposal symmetric
+        self.p = -self.p
+
+    def compute_acceptance_ratio(self):
+
+        # Evaluate potential and kinetic energies at start and end of trajectory
+        current_U = -self.distr_fun_current_val 
+        L_current_p = np.matmul(self.current_p, linalg.inv(self.C_approx))
+        arg_current_K = L_current_p * self.current_p
+        
+        current_K = np.sum(arg_current_K) / 2 
+        #current_K = np.sum(self.current_p**2) / 2
+
+        self.distr_fun_new_val = self.distr_fun(self.new_val)
+        proposed_U = -self.distr_fun_new_val  
+        L_p = np.matmul(self.p, linalg.inv(self.C_approx))
+        arg_proposed_K = L_p * self.p
+        proposed_K = np.sum(arg_proposed_K) / 2 
+        #proposed_K = np.sum(self.p**2) / 2
+       
+        if self.distr_fun_new_val is -np.inf: 
+            self.r = 0
+        else: 
+            #self.r = self.distr_fun_new_val/self.distr_fun_current_val
+            self.r = np.exp(current_U-proposed_U+current_K-proposed_K)
+
+        self.alpha = min(1, self.r)
+
+class ito_SDE(GradientBasedMCMC):
+    """Ito-SDE Markov Chain Monte Carlo algorithm.  
+    From Soize, Arnst et al.).
+    Implementation: Joffrey Coheur 17-04-19."""
+
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, h, f0, C_matrix, gradient):
+
+        GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
 
         # Time step h and free parameter f0 for the ito-sde resolution
         self.h = h
@@ -372,27 +533,10 @@ class ito_SDE(MetropolisHastings):
         self.hfm = 1 - self.h*self.f0/4
         self.hfp = 1 + self.h*self.f0/4
 
-        # Definition of the log-distribution function
-        self.log_like = self.distr_fun
-
-        #self.log_prior = lambda cv_xi : np.log(np.exp(cv_xi[0]) * np.exp(cv_xi[1]) * 1/((sec(1/2 + np.arctan(cv_xi[2])/np.pi))**2))
-
-        # Compute matrix G for precondictioning (scaling and correlation)
-        G_matrix = "Hessian" # Insert this in input file 
-        if G_matrix == "Hessian": 
-            hess_FD = -computeHessianFD(self.log_like, self.param_init, eps=0.0000001)
-            self.C_approx = linalg.inv(hess_FD)  # np.array([np.log(1e4)**2])
-        elif G_matrix == "Identity": 
-            self.C_approx = np.identity(self.n_param)
-        else: 
-            raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(G_matrix))
- 
-        L_c = linalg.cholesky(self.C_approx)
-        self.inv_L_c_T = linalg.inv(np.transpose(L_c))
-
         # Initial parameters
         self.xi_nm = np.array(self.param_init)
         self.P_nm = np.zeros(self.n_param)
+        self.IO_fileID['ito_p_moments'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
 
     def run_algorithm(self):
 
@@ -403,8 +547,9 @@ class ito_SDE(MetropolisHastings):
             xi_n = self.xi_nm + self.h/2*np.matmul(self.C_approx, self.P_nm)
 
             # Gradient Log-Likelihood
-            grad_LL = computeGradientFD(self.log_like, xi_n, eps=0.000001)
-            grad_phi = - grad_LL
+            grad_LL = self.computeGrad(xi_n)
+            #print(computeGradientFD(self.log_like, xi_n, eps=0.00000001), grad_LL) # For comparing. "gradient" must be set to Analytical 
+            grad_phi = -grad_LL
 
             P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp * \
                 (-grad_phi) + np.sqrt(self.f0)/self.hfp * \
@@ -424,7 +569,9 @@ class ito_SDE(MetropolisHastings):
             self.prob_distr.update_eval()
 
             # Write the sample values and function evaluation in a file 
+            #self.prob_distr.save_log_post(self.IO_fileID)
             self.prob_distr.save_sample(self.IO_fileID, xi_n)
+            self.IO_fileID['ito_p_moments'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
             self.write_fun_distr_val(self.it)
             # Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
             # self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))
@@ -454,6 +601,11 @@ def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
             # initialize parameter
             var_model_pert = np.array(var_model)
             delta_p = var_model_pert[i]*eps
+
+            if delta_p == 0.:
+                # Happens if, for instance, var_model = 0.0 
+                # This should be check also for Central and Hessian computation, but not done yet 
+                delta_p = eps
 
             # Perturb the good parameters
             var_model_pert[i] = var_model[i]+delta_p
@@ -489,7 +641,7 @@ def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
     return grad_FD
 
 
-def computeHessianFD(f_X, var_model, eps=0.01):
+def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
     """Compute the hessian matrix of the model f_X with respect to its variables around the values provided in var_model
 
     f_x is a function handle of variables var_model
@@ -520,49 +672,52 @@ def computeHessianFD(f_X, var_model, eps=0.01):
         # Finite difference scheme for the diagonal terms
         num = f_X_pert_p - 2*f_X_init + f_X_pert_m
         hess_FD[i, i] = num/(delta_pi**2)
-
+        # We force the diag to be positive 
+        #hess_FD[i, i] = -np.abs(num/(delta_pi**2))
+        #print(hess_FD[i, i])
     # 2) Off diagonal terms
-    for i in range(nVar):
-        # Initialize parameter
-        var_i_model_pert_p = np.array(var_model)
-        var_i_model_pert_m = np.array(var_model)
-        delta_pi = var_model[i]*eps
+    if compute_all_element: 
+        for i in range(nVar):
+            # Initialize parameter
+            var_i_model_pert_p = np.array(var_model)
+            var_i_model_pert_m = np.array(var_model)
+            delta_pi = var_model[i]*eps
 
-        # Perturb the good parameters
-        var_i_model_pert_p[i] = var_model[i]+delta_pi
-        var_i_model_pert_m[i] = var_model[i]-delta_pi
-
-        # Compute the function with perturbed parameters
-        f_X_i_pert_p = f_X(var_i_model_pert_p)
-        f_X_i_pert_m = f_X(var_i_model_pert_m)
-
-        for j in range(nVar):
-
-            if j <= i:
-                continue
-
-            delta_pj = var_model[j]*eps
-            var_j_model_pert_p = np.array(var_model)
-            var_j_model_pert_m = np.array(var_model)
-            var_j_model_pert_p[j] = var_model[j]+delta_pj
-            var_j_model_pert_m[j] = var_model[j]-delta_pj
-
-            var_ij_model_pert_p = var_i_model_pert_p
-            var_ij_model_pert_m = var_i_model_pert_m
-            var_ij_model_pert_p[j] = var_i_model_pert_p[j]+delta_pj
-            var_ij_model_pert_m[j] = var_i_model_pert_m[j]-delta_pj
+            # Perturb the good parameters
+            var_i_model_pert_p[i] = var_model[i]+delta_pi
+            var_i_model_pert_m[i] = var_model[i]-delta_pi
 
             # Compute the function with perturbed parameters
-            f_X_j_pert_p = f_X(var_j_model_pert_p)
-            f_X_j_pert_m = f_X(var_j_model_pert_m)
+            f_X_i_pert_p = f_X(var_i_model_pert_p)
+            f_X_i_pert_m = f_X(var_i_model_pert_m)
 
-            # Compute the function with perturbed parameters
-            f_X_ij_pert_p = f_X(var_ij_model_pert_p)
-            f_X_ij_pert_m = f_X(var_ij_model_pert_m)
+            for j in range(nVar):
 
-            # Finite difference scheme for off-diagonal terms
-            hess_FD[i, j] = (f_X_ij_pert_p - f_X_i_pert_p - f_X_j_pert_p + 2*f_X_init -
-                            f_X_i_pert_m - f_X_j_pert_m + f_X_ij_pert_m)/(2*delta_pj*delta_pi)
-            hess_FD[j, i] = hess_FD[i, j]
+                if j <= i:
+                    continue
+
+                delta_pj = var_model[j]*eps
+                var_j_model_pert_p = np.array(var_model)
+                var_j_model_pert_m = np.array(var_model)
+                var_j_model_pert_p[j] = var_model[j]+delta_pj
+                var_j_model_pert_m[j] = var_model[j]-delta_pj
+
+                var_ij_model_pert_p = var_i_model_pert_p
+                var_ij_model_pert_m = var_i_model_pert_m
+                var_ij_model_pert_p[j] = var_i_model_pert_p[j]+delta_pj
+                var_ij_model_pert_m[j] = var_i_model_pert_m[j]-delta_pj
+
+                # Compute the function with perturbed parameters
+                f_X_j_pert_p = f_X(var_j_model_pert_p)
+                f_X_j_pert_m = f_X(var_j_model_pert_m)
+
+                # Compute the function with perturbed parameters
+                f_X_ij_pert_p = f_X(var_ij_model_pert_p)
+                f_X_ij_pert_m = f_X(var_ij_model_pert_m)
+
+                # Finite difference scheme for off-diagonal terms
+                hess_FD[i, j] = (f_X_ij_pert_p - f_X_i_pert_p - f_X_j_pert_p + 2*f_X_init -
+                                f_X_i_pert_m - f_X_j_pert_m + f_X_ij_pert_m)/(2*delta_pj*delta_pi)
+                hess_FD[j, i] = hess_FD[i, j]
 
     return hess_FD

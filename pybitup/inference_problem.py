@@ -16,14 +16,22 @@ class Sampler:
         self.prob_dist = prob_dist 
         self.algo = algo
         self.IO_fileID = IO_fileID
+        av_algo = {}
 
-        # List of implemented algorithms 
-        av_algo = ['RWMH', 'AMH', 'DR', 'DRAM', 'Ito-SDE']
+        # List of available algorithms 
+        av_algo['RWMH'] = "random-walk Metropolis-Hastings"
+        av_algo['AMH'] = "adaptive Metropolis-Hastings"
+        av_algo['DR'] = "delayed-rejection Metropolis-Hastings" 
+        av_algo['DRAM'] = "delayed-rejection adative Metropolis-Hastings"
+        av_algo['HMC'] = "Hamiltonian Monte Carlo"
+        av_algo['ISDE'] = "Ito-SDE"
 
         # Check that the requested algorithm is implemented
         self.algo_name = self.algo['name']
         if self.algo_name not in av_algo: 
             raise ValueError('Algorithm "{}" unknown.'.format(self.algo_name)) 
+        else: 
+            print("Running {} algorithm.".format(av_algo[self.algo_name]))
 
         if self.algo_name == "RWMH" or self.algo_name == "AMH" or self.algo_name == "DR" or self.algo_name == "DRAM": 
             # Proposal function need to be defined for these algorithms
@@ -48,34 +56,38 @@ class Sampler:
         We draw sequence of dependent samples from markov chains using iterative algorithms. """
 
         if self.algo_name == "RWMH": 
-            print("Using random-walk Metropolis-Hastings algorithm.")
             run_MCMCM = mha.MetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist)  
         elif self.algo_name == "AMH": 
-            print("Using adaptive random-walk Metropolis-Hastings algorithm.")
             starting_it = int(self.algo['AMH']['starting_it'])
             updating_it = int(self.algo['AMH']['updating_it'])
             eps_v = self.algo['AMH']['eps_v']
             run_MCMCM = mha.AdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
                                                         starting_it, updating_it, eps_v)
         elif self.algo_name == "DR": 
-            print("Using delayed-rejection random-walk Metropolis-Hastings algorithm.")
             gamma = self.algo['DR']['gamma']
             run_MCMCM = mha.DelayedRejectionMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
                                                         gamma)
 
         elif self.algo_name == "DRAM": 
-            print("Using delayed-rejection adaptive random-walk Metropolis-Hastings algorithm.")
             starting_it = int(self.algo['DRAM']['starting_it'])
             updating_it = int(self.algo['DRAM']['updating_it'])
             eps_v = self.algo['DRAM']['eps_v']
             gamma = self.algo['DRAM']['gamma']
             run_MCMCM = mha.DelayedRejectionAdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
                                                                         starting_it, updating_it, eps_v, gamma)
-        elif self.algo_name == "Ito-SDE": 
-            print("Running Ito-SDE algorithm.")
-            h = self.algo['Ito-SDE']['h']
-            f0 = self.algo['Ito-SDE']['f0']
+        elif self.algo_name == "HMC": 
+            step_size = self.algo['HMC']['step_size']
+            num_steps = self.algo['HMC']['num_steps']
+            C_matrix = self.algo['HMC']['C_matrix']
+            gradient = self.algo['HMC']['gradient']
+            run_MCMCM = mha.HamiltonianMonteCarlo(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
+                                                C_matrix, gradient, step_size, num_steps)
+        elif self.algo_name == "ISDE": 
+            h = self.algo['ISDE']['h']
+            f0 = self.algo['ISDE']['f0']
+            C_matrix = self.algo['ISDE']['C_matrix']
+            gradient = self.algo['ISDE']['gradient']
             run_MCMCM = mha.ito_SDE(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
-                                    h, f0)
+                                    h, f0, C_matrix, gradient)
         
         run_MCMCM.run_algorithm()

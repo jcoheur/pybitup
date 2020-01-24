@@ -2,31 +2,25 @@
 {  
     "Sampling": {
         "Distribution": {
-            "name": "Gaussian", 
-            "n_rand_var": 100,
-            "hyperparameters" : ["mean.csv", "cov.csv"], 
-            "init_val" : "init_val.csv"
+            "name": "Gaussian",
+            "n_rand_var" : 2,  
+            "hyperparameters" : [[[0.0], [0.0]], [[1.0, 0.98], [0.98, 1.0]]],
+            "init_val" : [0.0, 0.0]
         }, 
         "Algorithm": {
-            "name": "AMH", 
-            "AMH": {
-                "starting_it": 2e2, 
-				"updating_it": 2e2, 
-				"eps_v": 0.0
-			},
-            "n_iterations": 1e5, 
-		    "proposal": { 
-			    "name": "Gaussian",
-			    "covariance": { 
-				    "type": "diag", 
-				    "value": "prop_cov.csv"
-                }
-            }
+            "name": "HMC", 
+            "HMC" : {
+                "step_size" : 0.18, 
+                "num_steps" : 20, 
+                "C_matrix": "Identity", 
+                "gradient": "Numerical"
+            },
+            "n_iterations": 20
         }
     }, 
     "PostProcess": { 
 	    "MarkovChain": {
-		    "display": "yes",
+		    "display": "no",
 		    "thinning": 1
         },
         "Posterior": {

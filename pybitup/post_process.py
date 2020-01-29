@@ -90,11 +90,10 @@ def post_process_data(input_file_name):
 
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y)/n_x)
- 
                 for i in range(n_data_set): 
 
-                    #plt.figure(num_plot[num_data_set])
-                    plt.figure(i)
+                    plt.figure(num_plot[num_data_set])
+                    #plt.figure(i)
                     plt.plot(data_exp[data_id].x, data_exp[data_id].y[i*n_x:(i+1)*n_x],
                             'o', color=lineColor[num_data_set][0], mfc='none')
 
@@ -120,8 +119,8 @@ def post_process_data(input_file_name):
 
                 for i in range(n_data_set): 
 
-                    #plt.figure(num_plot[num_data_set])
-                    plt.figure(i)
+                    plt.figure(num_plot[num_data_set])
+                    #plt.figure(i)
 
                     plt.plot(data_exp[data_id].x,
                             data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
@@ -509,8 +508,8 @@ def post_process_data(input_file_name):
                 n_data_set = int(len(data_exp[data_id].y)/n_x)
  
                 for i in range(n_data_set): 
-                    #plt.figure(num_plot[num_data_set])
-                    plt.figure(i)
+                    plt.figure(num_plot[num_data_set])
+                    #plt.figure(i)
 
                     # Initialise bounds
                     data_ij_max = -1e5*np.ones(n_x)
@@ -622,8 +621,9 @@ def error_bar (x_data, y_data, error, col, line_width=1):
     dx = Dx/150
 
     ld = len(x_data)
-    for i in range(0, ld): 
-        plt.plot(np.array([x_data[i], x_data[i]]), np.array([ym_data_error[i], yp_data_error[i]]), color=col)
-        plt.plot(np.array([x_data[i]-dx, x_data[i]+dx]), np.array([yp_data_error[i], yp_data_error[i]]), color=col)
-        plt.plot(np.array([x_data[i]-dx, x_data[i]+dx]), np.array([ym_data_error[i], ym_data_error[i]]), color=col)
+    # Might be problematic if ld is too large (takes too much time)
+    for i in range(0, ld, 1000): 
+        plt.plot([x_data[i], x_data[i]], [ym_data_error[i], yp_data_error[i]], color=col)
+        plt.plot([x_data[i]-dx, x_data[i]+dx], [yp_data_error[i], yp_data_error[i]], color=col)
+        plt.plot([x_data[i]-dx, x_data[i]+dx], [ym_data_error[i], ym_data_error[i]], color=col)
 

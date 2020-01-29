@@ -3,7 +3,23 @@ import random
 import scipy
 from scipy import linalg
 import time
+from functools import wraps
 import pandas as pd 
+
+def time_it(func):
+    # decorator to time execution time of a function. simply use @time_it before the function
+    @wraps(func)
+    def _time_it(*args, **kwargs):
+        print("Start time {}" .format(time.asctime(time.localtime())))
+        t1 = time.clock()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            print("End time {}" .format(time.asctime(time.localtime())))
+            print("Elapsed time: {} sec".format(time.strftime(
+            "%H:%M:%S", time.gmtime(time.clock()-t1))))
+
+    return _time_it
 
 class MetropolisHastings:
 
@@ -73,8 +89,7 @@ class MetropolisHastings:
         # Monitoring the chain
         self.n_rejected = 0
 
-        # Print current time and start clock count
-        print("Start time {}" .format(time.asctime(time.localtime())))
+        # Start the clock count for estimating the time for the total numer of iterations
         self.t1 = time.clock()
 
         self.it = 0 
@@ -83,6 +98,8 @@ class MetropolisHastings:
         self.mean_r = 0
         self.r = 0
 
+        
+    @time_it
     def run_algorithm(self):
 
         for self.it in range(1, self.nIterations+1):
@@ -179,17 +196,13 @@ class MetropolisHastings:
         return mv_norm
 
 
-
     def terminate_loop(self):
 
-        print("\nEnd time {}" .format(time.asctime(time.localtime())))
-        print("Elapsed time: {} sec".format(time.strftime(
-            "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
         if self.nIterations == 0: 
             rejection_rate = 0
         else: 
             rejection_rate = self.n_rejected/self.nIterations*100
-            print("Rejection rate is {} %".format(rejection_rate))
+            print("\nRejection rate is {} %".format(rejection_rate))
       
         self.IO_fileID['out_data'].write("$RandomVarName$\n")
         for i in range(self.n_param): 
@@ -229,6 +242,7 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
         self.V_i = self.V_0 
         self.X_av_i = self.param_init 
 
+    @time_it
     def run_algorithm(self):
 
         for self.it in range(1, self.nIterations+1):
@@ -407,26 +421,30 @@ class GradientBasedMCMC(MetropolisHastings):
         # Compute matrix C for precondictioning (scaling and correlation)
         if C_matrix == "Hessian": 
             print('Computing full Hessian for scaling and correlation.')
-            hess_FD = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
-            self.C_approx = linalg.inv(hess_FD)  # np.array([np.log(1e4)**2])
+            self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
+            self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
         elif C_matrix == "Hessian_diag": 
             print('Computing diagonal of Hessian for scaling and correlation.')
-            hess_FD = -computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False)
-            self.C_approx = linalg.inv(hess_FD)  # np.array([np.log(1e4)**2])
+            self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False)
+            self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
         elif C_matrix == "Identity": 
             print('Using identity matrix for Hessian approxiation')
+            self.hess_mat = np.identity(self.n_param)
             self.C_approx = np.identity(self.n_param)
         elif C_matrix == "PSD": 
             print('Positive semi-definite approximation of the Hessian. Didn''t prove to be correct so far.')
             # Positive semi-definitive approximation. Approximation not accurate so far. 
-            hess_FD = self.prob_distr.estimate_hessian_model(self.param_init)
-            self.C_approx = linalg.inv(hess_FD)
+            self.hess_mat = self.prob_distr.estimate_hessian_model(self.param_init)
+            self.C_approx = linalg.inv(self.hess_mat)
             print(self.C_approx)
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix))
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
         print(self.C_approx)
-        #print(hess_FD)
+        self.L_c = linalg.cholesky(self.C_approx)
+        self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+
+        #print(self.hess_mat)
 
         # --------------------
         # Gradient computation 
@@ -443,8 +461,6 @@ class GradientBasedMCMC(MetropolisHastings):
         else: 
             raise ValueError('Unknown gradient type "{}" for estimating gradients.'.format(gradient))
 
-        self.L_c = linalg.cholesky(self.C_approx)
-        self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
 
 class HamiltonianMonteCarlo(GradientBasedMCMC):
     """ Hamiltonian Monte Carlo alrogithm. 
@@ -473,7 +489,7 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         #Initialise 
         self.new_val[:] = self.current_val[:]
         self.p = self.compute_multivariate_normal() # independent standard normal variates
-        self.p = np.matmul(self.p, self.L_c)
+        self.p = np.matmul(self.p, self.inv_L_c_T)
         self.current_p = self.p
 
         # Make a half step for momentum at the beginning
@@ -482,7 +498,7 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         # Alternate full steps for position and momentum 
         for i in range(self.L):
             # Make a full step for the position 
-            self.new_val = self.new_val + self.epsilon * (np.matmul(self.p, linalg.inv(self.C_approx)))
+            self.new_val = self.new_val + self.epsilon * (np.matmul(self.p, self.C_approx))
             self.distr_grad_log_like_new_val = self.computeGrad(self.new_val)
             # Make a full step for the momentum, except at end of trajectory 
             if i!=(self.L-1): 
@@ -497,7 +513,7 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
 
         # Evaluate potential and kinetic energies at start and end of trajectory
         current_U = -self.distr_fun_current_val 
-        L_current_p = np.matmul(self.current_p, linalg.inv(self.C_approx))
+        L_current_p = np.matmul(self.current_p, self.C_approx)
         arg_current_K = L_current_p * self.current_p
         
         current_K = np.sum(arg_current_K) / 2 
@@ -505,7 +521,7 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
 
         self.distr_fun_new_val = self.distr_fun(self.new_val)
         proposed_U = -self.distr_fun_new_val  
-        L_p = np.matmul(self.p, linalg.inv(self.C_approx))
+        L_p = np.matmul(self.p, self.C_approx)
         arg_proposed_K = L_p * self.p
         proposed_K = np.sum(arg_proposed_K) / 2 
         #proposed_K = np.sum(self.p**2) / 2
@@ -538,9 +554,17 @@ class ito_SDE(GradientBasedMCMC):
         self.P_nm = np.zeros(self.n_param)
         self.IO_fileID['ito_p_moments'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
 
+    @time_it
     def run_algorithm(self):
 
         for self.it in range(1, self.nIterations+1):
+
+            # if  self.it % 100 == 0: 
+            #     print("recompute hess")
+            #     # Update Hessian 
+            #     self.hess_mat = -computeHessianFD(self.log_like, self.xi_nm, eps=0.001)
+            #     self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
+            #     self.L_c = linalg.cholesky(self.C_approx)
 
             # Solve Ito-SDE using Stormer-Verlet scheme
             WP_np = np.sqrt(self.h) * self.compute_multivariate_normal()
@@ -553,7 +577,7 @@ class ito_SDE(GradientBasedMCMC):
 
             P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp * \
                 (-grad_phi) + np.sqrt(self.f0)/self.hfp * \
-                            np.matmul(self.inv_L_c_T, WP_np)
+                            np.matmul(linalg.inv(self.L_c),WP_np) 
             xi_np = xi_n + self.h/2*np.matmul(self.C_approx, P_np)
 
             self.P_nm = P_np

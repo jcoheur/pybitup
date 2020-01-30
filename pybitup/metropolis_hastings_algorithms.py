@@ -500,6 +500,7 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
             # Make a full step for the position 
             self.new_val = self.new_val + self.epsilon * (np.matmul(self.p, self.C_approx))
             self.distr_grad_log_like_new_val = self.computeGrad(self.new_val)
+            #print(computeGradientFD(self.log_like, self.new_val, eps=0.00000001), self.distr_grad_log_like_new_val) # For comparing. "gradient" must be set to Analytical 
             # Make a full step for the momentum, except at end of trajectory 
             if i!=(self.L-1): 
                 self.p = self.p - self.epsilon * (-self.distr_grad_log_like_new_val)

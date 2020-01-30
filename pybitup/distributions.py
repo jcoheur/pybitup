@@ -269,3 +269,7 @@ class SoizePDF(ProbabilityDistribution):
         log_val = np.log(self.c0) - 15 * (X[0]**3 - X[1])**2 - (X[1] - 0.3)**4
 
         return log_val 
+
+    def compute_grad_log_value(self, X):
+
+        return 1

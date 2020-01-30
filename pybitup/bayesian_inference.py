@@ -43,6 +43,10 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         return bayes_post 
 
     def compute_log_value(self, Y): 
+        """ Compute the value of the logarithm of the distribution. 
+        In the Bayesian framework, this is the posterior distribution, which takes into accout 
+        the likelihood, the determinant of the jacobian (if there is a change of variable) and the prior.
+        The log(det(jac)) is by default equal to zero if there is no change of variable. """ 
 
         X = self.model.parametrization_backward(Y) 
 
@@ -70,15 +74,21 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
     #     return log_like_val
 
     def compute_grad_log_value(self, Y): 
+        """ Compute the gradient of the logarithm of the distribution. 
+        In the Bayesian framework, this is the log of the posterior distribution, which takes into 
+        account the likelihood, the determinant of the jacobian and the prior (!!!! prior still needs to be added here, 
+        only constant prior works so far). """
 
         X = self.model.parametrization_backward(Y)
 
         grad_log_like = self.likelihood.compute_grad_log_value(X)
+        grad_log_det_jac = self.likelihood.compute_grad_log_det_jac(X)
 
-        return grad_log_like
+        return grad_log_like - grad_log_det_jac 
+
 
     def estimate_hessian_model(self, Y): 
-        """ Estimate the Hessian of the model using its analytical gradeints. """ 
+        """ Estimate the Hessian of the model using its analytical gradients. """ 
 
         X = self.model.parametrization_backward(Y)
 
@@ -446,7 +456,7 @@ class Likelihood:
         self.arg_LL = J
 
 
-    # Implementation of the 15-01-20 
+    # # Implementation of the 15-01-20 
     # def compute_grad_log_value(self, X): 
 
     #     grad = np.zeros(len(X))
@@ -495,14 +505,26 @@ class Likelihood:
                 for j in range(nspecies): 
                     grad_model_i = np.concatenate((grad_model_i, self.models[model_id].model_grad[j, pn]))
                 
+                my_mat = np.matmul(ss_x, grad_model_i)  # ss_x * grad_model_i 
+                #grad = np.dot(inv_jac, my_mat) 
                 for k, pn2 in enumerate(self.models[model_id].unpar_name):
-                    prod_i_k = ss_x * grad_model_i * inv_jac[i, k]
-
-                    grad[k] = grad[k] + np.sum(prod_i_k, axis=0)
+                    #prod_i_k = my_mat * inv_jac[i, k]
+                    grad[k] = grad[k] + my_mat * inv_jac[i, k]
 
         return grad
 
 
+    def compute_grad_log_det_jac(self, X):
+
+        for model_id in self.models.keys(): 
+
+            inv_jac = self.models[model_id].parametrization_inv_jac(X)
+            grad_det_jac = self.models[model_id].grad_det_jac(X)
+            det_jac = self.models[model_id].parametrization_det_jac(X)
+
+            grad_log_det_jac = np.matmul(grad_det_jac, inv_jac)/det_jac
+
+        return grad_log_det_jac
 
     def compute_hess_PSD(self, X): 
 

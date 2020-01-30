@@ -128,19 +128,19 @@ def post_process_data(input_file_name):
     if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None) or  (inputFields.get("Propagation") is not None):
 
 
-        reader = pd.read_csv('output/mcmc_chain.csv')
+        reader = pd.read_csv('output/mcmc_chain.csv', header=None)
         param_value_raw = reader.values
-        n_samples = len(param_value_raw[:, 0]) + 1
+        n_samples = len(param_value_raw[:, 0])  # + 1
 
-        # Load the samples of the distribution                        
-        param_value_raw = np.zeros((n_samples, n_unpar))
-        with open('output/mcmc_chain.dat', 'r') as file_param:
-            i = 0
-            for line in file_param:
-                c_chain = line.strip()
-                param_value_raw[i, :] = np.fromstring(
-                    c_chain[1:len(c_chain)-1], sep=' ')
-                i += 1
+        # # Load the samples of the distribution                        
+        # param_value_raw = np.zeros((n_samples, n_unpar))
+        # with open('output/mcmc_chain.dat', 'r') as file_param:
+        #     i = 0
+        #     for line in file_param:
+        #         c_chain = line.strip()
+        #         param_value_raw[i, :] = np.fromstring(
+        #             c_chain[1:len(c_chain)-1], sep=' ')
+        #         i += 1
         # -------------------------------------------
         # --------- Plot markov chains --------------
         # -------------------------------------------
@@ -166,6 +166,15 @@ def post_process_data(input_file_name):
 
                 print("{}: mean value = {}; standard dev. = {}; cv = {}; cqv = {}".format(unpar_name[i], c_mean_val, c_std_val, cv, cqv))
 
+
+                # Computing convergence criteria and graphs for each chains 
+                # From Gelman et al., Bayesian Data Analysis, 2014. 
+                mean_it = np.zeros(n_samples-1)
+                plt.figure(1000+i)
+                for it in  range(n_samples-1): 
+                    mean_it[it] = np.mean(param_value_raw[0:it+1, i])
+
+                plt.plot(range(n_samples-1), mean_it)
 
             """
             cov_c = np.cov(param_value_raw, rowvar=False)

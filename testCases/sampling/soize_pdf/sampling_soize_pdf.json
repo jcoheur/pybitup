@@ -8,13 +8,19 @@
             "init_val" : [1.4, -0.75]
         }, 
         "Algorithm": {
-            "name": "Ito-SDE", 
-            "Ito-SDE" : {
+            "name": "RWMH", 
+            "ISDE" : {
                 "h" : 0.025, 
                 "f0" : 1.5, 
-                "C_matrix": "Identity"
+                "C_matrix": "Identity", 
+                "gradient": "Numerical"
             },
-            "n_iterations": 1e4, 
+            "HMC" : {
+                "step_size" : 0.1, 
+                "num_steps": 10, 
+                "C_matrix": "Identity", 
+                "gradient": "Numerical"
+            }, 
             // Proposal is not read for Ito-SDE. We keep it for easily switching between the two for comparison
 		    "proposal": { 
 			    "name": "Gaussian",
@@ -22,7 +28,8 @@
 				    "type": "diag", 
 				    "value": [0.0625, 0.0625]
                 }
-            }
+            }, 
+            "n_iterations": 1e5
         }
         // "ComputeAnalyticalDistribution": {
         //     "DistributionSupport" : [[-1.5, 1.5], [-1.5, 2]]

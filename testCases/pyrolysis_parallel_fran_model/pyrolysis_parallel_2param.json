@@ -23,8 +23,8 @@
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A1": {"initial_val" : 4.220996697147369,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
-                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]} // [0, 1e10]   
+                    "A0": {"initial_val" : 16634.000000000015,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
+                    "E0": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]} // [0, 1e10]   
                 }
             },
             "Likelihood": {
@@ -34,7 +34,7 @@
         },
 	    "Algorithm": {
             "name": "RWMH", 
-		    "n_iterations": 1e4,
+		    "n_iterations": 1e3,
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 

@@ -2,6 +2,7 @@ import numpy as np
 import random
 import scipy
 from scipy import linalg
+from scipy.linalg import polar
 import time
 from functools import wraps
 import pandas as pd 
@@ -119,7 +120,7 @@ class MetropolisHastings:
             self.write_fun_distr_val(self.it)
 
 
-        self.compute_covariance()
+        self.compute_covariance(self.nIterations+2)
 
         self.terminate_loop()
 
@@ -169,16 +170,21 @@ class MetropolisHastings:
             self.prob_distr.likelihood.data[model_id].std_y = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b))
             #print(self.prob_distr.likelihood.data[model_id].std_y)
 
-    def compute_covariance(self):
+    def compute_covariance(self, n_iterations):
+
+        file_path = self.IO_fileID['MChains_reparam'] # MChains, MChains_reparam
 
         # Load all the previous iterations
-        param_values = np.zeros((self.nIterations+2, self.n_param))
+        param_values = np.zeros((n_iterations, self.n_param))
         j = 0
-        self.IO_fileID['MChains'].seek(0)
-        for line in self.IO_fileID['MChains']:
+        file_path.seek(0) 
+        for line in file_path:
             c_chain = line.strip()
             param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
             j += 1
+
+        # Compute sample mean 
+        self.mean_c = np.mean(param_values, axis=0)
 
         # Compute sample covariance (to be written in output.dat)
         self.cov_c = np.cov(param_values, rowvar=False)
@@ -221,8 +227,8 @@ class MetropolisHastings:
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
 
-        print("Estimated time: {}; accptance ratio: {}".format(time.strftime("%H:%M:%S",
-                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='\r', flush=True)
+        print("\rEstimated time: {}; acceptance ratio: {}\t".format(time.strftime("%H:%M:%S",
+                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='', flush=True)
 
 
     def write_fun_distr_val(self, current_it):
@@ -263,7 +269,7 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
             self.prob_distr.save_sample(self.IO_fileID, self.current_val)
             self.write_fun_distr_val(self.it)
 
-        self.compute_covariance()
+        self.compute_covariance(self.nIterations+2)
 
         self.terminate_loop()
 
@@ -407,6 +413,12 @@ class GradientBasedMCMC(MetropolisHastings):
         # Definition of the log-distribution function 
         self.log_like = self.distr_fun 
         
+        # Parameters for adaptation 
+        self.X_av_i = np.array(self.param_init)
+        self.S_d = 2.38**2/self.n_param
+        self.eps_Id = 0.0*np.eye(self.n_param)
+        self.update_it = 100
+
         #---------------
         # Hessian matrix
         # --------------
@@ -422,11 +434,11 @@ class GradientBasedMCMC(MetropolisHastings):
         if C_matrix == "Hessian": 
             print('Computing full Hessian for scaling and correlation.')
             self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
-            self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
+            self.C_approx = linalg.inv(self.hess_mat)  
         elif C_matrix == "Hessian_diag": 
             print('Computing diagonal of Hessian for scaling and correlation.')
             self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False)
-            self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
+            self.C_approx = linalg.inv(self.hess_mat)  
         elif C_matrix == "Identity": 
             print('Using identity matrix for Hessian approxiation')
             self.hess_mat = np.identity(self.n_param)
@@ -436,13 +448,30 @@ class GradientBasedMCMC(MetropolisHastings):
             # Positive semi-definitive approximation. Approximation not accurate so far. 
             self.hess_mat = self.prob_distr.estimate_hessian_model(self.param_init)
             self.C_approx = linalg.inv(self.hess_mat)
-            print(self.C_approx)
+        elif C_matrix == "nearPD": 
+            print('Nearest positive semi-definite matrix. ')
+            self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
+            C_approx_nonPD = linalg.inv(self.hess_mat)
+            print(C_approx_nonPD)
+            self.C_approx  = nearPD(C_approx_nonPD)
+
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix))
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
         print(self.C_approx)
         self.L_c = linalg.cholesky(self.C_approx)
-        self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+
+        try: 
+            self.L_c = linalg.cholesky(self.C_approx)
+            self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+        except: 
+            print('Non positive defintie Hessian matrix. Set to identity matrix.')
+            self.C_approx = np.identity(self.n_param)
+            self.L_c = np.identity(self.n_param)
+            self.inv_L_c_T = np.identity(self.n_param)
+
+        # self.L_c = linalg.cholesky(self.C_approx)
+        # self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
 
         #print(self.hess_mat)
 
@@ -461,6 +490,39 @@ class GradientBasedMCMC(MetropolisHastings):
         else: 
             raise ValueError('Unknown gradient type "{}" for estimating gradients.'.format(gradient))
 
+    def _set_algo_param(self, *args): 
+        pass 
+
+    def adapt_covariance(self, i, *args):
+        """ Adapt covariance and algorithm parameters if asked. 
+        args contain algorithm parameters. """ 
+
+        # Update covariance with recursion 
+        if  self.it == self.update_it:  
+            # Initialise sample mean and covariance estimation 
+            self.compute_covariance(self.it) # update self.mean_c and self.cov_c
+            self.X_av_i = self.mean_c
+            self.V_i = self.S_d*(self.cov_c + self.eps_Id)
+
+        if self.it > self.update_it and self.it < 1e5: 
+            X_i = self.current_val[:]
+            X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
+            V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
+            # Update mean and covariance
+            self.V_i = V_ip
+            self.X_av_i = X_av_ip
+
+        # Update covariance 
+        if  self.it % self.update_it == 0 and self.it < 1e5: 
+            # Adapt time step 
+            if self.it == self.update_it: 
+                self._set_algo_param(*args)
+            
+            print("\n{}\n".format(self.V_i))
+
+            self.C_approx = self.V_i
+            self.L_c = linalg.cholesky(self.C_approx)
+            self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
 
 class HamiltonianMonteCarlo(GradientBasedMCMC):
     """ Hamiltonian Monte Carlo alrogithm. 
@@ -474,17 +536,22 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
 
         # HMC tuning parameters 
-        self.epsilon = step_size 
-        self.L = num_steps 
+        self._set_algo_param(step_size, num_steps)
 
         # Initial parameters
         self.current_val = self.param_init 
         self.distr_fun_current_val = self.distr_fun(self.current_val)
         self.distr_grad_log_like_current_val = self.computeGrad(self.current_val)
-        print(self.distr_grad_log_like_current_val)
+
+    def _set_algo_param(self, *args): 
+        self.epsilon = args[0] 
+        self.L =  args[1] 
 
     def compute_new_val(self):
         """ Solve Hamiltonian dynamics using leapfrog discretization. """
+
+        # Adapt covariance 
+        self.adapt_covariance(self.it, 0.05, self.L)
 
         #Initialise 
         self.new_val[:] = self.current_val[:]
@@ -493,7 +560,7 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         self.current_p = self.p
 
         # Make a half step for momentum at the beginning
-        self.p = self.p - self.epsilon * ( -self.distr_grad_log_like_current_val) / 2
+        self.p = self.p - self.epsilon * (-self.distr_grad_log_like_current_val) / 2
 
         # Alternate full steps for position and momentum 
         for i in range(self.L):
@@ -545,27 +612,77 @@ class ito_SDE(GradientBasedMCMC):
         GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
 
         # Time step h and free parameter f0 for the ito-sde resolution
-        self.h = h
-        self.f0 = f0 
-        self.hfm = 1 - self.h*self.f0/4
-        self.hfp = 1 + self.h*self.f0/4
+        self._set_algo_param(h, f0)
 
         # Initial parameters
         self.xi_nm = np.array(self.param_init)
         self.P_nm = np.zeros(self.n_param)
         self.IO_fileID['ito_p_moments'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
 
+    def _set_algo_param(self, *args): 
+        """ Set the time step h, damping parameters f0 and dependent parameters."""
+        self.h = args[0]
+        self.f0 = args[1]
+        self.hfm = 1 - self.h*self.f0/4
+        self.hfp = 1 + self.h*self.f0/4
+
+
     @time_it
     def run_algorithm(self):
 
         for self.it in range(1, self.nIterations+1):
 
-            # if  self.it % 100 == 0: 
-            #     print("recompute hess")
+            # if  self.it % 10 == 0: 
+            #     print("Recomputing Hessian matrix... ")
             #     # Update Hessian 
             #     self.hess_mat = -computeHessianFD(self.log_like, self.xi_nm, eps=0.001)
-            #     self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
+
+            #     try: 
+            #         self.C_approx = linalg.inv(self.hess_mat)  # np.array([np.log(1e4)**2])
+            #         self.L_c = linalg.cholesky(self.C_approx)
+            #         self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+            #     except: 
+            #         print('Non positive defintie local Hessian matrix. Set to identity matrix.\n')
+            #         diag_hess = np.diag(np.abs(np.diag(self.hess_mat)))
+            #         print(diag_hess)
+            #         self.C_approx = linalg.inv(diag_hess)
+            #         self.L_c = linalg.cholesky(self.C_approx)
+            #         self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+            #         # self.C_approx = np.identity(self.n_param)
+            #         # self.L_c = np.identity(self.n_param)
+            #         # self.inv_L_c_T = np.identity(self.n_param)
+
+            # Adapt covariance 
+            self.current_val = self.xi_nm
+            self.adapt_covariance(self.it, 0.1, self.f0)
+
+            # # Update covariance with recursion 
+            # if  self.it == self.update_it:  
+            #     # Initialise sample mean and covariance estimation 
+            #     self.compute_covariance(self.it) # update self.mean_c and self.cov_c
+            #     self.X_av_i = self.mean_c
+            #     self.V_i = self.S_d*(self.cov_c + self.eps_Id)
+
+            # if self.it > self.update_it and self.it < 1e5: 
+            #     X_i = self.current_val
+            #     X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
+            #     V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
+            #     # Update mean and covariance
+            #     self.V_i = V_ip
+            #     self.X_av_i = X_av_ip
+
+            # # Update covariance 
+            # if  self.it % self.update_it == 0 and self.it < 1e5: 
+            #     # Adapt time step 
+            #     if self.it == self.update_it: 
+            #         # Adat time step (f0 is kept the same)
+            #         self._set_algo_param(0.1, self.f0)
+                
+            #     print("\n{}\n".format(self.V_i))
+
+            #     self.C_approx = self.V_i
             #     self.L_c = linalg.cholesky(self.C_approx)
+            #     self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
 
             # Solve Ito-SDE using Stormer-Verlet scheme
             WP_np = np.sqrt(self.h) * self.compute_multivariate_normal()
@@ -601,7 +718,7 @@ class ito_SDE(GradientBasedMCMC):
             # Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
             # self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))
 
-        self.compute_covariance()
+        self.compute_covariance(self.nIterations+2)
 
         self.terminate_loop()
 
@@ -698,7 +815,7 @@ def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
         num = f_X_pert_p - 2*f_X_init + f_X_pert_m
         hess_FD[i, i] = num/(delta_pi**2)
         # We force the diag to be positive 
-        #hess_FD[i, i] = -np.abs(num/(delta_pi**2))
+        hess_FD[i, i] = -np.abs(num/(delta_pi**2))
         #print(hess_FD[i, i])
     # 2) Off diagonal terms
     if compute_all_element: 
@@ -746,3 +863,133 @@ def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
                 hess_FD[j, i] = hess_FD[i, j]
 
     return hess_FD
+
+
+
+def _getAplus(A):
+    eigval, eigvec = np.linalg.eig(A)
+    Q = np.matrix(eigvec)
+    xdiag = np.matrix(np.diag(np.maximum(eigval, 0)))
+    return Q*xdiag*Q.T
+
+def _getPs(A, W=None):
+    W05 = np.matrix(W**.5)
+    return  W05.I * _getAplus(W05 * A * W05) * W05.I
+
+def _getPu(A, W=None):
+    Aret = np.array(A.copy())
+    Aret[W > 0] = np.array(W)[W > 0]
+    return np.matrix(Aret)
+
+
+def computeCorrMat(covMat, sigma): 
+
+    n = covMat.shape[0]
+    corrMat = np.zeros((n,n))
+    for i in range(n): 
+        for j in range(n): 
+            corrMat[i,j] = covMat[i,j]/(sigma[i] * sigma[j])
+
+    return corrMat 
+
+
+def computeCovMat(corrMat, sigma): 
+
+    n = corrMat.shape[0]
+    covMat = np.zeros((n,n))
+    for i in range(n): 
+        for j in range(n): 
+            covMat[i,j] = corrMat[i,j] * (sigma[i] * sigma[j])
+    return covMat 
+
+
+def nearPD(A, nit=10):
+
+    sigma = np.sqrt(np.abs(np.diag(A)))
+    n = A.shape[0]
+    A_ = np.zeros((n, n))
+    for i in range(n): 
+        for j in range(n): 
+            if i == j: 
+                A_[i,j] = sigma[i] ** 2 
+            else: 
+                A_[i,j] = A[i,j]
+
+    corr = computeCorrMat(A_, sigma)
+    corr = A 
+
+
+    W = np.identity(n) 
+# W is the matrix used for the norm (assumed to be Identity matrix here)
+# the algorithm should work for any diagonal W
+    deltaS = 0
+    Yk = corr.copy()
+    for k in range(nit):
+        Rk = Yk - deltaS
+        Xk = _getPs(Rk, W=W)
+        deltaS = Xk - Rk
+        Yk = _getPu(Xk, W=W)
+
+    Yk = computeCovMat(Yk, sigma)
+
+
+    return Yk
+
+
+# def nearPD(A,epsilon=0):
+
+#     sigma = np.sqrt(np.abs(np.diag(A)))
+#     A = computeCorrMat(A, sigma)
+
+
+#     n = A.shape[0]
+#     eigval, eigvec = np.linalg.eig(A)
+#     val = np.matrix(np.maximum(eigval,epsilon))
+#     vec = np.matrix(eigvec)
+#     T = 1/(np.multiply(vec,vec) * val.T)
+#     T = np.matrix(np.sqrt(np.diag(np.array(T).reshape((n)) )))
+#     B = T * vec * np.diag(np.array(np.sqrt(val)).reshape((n)))
+#     out = B*B.T
+
+#     out = computeCovMat(out, sigma)
+
+#     return(out)
+
+
+# def nearPD(A):
+
+#     B = (np.transpose(A) + A)/ 2
+#     u, H = polar(B)
+#     PSDmat = (B + H)/2 
+#     #PSDmat = (PSDmat + np.transpose(PSDmat)) / 2
+
+#     p = 1
+#     k = 0
+#     while p != 0:
+
+#         try: 
+#             R = linalg.cholesky(PSDmat)
+#             p = 0
+#         except: 
+#             print('Non positive defintie Hessian matrix. Set to identity matrix.')
+#             p = 1
+#             k = k + 1
+
+#         if p != 0:
+#             # Ahat failed the chol test. It must have been just a hair off,
+#             # due to floating point trash, so it is simplest now just to
+#             # tweak by adding a tiny multiple of an identity matrix.
+#             eigval, eigvec = np.linalg.eig(PSDmat)
+#             mineig = min(eigval)
+#             PSDmat = PSDmat + (-mineig*k**2 + np.finfo(float).eps )*np.eye(A.shape[0])
+
+#     PSDmat[0,0] = np.abs(A[0,0])
+
+#     return PSDmat
+
+
+
+
+
+
+

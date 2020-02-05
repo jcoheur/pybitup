@@ -10,7 +10,7 @@ case_name = "pyrolysis_parallel_2param"
 input_file_name = "{}.json".format(case_name) 
 
 pyrolysis_model = {}
-pyrolysis_model["case_name"] = parallel_reaction.SetParallelReaction()
+pyrolysis_model[case_name] = parallel_reaction.SetParallelReaction()
 
 post_dist = pybitup.solve_problem.Sampling(input_file_name)
 post_dist.sample(pyrolysis_model)

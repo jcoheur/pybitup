@@ -23,14 +23,14 @@
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A1": {"initial_val" : 4.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
-                    "E1": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
-                    "n1": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-                    "g1": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
-                    "A2": {"initial_val" : 3.221022805204841,    "prior_name" : "Uniform", "prior_param" : [0, 1e2]}, 
-                    "E2": {"initial_val" : 78000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
-                    "n2": {"initial_val" : 3.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-                    "g2": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+                    "A0": {"initial_val" : 16635.020942,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, 
+                    "E0": {"initial_val" : 112998.868630,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]}, 
+                    "n0": {"initial_val" : 1.930950,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+                    "g0": {"initial_val" : 0.040942,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
+                    "A1": {"initial_val" : 1663.351154,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, 
+                    "E1": {"initial_val" : 77999.941151,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]}, 
+                    "n1": {"initial_val" : 3.256541,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+                    "g1": {"initial_val" : 0.000509,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
                 }
             },
             "Likelihood": {
@@ -54,7 +54,7 @@
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes",
-		    "num_plot": 1
+		    "num_plot": [1]
 		},
 	    "InitialGuess": {
 		    "display": "yes",

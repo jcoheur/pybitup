@@ -31,6 +31,9 @@ class MetropolisHastings:
             self.save_freq = 1
         else:
             self.save_freq = nIterations/100
+
+        # self.save_freq = 1
+
         self.V = V
         self.prob_distr = prob_distr 
         self.distr_fun = prob_distr.compute_log_value

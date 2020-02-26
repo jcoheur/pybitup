@@ -18,6 +18,7 @@ import pybitup.distributions
 import pybitup.bayesian_inference
 import pybitup.inference_problem
 import pybitup.post_process
+import pybitup.polynomial_chaos
 
 class SolveProblem(): 
     
@@ -196,8 +197,13 @@ class Sampling(SolveProblem):
                         x = np.array(np.arange(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
                     elif  c_data['x']['Type'] == "linspace": 
                         x = np.array(np.linspace(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
+                    elif c_data['x']['Type'] == "ReadFromFile":
 
-                    models[model_id].x = x 
+                        reader = pd.read_csv(c_data['x']['FileName'],header=None)
+                        x = reader.values[:,c_data['x']["field"]]
+
+
+                    models[model_id].x = x
 
                     std_y = np.array(c_data['y']['Sigma'])
                     y = np.array(pybitup.bayesian_inference.generate_synthetic_data(models[model_id], c_data['y']['Sigma'], c_data['y']['Error']))
@@ -324,10 +330,9 @@ class Propagation(SolveProblem):
                 c_model = propagation_inputs["Model"][model_num]
 
                 design_point_input = c_model["design_points"]
-                reader = pd.read_csv(design_point_input["filename"])
+                reader = pd.read_csv(design_point_input["filename"],header=None)
             
                 c_design_points = reader.values[:,design_point_input["field"]]
-
                 model_id_to_num[model_id] = model_num
 
                 # Set the evaluation of the model at the design points 
@@ -345,7 +350,37 @@ class Propagation(SolveProblem):
                 models[model_id].unpar_name = unpar.keys()
 
 
-            # Run propagation 
+
+            # Create surrogate
+            # ----------------
+            # Polynomial Chaos Method
+
+
+
+
+
+            for model_id in models.keys():
+
+                if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="pce":
+
+                    print("Computing pce of ",model_id)
+
+                    # Set pce parameters
+                    pce_param = self.user_inputs["Propagation"]["Model"][0]["pce"]
+                    pce = pybitup.polynomial_chaos.PCE(pce_param)
+
+                    # Compute pce
+                    poly,coef,model = pce.compute_pce(models[model_id])
+
+                    # Save the pce model in output
+                    pce.save_pickle(model,self.IO_path['out_folder']+"/pce_model")
+                    pce.save_pickle(poly,self.IO_path['out_folder']+"/poly")
+
+
+
+
+
+            # Run propagation
             # ---------------
             # Evaluate the model at the parameter values
 
@@ -434,7 +469,8 @@ class Propagation(SolveProblem):
                     models[model_id].run_model(c_param)
 
                     # Get model evaluations
-                    fun_eval[model_id][i, :] = models[model_id].model_eval 
+                    #print(len(models[model_id].model_eval))
+                    fun_eval[model_id][i, :] = models[model_id].model_eval
                     #fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
 
                     c_eval = fun_eval[model_id][i, :]

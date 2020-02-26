@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 from scipy import stats
 import random
 import matplotlib.pyplot as plt 
@@ -114,7 +114,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
     #     IO_fileID['Distribution_values'].write("{}\n".format(str(self.log_bayes_post).replace('\n', '')))
 
-    def save_value(self, current_it): 
+    def save_value(self, current_it):
 
         self.likelihood.write_fun_eval(current_it)
 
@@ -333,7 +333,7 @@ class Model:
                 self.param = var_param
 
             self.model_eval = self.fun_x()
-            
+
             
         else: 
             # Model is build based on a given input file. 
@@ -390,9 +390,8 @@ class Likelihood:
         # We want to save model evaluation for time saving 
         #self.model_eval = self.model_eval_X 
 
-        self.model_eval = []
-        for model_id in self.models.keys(): 
-            self.model_eval = np.concatenate((self.model_eval, self.models[model_id].model_eval))
+        for model_id in self.models.keys():
+            self.model_eval = self.models[model_id].model_eval
 
     def write_fun_eval(self, num_it):
         """ Save the function evaluation at every save_freq evaluation. """ 
@@ -400,7 +399,7 @@ class Likelihood:
         # We want to save model evaluation for time saving 
         #np.save(name_file, self.model_eval)
         for model_id in self.models.keys(): 
-            np.save('output/'+model_id+'_fun_eval.'+str(num_it), self.models[model_id].model_eval) 
+            np.save('output/'+model_id+'_fun_eval.'+str(num_it), self.model_eval)
 
             # n_x = len(self.data[model_id].x)
             # n_data_set = int(len(self.data[model_id].y)/n_x)

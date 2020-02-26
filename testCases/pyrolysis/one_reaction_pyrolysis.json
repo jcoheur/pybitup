@@ -6,8 +6,9 @@
                 {
                     "Type": "GenerateSynthetic", 
                     "x": {
-                        "Type": "linspace", 
-                        "Value": [300.0, 1400.0, 101]
+                        "Type": "ReadFromFile", 
+                        "FileName": "test_design_points.dat", 
+                        "field": 0
                     },
                     "y": {
                         "Name": "Temperature",
@@ -40,7 +41,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -54,31 +55,78 @@
     "Propagation": {
         "Model": [ 
             {
-                // Emulator ? 
-                "model_id": "6.1_K_per_Min", // Optional
+                "model_id": "6.1_K_per_Min",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
-                },  
+                },
+            
+                
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
-                "parametrization" : "no"
+                "parametrization" : "no",
+                "emulator": "pce",
+                "pce": {
+                    
+                    "polynomials":{
+                        "method": "gram_schmidt",                           // "gram_schmidt" or "recurrence"
+                        "point_coordinates": "output/mcmc_chain.csv",       // "file.csv" or "file.npy"
+                        "hyperbolic_truncation": 0.75,                      // must be > 0
+                        "point_weights": "None",                            // "file.csv", "file.npy" or "None"
+                        "order": 4,                                         // must be integer > 0
+                        "parameter_laws": [                                 // only for three terms recurrence
+                            {"uniform": [-1,1]},
+                            {"gamma": [2,3]},
+                            {"normal": [0,1]},
+                            {"expo": [1]}
+                        ]
+                    },
+                
+                    "quadrature":{
+                        "method": "leja",                                   // "monte_carlo","fekete" or "leja"
+                        "order_truncation": 2                               // must be integer > 0, generally half of "order"
+                    },
+                
+                    "coefficients":{
+                        "method": "lars_full",                              // "spectral","colloc","lars" or "lars_full"
+                        "iterations": 10                                    // must be integer > 0 and can be "unlimited"
+                    }
+                }
             }, 
             {
-                // Emulator ? 
-                "model_id": "366_K_per_Min", // Optional
+                "model_id": "366_K_per_Min",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
                 },  
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 366],
-                "parametrization" : "no"
+                "parametrization" : "no",
+                "emulator": "pce",
+                "pce": {
+                    
+                    "polynomials":{
+                        "method": "gram_schmidt",
+                        "point_coordinates": "output/mcmc_chain.csv",
+                        "hyperbolic_truncation": 0.75,
+                        "point_weights": "None",
+                        "order": 4
+                    },
+                
+                    "quadrature":{
+                        "method": "leja",
+                        "order_truncation": 2
+                    },
+                
+                    "coefficients":{
+                        "method": "lars",
+                        "iterations": 10
+                    }
+                }
             }
         ],
         "Uncertain_param": {
-            "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
-            //"A":  {"filename": "None, "distribution": "Gaussian", "hyperparam": [mean, sigma]}, 
+            "A":  {"filename": "output/mcmc_chain.csv", "field": 0},
             "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
             "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
             "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
@@ -106,8 +154,8 @@
 		},
         "Posterior": {
             "display": "no", 
-            "distribution": "bivariate", // marginal, bivariate
-            "estimation": "contour", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "distribution": "bivariate",
+            "estimation": "contour",
             "burnin": 1
         },
         "Propagation": {

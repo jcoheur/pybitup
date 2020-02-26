@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 from scipy import linalg
 from scipy import stats
 from scipy.integrate import simps

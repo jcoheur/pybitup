@@ -39,19 +39,13 @@ def tensdot(polyList,order,trunc):
     expo = indextens(order,dim,trunc)
     nbrPoly = expo.shape[1]
     coef = np.eye(nbrPoly)
-    norm = np.ones(nbrPoly)
-
-    for i in range(dim):
-        polyList[i] = reshape(polyList[i],expo[i])
 
     # Tensor product of the univariate basis
 
-    for i in range(nbrPoly):
+    for i in range(dim): polyList[i] = reshape(polyList[i],expo[i])
+    for i in range(nbrPoly): coef[i] = np.prod([polyList[j][expo[j,i]] for j in range(dim)],axis=0)
 
-        norm[i] = np.prod([polyList[j].norm[expo[j,i]] for j in range(dim)])
-        coef[i] = np.prod([polyList[j][expo[j,i]] for j in range(dim)],axis=0)
-
-    poly = Polynomial(expo,coef,norm,1)
+    poly = Polynomial(expo,coef,1)
     return poly
 
 # %% Prime Numbers

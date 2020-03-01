@@ -1,7 +1,7 @@
 from .math import indextens,tensdot
+from scipy import sparse,linalg
 from .struct import Polynomial
 from .tools import printer
-from scipy import sparse
 import numpy as np
 
 # %% Gram-Schmidt
@@ -21,18 +21,18 @@ def gschmidt(order,point,weight=0,trunc=1):
     expo = indextens(order,dim,trunc)
     nbrPoly = expo.shape[1]
     coef = sparse.eye(nbrPoly)
-    norm = np.ones(nbrPoly)
-    base = Polynomial(expo,coef,norm)
+    base = Polynomial(expo,coef)
 
     # Computes modified Gram-Schmidt algorithm
 
     V = base.vander(point)
     V = np.transpose(np.sqrt(weight)*V.T)
     R = np.linalg.qr(V,"r")
-    coef = np.linalg.inv(R).T
+
+    coef = linalg.lapack.dtrtri(R)[0].T
     coef[0,0] = 1
 
-    poly = Polynomial(expo,coef,norm,1)
+    poly = Polynomial(expo,coef,1)
     printer(1,"Computing polynomials 100 %")
     return poly
 
@@ -46,9 +46,10 @@ def polyrecur(order,lawList,trunc=1):
     nbrPoly = order+1
     lawList = np.atleast_1d(lawList)
     dim = lawList.shape[0]
-    norm = np.ones(nbrPoly)
     expo = np.arange(nbrPoly)
     coef = np.zeros((nbrPoly,nbrPoly))
+    norm = np.ones((dim,nbrPoly))
+
     coef[0,0] = 1
     polyList = []
 
@@ -56,17 +57,19 @@ def polyrecur(order,lawList,trunc=1):
 
     for i in range(dim):
 
-        polyList.append(Polynomial(expo,coef,norm))
+        polyList.append(Polynomial(expo,coef))
         AB = lawList[i].coef(nbrPoly)
 
         for j in range(1,nbrPoly):
 
-            polyList[i].norm[j] = polyList[i].norm[j-1]*AB[1,j]
+            norm[i,j] = norm[i,j-1]*AB[1,j]
             polyList[i][j] = np.roll(polyList[i][j-1],1,axis=0)
             polyList[i][j] -= AB[0,j-1]*polyList[i][j-1]+AB[1,j-1]*polyList[i][j-2]
 
-    # Performs the basis tensor product
+    # Normalization and tensor product
 
+    for i in range(dim): polyList[i][:] /= np.sqrt(norm[i,:,None])
     poly = tensdot(polyList,order,trunc)
+
     printer(1,"Computing polynomials 100 %")
     return poly

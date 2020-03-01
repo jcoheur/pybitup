@@ -12,14 +12,14 @@ def spectral(resp,poly,point,weight=0):
     printer(0,"Computing coefficients ...")
 
     V = poly.vander(point)
-    resp = np.atleast_2d(np.transpose(resp)).T
     if not np.any(weight): weight = 1/V.shape[0]
+    resp = np.atleast_2d(np.transpose(resp)).T
     nbrResp = resp.shape[1]
 
     # Computes the polynomial chaos coefficients
 
-    yw = resp*np.tile(weight,(nbrResp,1)).T
-    coef = np.transpose(np.dot(yw.T,V))/poly.norm[:,None]
+    V = np.transpose(weight*V.T)
+    coef = np.transpose(np.dot(resp.T,V))
     printer(1,"Computing coefficients 100 %")
     return coef
 
@@ -29,9 +29,10 @@ def colloc(resp,poly,point,pdf=0):
     """Computes the expansion coefficients with least-square collocation"""
 
     printer(0,"Computing coefficients ...")
-
-    V = poly.vander(point)
     resp = np.atleast_2d(np.transpose(resp)).T
+    V = poly.vander(point)
+
+    # If weighted point collocation
 
     if callable(pdf):
 
@@ -40,7 +41,7 @@ def colloc(resp,poly,point,pdf=0):
         V = np.transpose(weight*V.T)
         resp = np.transpose(weight*resp.T)
 
-    # Solves the least square linear system
+    # Solves the least squares linear system
 
     coef = np.linalg.lstsq(V,resp,rcond=None)[0]
     printer(1,"Computing coefficients 100 %")
@@ -149,7 +150,7 @@ def transfo(invcdf,order,law):
     for i in range(nbrPoly):
 
         fun = lambda x: invcdf(x)*poly.eval(i,law.invcdf(x))
-        coef[i] = integrate.quad(fun,0,1)[0]/poly.norm[i]
+        coef[i] = integrate.quad(fun,0,1)[0]
 
     expan = Expansion(coef,poly)
     transfo = lambda x: expan.eval(x)

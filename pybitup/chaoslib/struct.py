@@ -6,14 +6,13 @@ import numpy as np
 class Polynomial:
     """Class of orthogonal polynomials basis"""
 
-    def __init__(self,expo,coef,norm,csr=0):
+    def __init__(self,expo,coef,csr=0):
 
         if sparse.issparse(coef): self.coef = coef.copy()
         else: self.coef = np.atleast_2d(np.transpose(coef)).T.copy()
         if csr: self.coef = sparse.csr_matrix(self.coef)
 
         self.expo = np.atleast_2d(expo).copy()
-        self.norm = np.atleast_1d(norm).copy()
         self.nbrPoly = self.coef.shape[0]
         self.dim = self.expo.shape[0]
 
@@ -53,7 +52,6 @@ class Polynomial:
         id2 = np.setdiff1d(range(self.nbrPoly),self.coef[:,id2].nonzero()[0])
 
         self.coef = self.coef[id2]
-        self.norm = self.norm[id2]
         self.coef = self.coef[:,id1]
         self.expo = self.expo[:,id1]
         self.nbrPoly = self.coef.shape[0]
@@ -67,7 +65,6 @@ class Polynomial:
     def clean(self,idx):
 
         self.coef = self.coef[idx]
-        self.norm = self.norm[idx]
         self.nbrPoly = self.coef.shape[0]
 
         idx = np.unique(self.coef.nonzero()[1])

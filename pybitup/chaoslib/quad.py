@@ -5,14 +5,13 @@ import numpy as np
 
 # %% Quasi-Monte Carlo
 
-def qmcquad(nbrPts,dom,seq,pdf=0):
+def qmcquad(nbrPts,dom,pdf=0):
     """Computes the points and weights for quasi-Monte Carlo inregration"""
 
     dom = np.atleast_2d(dom)
     dim = dom.shape[0]
 
-    if seq=="R": point = rseq(nbrPts,dom)
-    elif seq=="H":point = halton(nbrPts,dom)
+    point = rseq(nbrPts,dom)
     weight = np.ones(nbrPts)/nbrPts
 
     # Computes the weights with probability density function
@@ -62,7 +61,7 @@ def tensquad(nbrPts,lawList):
 # %% Leja Points
 
 def lejquad(point,poly):
-    """Selects the approximate Leja points and computes their weights"""
+    """Selects the discrete Leja points and computes their weights"""
 
     printer(0,"Selecting points ...")
 

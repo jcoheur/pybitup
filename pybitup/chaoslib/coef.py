@@ -25,25 +25,31 @@ def spectral(resp,poly,point,weight=0):
 
 # %% Point Collocation
 
-def colloc(resp,poly,point,pdf=0):
+def colloc(resp,poly,point,weight=0):
     """Computes the expansion coefficients with least-square collocation"""
 
     printer(0,"Computing coefficients ...")
     resp = np.atleast_2d(np.transpose(resp)).T
     V = poly.vander(point)
 
-    # If weighted point collocation
-
-    if callable(pdf):
-
-        point = np.atleast_2d(np.transpose(point))
-        weight = np.sqrt(pdf(*point))
-        V = np.transpose(weight*V.T)
-        resp = np.transpose(weight*resp.T)
-
     # Solves the least squares linear system
 
-    coef = np.linalg.lstsq(V,resp,rcond=None)[0]
+    if callable(weight):
+
+        point = np.atleast_2d(np.transpose(point))
+        weight = np.sqrt(weight(*point))
+        v1 = np.transpose(weight*V.T)
+        v2 = np.transpose(weight*resp.T)
+        coef = np.linalg.lstsq(v1,v2,rcond=None)[0]
+
+    elif np.any(weight):
+
+        Vt = V.T
+        v1 = Vt.dot(np.transpose(weight*Vt))
+        v2 = Vt.dot(np.transpose(weight*resp.T))
+        coef = np.linalg.solve(v1,v2)
+
+    else: coef = np.linalg.lstsq(V,resp,rcond=None)[0]
     printer(1,"Computing coefficients 100 %")
     return coef
 

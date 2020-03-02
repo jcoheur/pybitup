@@ -16,8 +16,16 @@ poly = pickle.load(f)
 f.close()
 
 point = np.loadtxt("output/mcmc_chain.csv",delimiter=",")
-resp = np.array([np.load("output/one_reaction_pyrolysis_fun_eval."+str(i)+".npy") for i in range(len(point))])
-respMod = model.eval(point)
+index = []
+resp = []
+
+for i in range(len(point)):
+    try:
+        resp.append(np.load("output/one_reaction_pyrolysis_fun_eval."+str(i)+".npy"))
+        index.append(i)
+    except: pass
+
+respMod = model.eval(point[index])
 
 # %% Monte Carlo and error
 
@@ -33,8 +41,8 @@ error = 100*np.mean(error,axis=0)
 
 plt.figure(1)
 plt.rcParams.update({"font.size":16})
-plt.plot(meanMod,'C0',label="chaoslib")
-plt.plot(mean,'C1--',label="Monte Carlo")
+plt.plot(meanMod,'C0',label="PCE")
+plt.plot(mean,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Response")
 plt.xlabel("Step")
@@ -42,8 +50,8 @@ plt.grid()
 
 plt.figure(2)
 plt.rcParams.update({"font.size":16})
-plt.plot(varMod,'C0',label="chaoslib")
-plt.plot(var,'C1--',label="Monte Carlo")
+plt.plot(varMod,'C0',label="PCE")
+plt.plot(var,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Response")
 plt.xlabel("Step")

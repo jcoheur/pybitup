@@ -10,9 +10,7 @@ import sys
 class PCE:
     """Wrapper for chaoslib, the class takes a json file containing the polynomial expansion parameters"""
 
-    def __init__(self,parameters):
-        #with open("{}".format(fileName)) as file: self.param = loads(jsmin(file.read()))
-        self.param = parameters
+    def __init__(self,parameters): self.param = parameters
 
     def compute_polynomials(self,point,weight):
 
@@ -60,9 +58,8 @@ class PCE:
             return cl.lars(resp,poly,point,it)
 
         elif method=="spectral": return cl.spectral(resp,poly,point,weight)
-        elif method=="colloc": return cl.colloc(resp,poly,point)
+        elif method=="colloc": return cl.colloc(resp,poly,point,weight)
         else: raise Exception("compute_coefficients: unknown method")
-
 
     def save_pickle(self,item,name): cl.save(item,name)
 

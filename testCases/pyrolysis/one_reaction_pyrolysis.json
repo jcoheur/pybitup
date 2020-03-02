@@ -73,13 +73,13 @@
                         "point_coordinates": "output/mcmc_chain.csv",       // "file.csv" or "file.npy"
                         "hyperbolic_truncation": 0.75,                      // must be > 0
                         "point_weights": "None",                            // "file.csv", "file.npy" or "None"
-                        "order": 4,                                         // must be integer > 0
-                        "parameter_laws": [                                 // only for three terms recurrence
-                            {"uniform": [-1,1]},
-                            {"gamma": [2,3]},
-                            {"normal": [0,1]},
-                            {"expo": [1]}
-                        ]
+                        "order": 4                                          // must be integer > 0
+                        //"parameter_laws": [
+                            //{"uniform": [-1,1]},
+                            //{"gamma": [2,3]},
+                            //{"normal": [0,1]},
+                            //{"expo": [1]}
+                        //]
                     },
                 
                     "quadrature":{

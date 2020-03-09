@@ -41,7 +41,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e4, 
+		    "n_iterations": 1e5, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -83,8 +83,8 @@
                     },
                 
                     "quadrature":{
-                        "method": "leja",                                   // "monte_carlo","fekete" or "leja"
-                        "order_truncation": 2                               // must be integer > 0, generally half of "order"
+                        "method": "fekete",                                 // "monte_carlo","fekete" or "leja"
+                        "order_truncation": 2                               // must be integer >= half of "order"
                     },
                 
                     "coefficients":{

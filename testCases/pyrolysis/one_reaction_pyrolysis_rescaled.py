@@ -27,7 +27,7 @@ class OneReactionPyrolysisRescaled(OneReactionPyrolysis):
         return Y
         
     def parametrization_backward(self, Y):
-            
+
         X1 = self.P[1] / (OneReactionPyrolysis.R * 800)
         
         X = np.zeros(len(Y[:]))

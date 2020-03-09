@@ -25,7 +25,7 @@ class Uniform:
 # %% Normal Law
 
 class Normal:
-    """Class of normal law with mean and variance"""
+    """Class of normal law with mean and standard deviation"""
 
     def __init__(self,a,b):
 
@@ -130,3 +130,34 @@ class Beta:
         coef[0] = ((a-1)**2-(b-1)**2)*0.5/(nab*(nab-2)+(nab==0)+(nab==2))+0.5
         coef[1] = np.where((n==0)+(n==1),B1,B2)
         return coef
+
+# %% PCA Whitening
+
+class Pca:
+    """Class of PCA whitening for linearly correlated variables"""
+
+    def __init__(self,point):
+
+        self.mean = np.mean(point,axis=0)
+        self.std = np.std(point,axis=0,ddof=1)
+
+        # Standardizes and computes the whitening matrix
+
+        point = (point-self.mean)/self.std
+        cov = np.cov(point.T)
+        val,vec = np.linalg.eig(cov)
+
+        self.A = np.diag(np.sqrt(1/val)).dot(vec.T)
+        self.invA = np.linalg.inv(self.A)
+
+    def decor(self,point):
+
+        point = np.transpose((point-self.mean)/self.std)
+        point = np.transpose(self.A.dot(point))
+        return point
+
+    def cor(self,point):
+
+        point = np.dot(self.invA,point.T)
+        point = self.std*point.T+self.mean
+        return point

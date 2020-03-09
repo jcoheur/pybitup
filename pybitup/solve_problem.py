@@ -374,7 +374,7 @@ class Propagation(SolveProblem):
 
                     # Save the pce model in output
                     pce.save_pickle(model,self.IO_path['out_folder']+"/pce_model")
-                    pce.save_pickle(poly,self.IO_path['out_folder']+"/poly")
+                    pce.save_pickle(poly,self.IO_path['out_folder']+"/pce_poly")
 
 
 

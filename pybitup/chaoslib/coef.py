@@ -13,13 +13,12 @@ def spectral(resp,poly,point,weight=0):
 
     V = poly.vander(point)
     if not np.any(weight): weight = 1/V.shape[0]
-    resp = np.atleast_2d(np.transpose(resp)).T
-    nbrResp = resp.shape[1]
 
     # Computes the polynomial chaos coefficients
 
     V = np.transpose(weight*V.T)
     coef = np.transpose(np.dot(resp.T,V))
+
     printer(1,"Computing coefficients 100 %")
     return coef
 
@@ -29,20 +28,15 @@ def colloc(resp,poly,point,weight=0):
     """Computes the expansion coefficients with least-square collocation"""
 
     printer(0,"Computing coefficients ...")
-    resp = np.atleast_2d(np.transpose(resp)).T
+
+    resp = np.array(resp)
+    shape = (poly[:].shape[0],)+resp.shape[1:]
+    resp = resp.reshape(resp.shape[0],-1)
     V = poly.vander(point)
 
     # Solves the least squares linear system
 
-    if callable(weight):
-
-        point = np.atleast_2d(np.transpose(point))
-        weight = np.sqrt(weight(*point))
-        v1 = np.transpose(weight*V.T)
-        v2 = np.transpose(weight*resp.T)
-        coef = np.linalg.lstsq(v1,v2,rcond=None)[0]
-
-    elif np.any(weight):
+    if np.any(weight):
 
         Vt = V.T
         v1 = Vt.dot(np.transpose(weight*Vt))
@@ -50,6 +44,8 @@ def colloc(resp,poly,point,weight=0):
         coef = np.linalg.solve(v1,v2)
 
     else: coef = np.linalg.lstsq(V,resp,rcond=None)[0]
+
+    coef = coef.reshape(shape)
     printer(1,"Computing coefficients 100 %")
     return coef
 
@@ -118,9 +114,14 @@ def lars(resp,poly,point,it=np.inf):
         coef[0] = respMean-np.dot(coef[1:],Vmean)
         return coef
 
-    resp = np.atleast_2d(np.transpose(resp)).T
+    # Initialization
+
+    resp = np.array(resp)
+    shape = (poly[:].shape[0],)+resp.shape[1:]
+    resp = resp.reshape(resp.shape[0],-1)
+
     nbrResp = resp.shape[1]
-    nbrPoly = poly.nbrPoly
+    nbrPoly = poly[:].shape[0]
     coef = np.zeros((nbrPoly,nbrResp))
     V = poly.vander(point)
     tol = 1e-8
@@ -140,6 +141,7 @@ def lars(resp,poly,point,it=np.inf):
         timer(i+1,nbrResp,"Computing coefficients ")
 
     index = np.argwhere(np.any(coef,axis=1)).flatten()
+    coef = coef.reshape(shape)
     return coef,index
 
 # %% Polynomial Chaos

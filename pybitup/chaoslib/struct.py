@@ -9,37 +9,32 @@ class Polynomial:
     def __init__(self,expo,coef,csr=0):
 
         if sparse.issparse(coef): self.coef = coef.copy()
-        else: self.coef = np.atleast_2d(np.transpose(coef)).T.copy()
+        else: self.coef = np.copy(np.atleast_2d(np.transpose(coef)).T)
         if csr: self.coef = sparse.csr_matrix(self.coef)
 
-        self.expo = np.atleast_2d(expo).copy()
-        self.nbrPoly = self.coef.shape[0]
+        self.expo = np.copy(np.atleast_2d(expo))
         self.dim = self.expo.shape[0]
 
     def __getitem__(self,i): return self.coef[i]
     def __setitem__(self,i,coef): self.coef[i] = coef
 
-    # Evaluates the i-th polynomial at the points
+    # Evaluates the k-th polynomial at the points
 
-    def eval(self,i,point):
+    def eval(self,k,point):
 
-        if self.dim>1: point = np.atleast_2d(point)
-        else: point = np.atleast_2d(np.transpose(point)).T
-
-        resp = np.power(point[:,0,None],self.expo[0])
-        for i in range(1,self.dim): resp *= np.power(point[:,i,None],self.expo[i])
-        resp = self.coef[i].dot(resp.T).flatten()
+        resp = 1
+        point = np.reshape(np.transpose(point),(self.dim,-1)).T
+        for i in range(self.dim): resp *= np.power(point[:,i,None],self.expo[i])
+        resp = self.coef[k].dot(resp.T).flatten()
         return resp
 
     # Computes the Vandermonde-like matrix of the basis
 
     def vander(self,point):
 
-        if self.dim>1: point = np.atleast_2d(point)
-        else: point = np.atleast_2d(np.transpose(point)).T
-
-        V = np.power(point[:,0,None],self.expo[0])
-        for i in range(1,self.dim): V *= np.power(point[:,i,None],self.expo[i])
+        V = 1
+        point = np.reshape(np.transpose(point),(self.dim,-1)).T
+        for i in range(self.dim): V *= np.power(point[:,i,None],self.expo[i])
         V = np.transpose(self.coef.dot(V.T))
         return V
 
@@ -47,14 +42,14 @@ class Polynomial:
 
     def trunc(self,order):
 
+        nbrPoly = self.coef.shape[0]
         id1 = np.where(np.sum(self.expo,axis=0)<=order)[0]
         id2 = np.setdiff1d(np.arange(self.expo.shape[1]),id1)
-        id2 = np.setdiff1d(range(self.nbrPoly),self.coef[:,id2].nonzero()[0])
+        id2 = np.setdiff1d(range(nbrPoly),self.coef[:,id2].nonzero()[0])
 
         self.coef = self.coef[id2]
         self.coef = self.coef[:,id1]
         self.expo = self.expo[:,id1]
-        self.nbrPoly = self.coef.shape[0]
 
         idx = np.unique(self.coef.nonzero()[1])
         self.expo = self.expo[:,idx]
@@ -65,8 +60,6 @@ class Polynomial:
     def clean(self,idx):
 
         self.coef = self.coef[idx]
-        self.nbrPoly = self.coef.shape[0]
-
         idx = np.unique(self.coef.nonzero()[1])
         self.expo = self.expo[:,idx]
         self.coef = self.coef[:,idx]
@@ -74,26 +67,25 @@ class Polynomial:
 # %% Expansion Model
 
 class Expansion:
-    """Class of polynomial substitution model"""
+    """Class of polynomial chaos expansion"""
 
     def __init__(self,coef,poly):
 
-        coef = np.atleast_2d(np.transpose(coef)).T
-        model = coef[0,None].T*poly[0]
-        for i in range(1,poly.nbrPoly): model += coef[i,None].T*poly[i]
+        coef = np.array(coef)
+        nbrPoly = poly[:].shape[0]
+        shape = (poly[:].shape[1],)+coef.shape[1:]
+        coef = coef.reshape(nbrPoly,-1)
 
-        self.expo = np.atleast_2d(poly.expo).copy()
+        self.expo = np.copy(np.atleast_2d(poly.expo))
+        self.coef = poly[:].T.dot(coef).reshape(shape).T
         self.dim = self.expo.shape[0]
-        self.coef = model
 
     # Evaluates the expansion at the points
 
     def eval(self,point):
 
-        if self.dim>1: point = np.atleast_2d(point)
-        else: point = np.atleast_2d(np.transpose(point)).T
-
-        V = np.power(point[:,0,None],self.expo[0])
-        for i in range(1,self.dim): V *= np.power(point[:,i,None],self.expo[i])
-        V = np.dot(V,self.coef.T)
+        V = 1
+        point = np.reshape(np.transpose(point),(self.dim,-1)).T
+        for i in range(self.dim): V *= np.power(point[:,i,None],self.expo[i])
+        V = np.squeeze(np.dot(self.coef,V.T).T)
         return V

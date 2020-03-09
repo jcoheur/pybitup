@@ -11,7 +11,7 @@ f = open("output/pce_model.pickle","rb")
 model = pickle.load(f)
 f.close()
 
-f = open("output/poly.pickle","rb")
+f = open("output/pce_poly.pickle","rb")
 poly = pickle.load(f)
 f.close()
 

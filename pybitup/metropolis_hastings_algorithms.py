@@ -32,7 +32,7 @@ class MetropolisHastings:
         else:
             self.save_freq = nIterations/100
 
-        # self.save_freq = 1
+        #self.save_freq = 1
 
         self.V = V
         self.prob_distr = prob_distr 

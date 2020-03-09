@@ -10,11 +10,10 @@ def qmcquad(nbrPts,dom,pdf=0):
 
     dom = np.atleast_2d(dom)
     dim = dom.shape[0]
-
     point = rseq(nbrPts,dom)
     weight = np.ones(nbrPts)/nbrPts
 
-    # Computes the weights with probability density function
+    # Computes the weights with the density
 
     for i in range(dim): weight *= (dom[i][1]-dom[i][0])
     if callable(pdf): weight = np.multiply(weight,pdf(*point.T))
@@ -25,7 +24,7 @@ def qmcquad(nbrPts,dom,pdf=0):
 def tensquad(nbrPts,lawList):
     """Computes the tensor product quadrature rule with recurrence coefficients"""
 
-    lawList = np.atleast_1d(lawList)
+    lawList = np.reshape(lawList,-1)
     dim = lawList.shape[0]
     J = np.zeros((2,nbrPts))
     points = np.zeros((nbrPts,dim))
@@ -64,15 +63,13 @@ def lejquad(point,poly):
     """Selects the discrete Leja points and computes their weights"""
 
     printer(0,"Selecting points ...")
-
-    nbrPoly = poly.nbrPoly
-    m = np.zeros(nbrPoly)
-    m[0] = 1
+    nbrPoly = poly[:].shape[0]
 
     # Reconditioning of V and LU decomposition
 
     V = poly.vander(point)
     for i in range(2): V,R = np.linalg.qr(V)
+    m = np.sum(V,axis=0)/V.shape[0]
 
     LU,P,info = linalg.lapack.dgetrf(V)
     L = np.tril(LU[:nbrPoly],-1)
@@ -95,17 +92,15 @@ def fekquad(point,poly):
     """Selects the approximate Fekete points and computes their weights"""
 
     printer(0,"Selecting points ...")
-
-    nbrPoly = poly.nbrPoly
-    m = np.zeros(nbrPoly)
-    m[0] = 1
+    nbrPoly = poly[:].shape[0]
 
     # Reconditioning of V and QR factorization
 
     V = poly.vander(point)
     for i in range(2): V,R = np.linalg.qr(V)
+    m = np.sum(V,axis=0)/V.shape[0]
 
-    Q,R,P = linalg.qr(V.T,pivoting=1,mode='economic')
+    Q,R,P = linalg.qr(V.T,pivoting=1,mode="economic")
     R = R[:,:nbrPoly]
     q = np.dot(Q.T,m)
 
@@ -114,6 +109,33 @@ def fekquad(point,poly):
     index = P[:nbrPoly]
     weight = linalg.solve_triangular(R,q)
     weight = weight/np.sum(weight)
+
+    printer(1,"Selecting points 100 %")
+    return index,weight
+
+# %% Dual Simplex
+
+def linquad(point,poly):
+    """Computes a positive quadrature rule using the dual-simplex"""
+
+    import subprocess as sub
+    from scipy import io
+    import os
+
+    printer(0,"Selecting points ...")
+
+    V = poly.vander(point)
+    m = np.sum(V,axis=0)/V.shape[0]
+
+    path = os.path.dirname(os.path.realpath(__file__))
+    io.savemat(path+"\data.mat",mdict={"V":V,"m":m})
+    process = sub.Popen([path+"\simplex.exe",path+"\data.mat"],stdout=sub.PIPE)
+    weight = process.stdout.readlines()
+    os.remove(path+"\data.mat")
+
+    weight = np.array(weight[3:-1],dtype=float)
+    index = np.argwhere(weight).flatten()
+    weight = weight[index]
 
     printer(1,"Selecting points 100 %")
     return index,weight

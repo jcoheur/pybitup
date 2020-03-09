@@ -6,8 +6,9 @@
                 {
                     "Type": "GenerateSynthetic", 
                     "x": {
-                        "Type": "linspace", 
-                        "Value": [300.0, 1400.0, 101]
+                        "Type": "ReadFromFile", 
+                        "FileName": "test_design_points.dat", 
+                        "field": 0
                     },
                     "y": {
                         "Name": "Temperature",
@@ -40,7 +41,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "n_iterations": 2e5, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 

@@ -415,40 +415,40 @@ class GradientBasedMCMC(MetropolisHastings):
         
         # Parameters for adaptation 
         self.X_av_i = np.array(self.param_init)
-        self.S_d = 2.38**2/self.n_param
-        self.eps_Id = 0.0*np.eye(self.n_param)
-        self.update_it = 100
-
+        self.S_d = 1.0 # 2.38**2/self.n_param
+        self.eps_Id = 1e-10*np.eye(self.n_param)
+        self.starting_it = C_matrix['update_it']
+        self.update_it = C_matrix['starting_it']
         #---------------
         # Hessian matrix
         # --------------
         #  
         # Estimation of the normalisation matrix. Type of approx for C is either Hessian, Hessian_diag or Identity matrices 
-        self.C_matrix = C_matrix 
+        C_matrix_estimation = C_matrix['value']
         # Check for Hessian numerical computation : LL = x^2 + y^2 
         # LL = lambda Z: Z[0]**2 + Z[1]**2 
         # hess_FD = computeHessianFD(LL, np.array([1., 1.]), eps=0.001)
         # print(hess_FD)
 
         # Compute matrix C for precondictioning (scaling and correlation)
-        if C_matrix == "Hessian": 
+        if C_matrix_estimation == "Hessian": 
             print('Computing full Hessian for scaling and correlation.')
             self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
             self.C_approx = linalg.inv(self.hess_mat)  
-        elif C_matrix == "Hessian_diag": 
+        elif C_matrix_estimation == "Hessian_diag": 
             print('Computing diagonal of Hessian for scaling and correlation.')
             self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False)
             self.C_approx = linalg.inv(self.hess_mat)  
-        elif C_matrix == "Identity": 
+        elif C_matrix_estimation == "Identity": 
             print('Using identity matrix for Hessian approxiation')
             self.hess_mat = np.identity(self.n_param)
             self.C_approx = np.identity(self.n_param)
-        elif C_matrix == "PSD": 
+        elif C_matrix_estimation == "PSD": 
             print('Positive semi-definite approximation of the Hessian. Didn''t prove to be correct so far.')
             # Positive semi-definitive approximation. Approximation not accurate so far. 
             self.hess_mat = self.prob_distr.estimate_hessian_model(self.param_init)
             self.C_approx = linalg.inv(self.hess_mat)
-        elif C_matrix == "nearPD": 
+        elif C_matrix_estimation == "nearPD": 
             print('Nearest positive semi-definite matrix. ')
             self.hess_mat = -computeHessianFD(self.log_like, self.param_init, eps=0.001)
             C_approx_nonPD = linalg.inv(self.hess_mat)
@@ -456,7 +456,7 @@ class GradientBasedMCMC(MetropolisHastings):
             self.C_approx  = nearPD(C_approx_nonPD)
 
         else: 
-            raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix))
+            raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix_estimation))
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
         print(self.C_approx)
         self.L_c = linalg.cholesky(self.C_approx)
@@ -497,14 +497,15 @@ class GradientBasedMCMC(MetropolisHastings):
         """ Adapt covariance and algorithm parameters if asked. 
         args contain algorithm parameters. """ 
 
-        # Update covariance with recursion 
-        if  self.it == self.update_it:  
+        # initialise covariance computation from all previous iteraties 
+        if  self.it == self.starting_it:  
             # Initialise sample mean and covariance estimation 
             self.compute_covariance(self.it) # update self.mean_c and self.cov_c
             self.X_av_i = self.mean_c
             self.V_i = self.S_d*(self.cov_c + self.eps_Id)
 
-        if self.it > self.update_it and self.it < 1e5: 
+        # Update covariance using recursion formula 
+        if self.it > self.starting_it and self.it < 1e5: 
             X_i = self.current_val[:]
             X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
             V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
@@ -512,7 +513,7 @@ class GradientBasedMCMC(MetropolisHastings):
             self.V_i = V_ip
             self.X_av_i = X_av_ip
 
-        # Update covariance 
+        # Effectively update the covariance in the MCMC algorithm 
         if  self.it % self.update_it == 0 and self.it < 1e5: 
             # Adapt time step 
             if self.it == self.update_it: 
@@ -558,10 +559,11 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         self.p = self.compute_multivariate_normal() # independent standard normal variates
         self.p = np.matmul(self.p, self.inv_L_c_T)
         self.current_p = self.p
-
+        np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
         # Make a half step for momentum at the beginning
         self.p = self.p - self.epsilon * (-self.distr_grad_log_like_current_val) / 2
-
+        np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
+        #self.IO_fileID['aux_variables'].write("{}\n".format(str([self.p, self.new_val[:]]).replace('\n', '')))
         # Alternate full steps for position and momentum 
         for i in range(self.L):
             # Make a full step for the position 
@@ -571,11 +573,15 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
             # Make a full step for the momentum, except at end of trajectory 
             if i!=(self.L-1): 
                 self.p = self.p - self.epsilon * (-self.distr_grad_log_like_new_val)
-
+                np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
         # Make a half step for momentum at the end.
         self.p = self.p - self.epsilon * (-self.distr_grad_log_like_new_val) / 2
+        np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
         # Negate momentum at end of trajectory to make the proposal symmetric
         self.p = -self.p
+
+        # Save in a "aux_variables" file the momentum variable
+        #np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
 
     def compute_acceptance_ratio(self):
 
@@ -607,7 +613,7 @@ class ito_SDE(GradientBasedMCMC):
     From Soize, Arnst et al.).
     Implementation: Joffrey Coheur 17-04-19."""
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, h, f0, C_matrix, gradient):
+    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, h, f0):
 
         GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
 
@@ -617,7 +623,8 @@ class ito_SDE(GradientBasedMCMC):
         # Initial parameters
         self.xi_nm = np.array(self.param_init)
         self.P_nm = np.zeros(self.n_param)
-        self.IO_fileID['ito_p_moments'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
+        np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.P_nm, self.xi_nm])), fmt="%f", delimiter=",")
+        #self.IO_fileID['aux_variables'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
 
     def _set_algo_param(self, *args): 
         """ Set the time step h, damping parameters f0 and dependent parameters."""
@@ -654,7 +661,7 @@ class ito_SDE(GradientBasedMCMC):
 
             # Adapt covariance 
             self.current_val = self.xi_nm
-            self.adapt_covariance(self.it, 0.1, self.f0)
+            self.adapt_covariance(self.it, 0.01, self.f0)
 
             # # Update covariance with recursion 
             # if  self.it == self.update_it:  
@@ -713,7 +720,8 @@ class ito_SDE(GradientBasedMCMC):
             # Write the sample values and function evaluation in a file 
             #self.prob_distr.save_log_post(self.IO_fileID)
             self.prob_distr.save_sample(self.IO_fileID, xi_n)
-            self.IO_fileID['ito_p_moments'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
+            np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.P_nm, self.xi_nm])), fmt="%f", delimiter=",")
+            #self.IO_fileID['aux_variables'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
             self.write_fun_distr_val(self.it)
             # Write the standard gaussian normal proposal value, whatever is was accepted or rejected 
             # self.IO_fileID['gp'].write("{}\n".format(str(self.z_k).replace('\n', '')))

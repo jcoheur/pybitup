@@ -1,0 +1,33 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{  
+    "Sampling": {
+        "Distribution": {
+            "name": "Gaussian",
+            "n_rand_var" : 1,  
+            "hyperparameters" : [[0.0], [[1.0]]],
+            "init_val" : [0.0]
+        }, 
+        "Algorithm": {
+            "name": "HMC", 
+            "HMC" : {
+                "step_size" : 0.18, 
+                "num_steps" : 20, 
+                "C_matrix": "Identity", 
+                "gradient": "Numerical"
+            },
+            "n_iterations": 3
+        }
+    }, 
+    "PostProcess": { 
+	    "MarkovChain": {
+		    "display": "no",
+		    "thinning": 1
+        },
+        "Posterior": {
+            "display": "no", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin" : 0
+		}
+	}
+}

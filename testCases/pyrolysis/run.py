@@ -26,7 +26,7 @@ pyro_model["one_reaction_pyrolysis"] = one_reaction_pyrolysis.OneReactionPyrolys
 
 post_dist = pybitup.solve_problem.Sampling(input_file_name)
 post_dist.sample(pyro_model)
-#post_dist.propagate(pyro_model)
+#post_dist.Propagation.propagate(pyro_model)
 post_dist.__del__()
 
 pybitup.post_process.post_process_data(input_file_name)

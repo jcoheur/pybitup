@@ -1,6 +1,6 @@
-from .math import halton,rseq
-from .tools import printer
-from scipy import linalg
+from scipy import optimize,linalg
+from .tools import printer,timer
+from .math import rseq
 import numpy as np
 
 # %% Quasi-Monte Carlo
@@ -81,7 +81,6 @@ def lejquad(point,poly):
     index = P[:nbrPoly]
     u = linalg.solve_triangular(U,m,trans=1)
     weight = linalg.solve_triangular(L.T,u,unit_diagonal=1)
-    weight = weight/np.sum(weight)
 
     printer(1,"Selecting points 100 %")
     return index,weight
@@ -108,14 +107,70 @@ def fekquad(point,poly):
 
     index = P[:nbrPoly]
     weight = linalg.solve_triangular(R,q)
-    weight = weight/np.sum(weight)
+
+    printer(1,"Selecting points 100 %")
+    return index,weight
+
+# %% Positive Quadrature
+
+def nulquad(point,poly):
+    """Computes a positive quadrature rule by iterative node removal"""
+
+    V = poly.vander(point)
+    nbrPts = V.shape[0]
+    index = np.arange(nbrPts)
+    nbrIter = nbrPts-V.shape[1]
+    weight = np.ones(nbrPts)/nbrPts
+    m = np.sum(V,axis=0)/V.shape[0]
+    A = V.T
+
+    for i in range(nbrIter):
+
+        timer(i+1,nbrIter,"Selecting points ")
+        U,S,Vt = np.linalg.svd(A,full_matrices=True)
+        z = Vt[-1]
+
+        # Selects the coefficient to cancel a weight
+
+        wz = weight/z
+        idx = np.argmin(np.abs(wz))
+        alp = wz[idx]
+
+        # Updates the weights and the matrix
+
+        weight -= alp*z
+        weight = np.delete(weight,idx)
+        A = np.delete(A,idx,axis=1)
+        index = np.delete(index,idx)
+
+    weight = np.linalg.solve(A,m)
+    return index,weight
+
+# %% Revised Simplex
+
+def linquad(point,poly):
+    """Computes a positive quadrature rule using the revised simplex"""
+
+    printer(0,"Selecting points ...")
+
+    tol = 1e-25
+    V = poly.vander(point)
+    nbrPts = V.shape[0]
+    c = np.ones(nbrPts)
+    m = np.sum(V,axis=0)/nbrPts
+
+    # Performs the revised simplex
+
+    x = optimize.linprog(c,A_eq=V.T,b_eq=m,method="revised simplex")
+    index = np.argwhere(x['x']>tol).flatten()
+    weight = x['x'][index]
 
     printer(1,"Selecting points 100 %")
     return index,weight
 
 # %% Dual Simplex
 
-def linquad(point,poly):
+def simquad(point,poly):
     """Computes a positive quadrature rule using the dual-simplex"""
 
     import subprocess as sub

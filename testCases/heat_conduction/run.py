@@ -1,7 +1,4 @@
-import sys
-sys.path.append('../../')
-
-import heat_conduction
+import heat_conduction 
 import pybitup
 
 case_name = "heat_conduction"

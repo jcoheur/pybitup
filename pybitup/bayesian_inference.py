@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np 
 from scipy import stats
 import random
 import matplotlib.pyplot as plt 
@@ -114,7 +114,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
     #     IO_fileID['Distribution_values'].write("{}\n".format(str(self.log_bayes_post).replace('\n', '')))
 
-    def save_value(self, current_it):
+    def save_value(self, current_it): 
 
         self.likelihood.write_fun_eval(current_it)
 
@@ -333,7 +333,7 @@ class Model:
                 self.param = var_param
 
             self.model_eval = self.fun_x()
-
+            
             
         else: 
             # Model is build based on a given input file. 
@@ -358,10 +358,14 @@ class Likelihood:
 
     def __init__(self, exp_data, model_list): 
         self.data = exp_data
-        self.model_eval = []
         self.models = model_list 
         self.SS_X = 0 # sum of square 
         self.arg_LL = 0 # Arg of the likelihood function 
+
+        # self.model_eval[model_id] is the value that is updated and saved
+        # We initialise it here as a list  
+        self.model_eval = {}
+
 
     def compute_value(self, X):
         """ Compute value of the likelihood at the current point X.
@@ -386,20 +390,22 @@ class Likelihood:
         return log_like_val
 
     def update_eval(self): 
+        """ Update the value of the model evaluation. """ 
 
-        # We want to save model evaluation for time saving 
-        #self.model_eval = self.model_eval_X 
+        # Initialise model evaluation value 
+        for model_id in self.models.keys(): 
+            self.model_eval[model_id] = []
 
-        for model_id in self.models.keys():
-            self.model_eval = self.models[model_id].model_eval
+        # Update it 
+        for model_id in self.models.keys(): 
+            self.model_eval[model_id] = np.concatenate((self.model_eval[model_id], self.models[model_id].model_eval))
 
     def write_fun_eval(self, num_it):
-        """ Save the function evaluation at every save_freq evaluation. """ 
+        """ Save the function evaluation in an output file. 
+        The name of the output file is fixed.""" 
 
-        # We want to save model evaluation for time saving 
-        #np.save(name_file, self.model_eval)
         for model_id in self.models.keys(): 
-            np.save('output/'+model_id+'_fun_eval.'+str(num_it), self.model_eval)
+            np.save('output/'+model_id+'_fun_eval.'+str(num_it), self.model_eval[model_id]) 
 
             # n_x = len(self.data[model_id].x)
             # n_data_set = int(len(self.data[model_id].y)/n_x)
@@ -500,7 +506,7 @@ class Likelihood:
 
                 # grad_model_i = self.models[model_id].model_grad[0, pn]
                 grad_model_i = []
-                nspecies = 1 #14, 2, 1
+                nspecies = 14 #14, 2, 1
                 for j in range(nspecies): 
                     grad_model_i = np.concatenate((grad_model_i, self.models[model_id].model_grad[j, pn]))
                 

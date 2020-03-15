@@ -1,7 +1,4 @@
-import sys
-sys.path.append('../../')
-
-import one_reaction_pyrolysis_rescaled
+import one_reaction_pyrolysis_rescaled 
 import numpy as np
 import pybitup
 import matplotlib.pyplot as plt
@@ -35,6 +32,8 @@ pyro_model["one_reaction_pyrolysis_rescaled"]  = one_reaction_pyrolysis_rescaled
 # X = pyro_model.parametrization_backward(Y, parametrization_param)
 # # X must be equal to param_values
 # print(X) 
+
+
 
 
 post_dist = pybitup.solve_problem.Sampling(input_file_name)

@@ -25,7 +25,7 @@ pyro_model["one_reaction_pyrolysis"] = one_reaction_pyrolysis.OneReactionPyrolys
 #Y = one_reaction_pyrolysis.parametrization_forward(param_values, parametrization_param)
 #X = one_reaction_pyrolysis.parametrization_backward(Y, parametrization_param)
 # X must be equal to param_values
-# print(X)
+# print(X) 
 
 post_dist = pybitup.solve_problem.Sampling(input_file_name)
 post_dist.sample(pyro_model)
@@ -36,3 +36,5 @@ post_dist.propagate(pyro_model)
 post_dist.__del__()
 
 pybitup.post_process.post_process_data(input_file_name)
+
+

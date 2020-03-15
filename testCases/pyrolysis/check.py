@@ -25,7 +25,9 @@ for i in range(len(point)):
         index.append(i)
     except: pass
 
+resp = np.array(resp)
 respMod = model.eval(point[index])
+respMod = respMod
 
 # %% Monte Carlo and error
 

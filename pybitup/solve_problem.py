@@ -18,7 +18,6 @@ import pybitup.distributions
 import pybitup.bayesian_inference
 import pybitup.inference_problem
 import pybitup.post_process
-import pybitup.polynomial_chaos
 
 class SolveProblem(): 
     
@@ -86,14 +85,14 @@ class Sampling(SolveProblem):
 
         SolveProblem.__init__(self, input_file_name)
 
-        new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'ito_p_moments']
+        new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'aux_variables']
         # Define output file for sampling 
         self.IO_path[new_file_keys[0]] = self.IO_path['out_folder']+"/mcmc_chain.dat"
         self.IO_path[new_file_keys[1]] = self.IO_path['out_folder']+"/mcmc_chain_reparam.dat"
         self.IO_path[new_file_keys[2]] = self.IO_path['out_folder']+"/mcmc_chain.csv"
         self.IO_path[new_file_keys[3]] = self.IO_path['out_folder']+"/distribution_values.csv"
         self.IO_path[new_file_keys[4]] = self.IO_path['out_folder']+"/gp.dat" # Gaussian proposal 
-        self.IO_path[new_file_keys[5]] = self.IO_path['out_folder']+"/ito_p_moments.dat" # p-moment in Ito-SDE mcmc 
+        self.IO_path[new_file_keys[5]] = self.IO_path['out_folder']+"/aux_variables.dat" # momentum variables in HMC and Ito 
 
         # Create and open files in read-write ('+') mode (w mode erase previous existing files) 
         for file_keys in new_file_keys:
@@ -197,13 +196,8 @@ class Sampling(SolveProblem):
                         x = np.array(np.arange(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
                     elif  c_data['x']['Type'] == "linspace": 
                         x = np.array(np.linspace(c_data['x']['Value'][0], c_data['x']['Value'][1], c_data['x']['Value'][2]))
-                    elif c_data['x']['Type'] == "ReadFromFile":
 
-                        reader = pd.read_csv(c_data['x']['FileName'],header=None)
-                        x = reader.values[:,c_data['x']["field"]]
-
-
-                    models[model_id].x = x
+                    models[model_id].x = x 
 
                     std_y = np.array(c_data['y']['Sigma'])
                     y = np.array(pybitup.bayesian_inference.generate_synthetic_data(models[model_id], c_data['y']['Sigma'], c_data['y']['Error']))
@@ -287,7 +281,7 @@ class Propagation(SolveProblem):
     def propagate(self, models=[]): 
 
             if (self.user_inputs.get("Propagation") is not None):
-                self.input_propagation = self.user_inputs["Propagation"] 
+                self.input_propagation = self.user_inputs["Propagation"]
             else: 
                 raise ValueError('Ask for uncertainty propagation but no Propagation inputs were provided')
 
@@ -317,7 +311,7 @@ class Propagation(SolveProblem):
             else:
                 # Default number of sample to propagate
                 n_sample_param = len(unpar[name])
-    
+
 
 
             # Get the design points
@@ -333,6 +327,7 @@ class Propagation(SolveProblem):
                 reader = pd.read_csv(design_point_input["filename"],header=None)
             
                 c_design_points = reader.values[:,design_point_input["field"]]
+
                 model_id_to_num[model_id] = model_num
 
                 # Set the evaluation of the model at the design points 
@@ -349,15 +344,9 @@ class Propagation(SolveProblem):
                 models[model_id].param_names = c_model['param_names']
                 models[model_id].unpar_name = unpar.keys()
 
-
-
             # Create surrogate
             # ----------------
             # Polynomial Chaos Method
-
-
-
-
 
             for model_id in models.keys():
 
@@ -375,8 +364,6 @@ class Propagation(SolveProblem):
                     # Save the pce model in output
                     pce.save_pickle(model,self.IO_path['out_folder']+"/pce_model")
                     pce.save_pickle(poly,self.IO_path['out_folder']+"/pce_poly")
-
-
 
 
 
@@ -469,8 +456,7 @@ class Propagation(SolveProblem):
                     models[model_id].run_model(c_param)
 
                     # Get model evaluations
-                    #print(len(models[model_id].model_eval))
-                    fun_eval[model_id][i, :] = models[model_id].model_eval
+                    fun_eval[model_id][i, :] = models[model_id].model_eval 
                     #fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
 
                     c_eval = fun_eval[model_id][i, :]

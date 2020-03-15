@@ -633,7 +633,7 @@ def error_bar (x_data, y_data, error, col, line_width=1):
 
     ld = len(x_data)
     # Might be problematic if ld is too large (takes too much time)
-    for i in range(0, ld, 1000): 
+    for i in range(0, ld): 
         plt.plot([x_data[i], x_data[i]], [ym_data_error[i], yp_data_error[i]], color=col)
         plt.plot([x_data[i]-dx, x_data[i]+dx], [yp_data_error[i], yp_data_error[i]], color=col)
         plt.plot([x_data[i]-dx, x_data[i]+dx], [ym_data_error[i], ym_data_error[i]], color=col)

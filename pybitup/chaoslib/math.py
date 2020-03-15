@@ -1,4 +1,3 @@
-from .struct import Polynomial
 import numpy as np
 
 # %% Multi-index
@@ -23,30 +22,6 @@ def indextens(order,dim,trunc):
         index = index[np.argsort(np.sum(index,axis=-1))]
 
     return index.T
-
-# %% Tensor Product
-
-def tensdot(polyList,order,trunc):
-    """Computes the tensor product of univariate polynomial basis"""
-
-    def reshape(poly,expo):
-
-        poly.coef = poly[:][:,expo]
-        poly.expo = expo
-        return poly
-
-    dim = len(polyList)
-    expo = indextens(order,dim,trunc)
-    nbrPoly = expo.shape[1]
-    coef = np.eye(nbrPoly)
-
-    # Tensor product of the univariate basis
-
-    for i in range(dim): polyList[i] = reshape(polyList[i],expo[i])
-    for i in range(nbrPoly): coef[i] = np.prod([polyList[j][expo[j,i]] for j in range(dim)],axis=0)
-
-    poly = Polynomial(expo,coef,1)
-    return poly
 
 # %% Prime Numbers
 
@@ -111,7 +86,7 @@ def halton(nbrPts,dom):
 
     return point
 
-# %% R-sequence
+# %% R-Sequence
 
 def rseq(nbrPts,dom):
     """Computes the R-sequence of quasi-random numbers"""
@@ -136,3 +111,34 @@ def rseq(nbrPts,dom):
         point[:,i] = (point[:,i]-0.5)*width+width/2+dom[i][0]
 
     return point
+
+# %% PCA Whitening
+
+class Pca:
+    """Class of PCA whitening for linearly separable variables"""
+
+    def __init__(self,point):
+
+        self.mean = np.mean(point,axis=0)
+        self.std = np.std(point,axis=0,ddof=1)
+
+        # Standardizes and computes the whitening matrix
+
+        point = (point-self.mean)/self.std
+        cov = np.cov(point.T)
+        val,vec = np.linalg.eig(cov)
+
+        self.A = np.diag(np.sqrt(1/val)).dot(vec.T)
+        self.invA = np.linalg.inv(self.A)
+
+    def decor(self,point):
+
+        point = np.transpose((point-self.mean)/self.std)
+        point = np.transpose(self.A.dot(point))
+        return point
+
+    def cor(self,point):
+
+        point = np.dot(self.invA,point.T)
+        point = self.std*point.T+self.mean
+        return point

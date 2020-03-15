@@ -27,7 +27,7 @@ class OneReactionPyrolysis(bi.Model):
         
         self.T = self._x 
         self.T_0 = self._x[0]
-
+        
     def solve_system(self): 
         
         # 
@@ -38,7 +38,7 @@ class OneReactionPyrolysis(bi.Model):
         
         # Exponential integral function 
         ei = special.expi
-
+                
         # Analytical solution
         C = (1 - self.xi_init)**(1 - self.n)/(1 - self.n) + (self.A / self.tau) * self.T_0 * np.exp(-self.E / (R * self.T_0)) \
             + ei(-self.E / (R * self.T_0)) * self.E * (self.A / self.tau) / R

@@ -6,9 +6,8 @@
                 {
                     "Type": "GenerateSynthetic", 
                     "x": {
-                        "Type": "ReadFromFile", 
-                        "FileName": "test_design_points.dat", 
-                        "field": 0
+                        "Type": "linspace", 
+                        "Value": [300.0, 1400.0, 101]
                     },
                     "y": {
                         "Name": "Temperature",
@@ -55,13 +54,12 @@
     "Propagation": {
         "Model": [ 
             {
-                "model_id": "6.1_K_per_Min",
+                // Emulator ? 
+                "model_id": "6.1_K_per_Min", // Optional
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
-                },
-            
-                
+                },  
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
                 "parametrization" : "no",
@@ -74,7 +72,7 @@
                         "hyperbolic_truncation": 0.75,                      // must be > 0
                         "point_weights": "None",                            // "file.csv", "file.npy" or "None"
                         "order": 4                                          // must be integer > 0
-                        //"parameter_laws": [
+                        //"parameter_laws": [                               // Laws of the parameters
                             //{"uniform": [-1,1]},
                             //{"gamma": [2,3]},
                             //{"normal": [0,1]},
@@ -83,8 +81,12 @@
                     },
                 
                     "quadrature":{
-                        "method": "fekete",                                 // "monte_carlo","fekete" or "leja"
-                        "order_truncation": 2                               // must be integer >= half of "order"
+                        "method": "simplex",                                // "monte_carlo", "quasi-monte carlo", "fekete", "leja", "simplex" or "null space"
+                        "order_truncation": 2                               // must be integer, generally >= half of "order"
+                        //"weight_function": "None"                         // must be a vectorized callable function fx(var1,var2,...,varN) or "None"
+                        //"domain": [[0,1],[1,2]]                           // 1D or 2D array [[dom1],[dom2],...[domN]]
+                        //"number_points": 1e5                              // Number of points for quasi-Monte Carlo
+
                     },
                 
                     "coefficients":{
@@ -94,39 +96,20 @@
                 }
             }, 
             {
-                "model_id": "366_K_per_Min",
+                // Emulator ? 
+                "model_id": "366_K_per_Min", // Optional
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
                 },  
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 366],
-                "parametrization" : "no",
-                "emulator": "pce",
-                "pce": {
-                    
-                    "polynomials":{
-                        "method": "gram_schmidt",
-                        "point_coordinates": "output/mcmc_chain.csv",
-                        "hyperbolic_truncation": 0.75,
-                        "point_weights": "None",
-                        "order": 4
-                    },
-                
-                    "quadrature":{
-                        "method": "leja",
-                        "order_truncation": 2
-                    },
-                
-                    "coefficients":{
-                        "method": "lars",
-                        "iterations": 10
-                    }
-                }
+                "parametrization" : "no"
             }
         ],
         "Uncertain_param": {
-            "A":  {"filename": "output/mcmc_chain.csv", "field": 0},
+            "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            //"A":  {"filename": "None, "distribution": "Gaussian", "hyperparam": [mean, sigma]}, 
             "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
             "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
             "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
@@ -154,8 +137,8 @@
 		},
         "Posterior": {
             "display": "no", 
-            "distribution": "bivariate",
-            "estimation": "contour",
+            "distribution": "bivariate", // marginal, bivariate
+            "estimation": "contour", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 1
         },
         "Propagation": {

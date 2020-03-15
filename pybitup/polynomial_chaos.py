@@ -33,7 +33,7 @@ class PCE:
                 elif name=="beta": lawList.append(cl.Beta(*param))
                 elif name=="expo": lawList.append(cl.Expo(*param))
                 elif name=="lognorm": lawList.append(cl.Lognorm(*param))
-                else: raise Exception("compute_polynomials: unonown law")
+                else: raise Exception("compute_polynomials: unknown law")
                 
             return cl.polyrecur(order,lawList,trunc)
 
@@ -45,6 +45,8 @@ class PCE:
     
         if method=="fekete": return cl.fekquad(point,poly)
         elif method=="leja": return cl.lejquad(point,poly)
+        elif method=="simplex": return cl.linquad(point,poly)
+        elif method=="null space": return cl.nulquad(point,poly)
         else: raise Exception("select_quadrature: unknown method")
 
     def compute_coefficients(self,resp,poly,point,weight):
@@ -92,17 +94,32 @@ class PCE:
         elif os.path.splitext(weightFile)[1]==".csv": weight = np.loadtxt(weightFile,delimiter=",")
         else: weight = None
 
+        # Computes the polynomials
+
         poly = self.compute_polynomials(point,weight)
 
-        if self.param["quadrature"]["method"]!="monte_carlo":
+        # Computes the quadrature points and the weights
 
+        if self.param["quadrature"]["method"]=="monte_carlo": weight = None
+        elif self.param["quadrature"]["method"]=="quasi_monte_carlo":
+
+            if self.param["quadrature"]["weight_function"]=="None": pdf = None
+            else: pdf = eval(self.param["quadrature"]["weight_function_name"])
+            nbrPts = int(self.param["quadrature"]["number_points"])
+            dom = self.param["quadrature"]["domain"]
+            point,weight = cl.qmcquad(nbrPts,dom,pdf)
+
+        else:
             index,weight = self.select_quadrature(point,poly)
             poly.trunc(self.param["quadrature"]["order_truncation"])
             point = point[index]
 
-        else: weight = None
+        # Computes the response at the points
 
         resp = self.function_evaluator(function,point)
+
+        # Computes the coefficients
+
         coef = self.compute_coefficients(resp,poly,point,weight)
 
         if isinstance(coef,tuple):
@@ -113,6 +130,8 @@ class PCE:
             coef = coef[index]
 
         if self.param["coefficients"]["method"]=="lars_full": coef = cl.colloc(resp,poly,point)
+
+        # Computes the pce model
 
         model = cl.Expansion(coef,poly)
         return poly,coef,model

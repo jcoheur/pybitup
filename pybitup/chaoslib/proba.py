@@ -9,8 +9,9 @@ class Uniform:
     def __init__(self,a,b):
 
         self.arg = [a,b]
-        self.invcdf = lambda x: (b-a)*x+a
         self.pdf = lambda x: x**0/(b-a)
+        self.cdf = lambda x: (x-a)/(b-a)
+        self.invcdf = lambda x: (b-a)*x+a
         self.sampler = lambda x: np.random.uniform(a,b,x)
 
     def coef(self,nbrCoef):
@@ -31,6 +32,7 @@ class Normal:
 
         self.arg = [a,b]
         self.invcdf = lambda x: a+np.sqrt(2)*b*special.erfinv(2*x-1)
+        self.cdf = lambda x: 0.5*(1+special.erf((x-a)/(b*np.sqrt(2))))
         self.pdf = lambda x: np.exp(-0.5*((x-a)/b)**2)/(b*np.sqrt(2*np.pi))
         self.sampler = lambda x: np.random.normal(a,b,x)
 
@@ -51,8 +53,9 @@ class Expo:
     def __init__(self,a):
 
         self.arg = a
-        self.invcdf = lambda x: -np.log(1-x)/a
+        self.cdf = lambda x: 1-np.exp(-a*x)
         self.pdf = lambda x: a*np.exp(-a*x)
+        self.invcdf = lambda x: -np.log(1-x)/a
         self.sampler = lambda x: np.random.exponential(a,x)
 
     def coef(self,nbrCoef):
@@ -72,6 +75,7 @@ class Gamma:
     def __init__(self,a,b):
 
         self.arg = [a,b]
+        self.cdf = lambda x: special.gammainc(a,x)
         self.invcdf = lambda x: b*special.gammaincinv(a,x)
         self.pdf = lambda x: x**(a-1)*np.exp(-x/b)/(special.gamma(a)*b**a)
         self.sampler = lambda x: np.random.gamma(a,b,x)
@@ -94,6 +98,7 @@ class Lognorm:
 
         self.arg = [a,b]
         self.invcdf = lambda x: np.exp(a+np.sqrt(2)*b*special.erfinv(2*x-1))
+        self.cdf = lambda x: 0.5*(1+special.erf((np.log(x)-a)/(b*np.sqrt(2))))
         self.pdf = lambda x: np.exp(-0.5*((np.log(x)-a)/b)**2)/(x*b*np.sqrt(2*np.pi))
         self.sampler = lambda x: np.random.lognormal(a,b,x)
 
@@ -114,6 +119,7 @@ class Beta:
     def __init__(self,a,b):
 
         self.arg = [a,b]
+        self.cdf = lambda x: special.betainc(a,b,x)
         self.invcdf = lambda x: special.betaincinv(a,b,x)
         self.pdf = lambda x: x**(a-1)*(1-x)**(b-1)/special.beta(a,b)
         self.sampler = lambda x: np.random.beta(a,b,x)
@@ -130,34 +136,3 @@ class Beta:
         coef[0] = ((a-1)**2-(b-1)**2)*0.5/(nab*(nab-2)+(nab==0)+(nab==2))+0.5
         coef[1] = np.where((n==0)+(n==1),B1,B2)
         return coef
-
-# %% PCA Whitening
-
-class Pca:
-    """Class of PCA whitening for linearly correlated variables"""
-
-    def __init__(self,point):
-
-        self.mean = np.mean(point,axis=0)
-        self.std = np.std(point,axis=0,ddof=1)
-
-        # Standardizes and computes the whitening matrix
-
-        point = (point-self.mean)/self.std
-        cov = np.cov(point.T)
-        val,vec = np.linalg.eig(cov)
-
-        self.A = np.diag(np.sqrt(1/val)).dot(vec.T)
-        self.invA = np.linalg.inv(self.A)
-
-    def decor(self,point):
-
-        point = np.transpose((point-self.mean)/self.std)
-        point = np.transpose(self.A.dot(point))
-        return point
-
-    def cor(self,point):
-
-        point = np.dot(self.invA,point.T)
-        point = self.std*point.T+self.mean
-        return point

@@ -76,18 +76,18 @@ class Sampler:
             run_MCMCM = mha.DelayedRejectionAdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
                                                                         starting_it, updating_it, eps_v, gamma)
         elif self.algo_name == "HMC": 
+            C_matrix = self.algo['covariance']
+            gradient = self.algo['gradient']
             step_size = self.algo['HMC']['step_size']
             num_steps = self.algo['HMC']['num_steps']
-            C_matrix = self.algo['HMC']['C_matrix']
-            gradient = self.algo['HMC']['gradient']
             run_MCMCM = mha.HamiltonianMonteCarlo(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
                                                 C_matrix, gradient, step_size, num_steps)
         elif self.algo_name == "ISDE": 
+            C_matrix = self.algo['covariance']
+            gradient = self.algo['gradient']
             h = self.algo['ISDE']['h']
             f0 = self.algo['ISDE']['f0']
-            C_matrix = self.algo['ISDE']['C_matrix']
-            gradient = self.algo['ISDE']['gradient']
             run_MCMCM = mha.ito_SDE(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
-                                    h, f0, C_matrix, gradient)
+                                    C_matrix, gradient, h, f0)
         
         run_MCMCM.run_algorithm()

@@ -20,7 +20,7 @@ resp = []
 
 for i in range(len(point)):
     try:
-        resp.append(np.load("output/one_reaction_pyrolysis_fun_eval."+str(i)+".npy"))
+        resp.append(np.load("output/heat_conduction_fun_eval."+str(i)+".npy"))
         index.append(i)
     except: pass
 
@@ -56,4 +56,11 @@ plt.plot(var,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Response")
 plt.xlabel("Step")
+plt.grid()
+
+plt.figure(3)
+plt.rcParams.update({"font.size":16})
+plt.plot(point[:,0],point[:,1],".C0")
+plt.xlabel("$O$")
+plt.ylabel("$h$")
 plt.grid()

@@ -1,7 +1,7 @@
 from scipy import special
 import numpy as np
 
-# %% Uniform Law
+# %% Uniform Distribution
 
 class Uniform:
     """Class of uniform law with lower and upper boundaries"""
@@ -23,7 +23,7 @@ class Uniform:
         coef[1] = ((b-a)*n/2)**2/(4*n**2-1)
         return coef
 
-# %% Normal Law
+# %% Normal Distribution
 
 class Normal:
     """Class of normal law with mean and standard deviation"""
@@ -45,7 +45,7 @@ class Normal:
         coef[1] = b**2*n
         return coef
 
-# %% Exponential Law
+# %% Exponential Distribution
 
 class Expo:
     """Class of exponential law with inverse scale"""
@@ -67,7 +67,7 @@ class Expo:
         coef[1] = (a*n)**2
         return coef
 
-# %% Gamma Law
+# %% Gamma Distribution
 
 class Gamma:
     """Class of gamma law with shape and scale"""
@@ -89,7 +89,7 @@ class Gamma:
         coef[1] = (n+a-1)*n*b**2
         return coef
 
-# %% Lognormal Law
+# %% Lognormal Distribution
 
 class Lognorm:
     """Class of lognormal law with mean and variance"""
@@ -111,7 +111,7 @@ class Lognorm:
         coef[1] = (np.exp(n*b**2)-1)*np.exp((3*n-2)*b**2+2*a)
         return coef
 
-# %% Beta Law
+# %% Beta Distribution
 
 class Beta:
     """Class of beta law with shape parameters"""

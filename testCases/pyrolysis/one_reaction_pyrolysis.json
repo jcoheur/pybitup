@@ -67,31 +67,22 @@
                 "pce": {
                     
                     "polynomials":{
-                        "method": "gram_schmidt",                           // "gram_schmidt" or "recurrence"
-                        "point_coordinates": "output/mcmc_chain.csv",       // "file.csv" or "file.npy"
-                        "hyperbolic_truncation": 0.75,                      // must be > 0
-                        "point_weights": "None",                            // "file.csv", "file.npy" or "None"
-                        "order": 4                                          // must be integer > 0
-                        //"parameter_laws": [                               // Laws of the parameters
-                            //{"uniform": [-1,1]},
-                            //{"gamma": [2,3]},
-                            //{"normal": [0,1]},
-                            //{"expo": [1]}
-                        //]
+                        "method": "gram_schmidt",
+                        "point_coordinates": "output/mcmc_chain.csv",
+                        "hyperbolic_truncation": 0.75,
+                        "point_weights": "None",
+                        "order": 4
                     },
                 
                     "quadrature":{
-                        "method": "simplex",                                // "monte_carlo", "quasi-monte carlo", "fekete", "leja", "simplex" or "null space"
-                        "order_truncation": 2                               // must be integer, generally >= half of "order"
-                        //"weight_function": "None"                         // must be a vectorized callable function fx(var1,var2,...,varN) or "None"
-                        //"domain": [[0,1],[1,2]]                           // 1D or 2D array [[dom1],[dom2],...[domN]]
-                        //"number_points": 1e5                              // Number of points for quasi-Monte Carlo
+                        "method": "simplex",
+                        "order_truncation": 2
 
                     },
                 
                     "coefficients":{
-                        "method": "lars_full",                              // "spectral","colloc","lars" or "lars_full"
-                        "iterations": 10                                    // must be integer > 0 and can be "unlimited"
+                        "method": "lars_full",
+                        "iterations": 10
                     }
                 }
             }, 
@@ -109,7 +100,6 @@
         ],
         "Uncertain_param": {
             "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
-            //"A":  {"filename": "None, "distribution": "Gaussian", "hyperparam": [mean, sigma]}, 
             "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
             "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
             "F":  {"filename": "output/mcmc_chain.csv", "field": 3}

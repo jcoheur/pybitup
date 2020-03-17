@@ -21,11 +21,11 @@ def qmcquad(nbrPts,dom,pdf=0):
 
 # %% Tensor Product
 
-def tensquad(nbrPts,lawList):
+def tensquad(nbrPts,distList):
     """Computes the tensor product quadrature rule with recurrence coefficients"""
 
-    lawList = np.reshape(lawList,-1)
-    dim = lawList.shape[0]
+    distList = np.reshape(distList,-1)
+    dim = distList.shape[0]
     J = np.zeros((2,nbrPts))
     points = np.zeros((nbrPts,dim))
     weights = np.zeros((nbrPts,dim))
@@ -34,7 +34,7 @@ def tensquad(nbrPts,lawList):
 
     for i in range(dim):
 
-        coef = lawList[i].coef(nbrPts)
+        coef = distList[i].coef(nbrPts)
         J[1] = np.append(np.sqrt(coef[1][1:]),[0])
         J[0] = coef[0]
 
@@ -153,7 +153,7 @@ def linquad(point,poly):
 
     printer(0,"Selecting points ...")
 
-    tol = 1e-25
+    tol = 1e-20
     V = poly.vander(point)
     nbrPts = V.shape[0]
     c = np.ones(nbrPts)

@@ -1,3 +1,4 @@
+from scipy import linalg
 import numpy as np
 
 # %% Multi-index
@@ -26,7 +27,7 @@ def indextens(order,dim,trunc):
 # %% Prime Numbers
 
 def prime(nbrPrime):
-    """Computes a list of first prime numbers"""
+    """Generates an array containing the first prime numbers"""
 
     def check(nbr,i=5):
         while i<=np.sqrt(nbr):
@@ -45,7 +46,7 @@ def prime(nbrPrime):
         elif check(nbr)!=0: prime.append(nbr)
         nbr += 2
 
-    return prime
+    return np.array(prime)
 
 # %% Halton Sequence
 
@@ -110,6 +111,50 @@ def rseq(nbrPts,dom):
         width = dom[i][1]-dom[i][0]
         point[:,i] = (point[:,i]-0.5)*width+width/2+dom[i][0]
 
+    return point
+
+# %% Quadratic Resampling
+
+def match(point,mean,cov):
+    """Performs a quadratic resampling according to imposed moments"""
+
+    sCov = np.cov(point.T)
+    sMean = np.mean(point,axis=0)
+    v2 = np.linalg.inv(linalg.sqrtm(sCov))
+    v1 = linalg.sqrtm(cov)
+    H = np.dot(v1,v2)
+
+    point = (point-sMean).dot(H.T)+mean
+    return point
+
+# %% Monte Carlo Sampler
+
+def sampler(nbrPts,dom,pdf):
+    """Generates a sample of points according to a probability distribution"""
+
+    dom = np.atleast_2d(dom)
+    dim = dom.shape[0]
+
+    y = np.random.uniform(0,1,nbrPts)
+    x = np.array([np.random.uniform(a,b,nbrPts) for [a,b] in dom])
+    index = np.argwhere(y<pdf(*x)).flatten()
+    point = np.transpose(x[:,index])
+
+    # Repeats the operation to obtain the desired size
+
+    while (point.shape[0]<nbrPts):
+
+        y = np.random.uniform(0,1,nbrPts)
+        x = np.array([np.random.uniform(a,b,nbrPts) for [a,b] in dom])
+        index = np.argwhere(y<pdf(*x)).flatten()
+
+        x = np.transpose(x[:,index])
+        point = np.concatenate((point,x),axis=0)
+
+    # Removes the overflow of points
+
+    index = np.random.choice(point.shape[0],nbrPts)
+    point = point[index]
     return point
 
 # %% PCA Whitening

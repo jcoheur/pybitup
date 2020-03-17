@@ -29,18 +29,18 @@ class Expansion:
 
 # %% Univariate Expansion
 
-def transfo(invcdf,order,law):
+def transfo(invcdf,order,dist):
     """Maps an arbitrary random variable to another distribution"""
 
     nbrPoly = order+1
     coef = np.zeros(nbrPoly)
-    poly = polyrecur(order,law)
+    poly = polyrecur(order,dist)
 
     # Computes polynomial chaos coefficients and model
 
     for i in range(nbrPoly):
 
-        fun = lambda x: invcdf(x)*poly.eval(i,law.invcdf(x))
+        fun = lambda x: invcdf(x)*poly.eval(i,dist.invcdf(x))
         coef[i] = integrate.quad(fun,0,1)[0]
 
     expan = Expansion(coef,poly)

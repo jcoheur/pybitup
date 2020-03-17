@@ -5,12 +5,15 @@ import numpy as np
 import os.path
 import sys
 
-# %% Polynomial Chaos Expansion
+# %% Polynomial Chaos Expansion Wrapper
 
 class PCE:
     """Wrapper for chaoslib, the class takes a json file containing the polynomial expansion parameters"""
 
     def __init__(self,parameters): self.param = parameters
+    def save_pickle(self,item,name): cl.save(item,name)
+
+    # %% Computes the polynomials
 
     def compute_polynomials(self,point,weight):
 
@@ -39,15 +42,7 @@ class PCE:
 
         else: raise Exception("compute_polynomials: unknown method")
 
-    def select_quadrature(self,point,poly):
-
-        method = self.param["quadrature"]["method"]
-    
-        if method=="fekete": return cl.fekquad(point,poly)
-        elif method=="leja": return cl.lejquad(point,poly)
-        elif method=="simplex": return cl.linquad(point,poly)
-        elif method=="null space": return cl.nulquad(point,poly)
-        else: raise Exception("select_quadrature: unknown method")
+    # %% Selects the coefficients
 
     def compute_coefficients(self,resp,poly,point,weight):
 
@@ -63,7 +58,63 @@ class PCE:
         elif method=="colloc": return cl.colloc(resp,poly,point,weight)
         else: raise Exception("compute_coefficients: unknown method")
 
-    def save_pickle(self,item,name): cl.save(item,name)
+    # %% Computes the quadrature
+
+    def compute_quadrature(self,point,poly):
+
+        # Monte Carlo
+
+        if self.param["quadrature"]["method"]=="monte_carlo": weight = None
+
+        # Quasi-Monte Carlo
+
+        elif self.param["quadrature"]["method"]=="quasi_monte_carlo":
+
+            if self.param["quadrature"]["weight_function"]=="None": pdf = None
+            else: pdf = eval(self.param["quadrature"]["weight_function_name"])
+            nbrPts = int(self.param["quadrature"]["number_points"])
+            dom = self.param["quadrature"]["domain"]
+
+            point,weight = cl.qmcquad(nbrPts,dom,pdf)
+
+        # Recurrence coefficients
+
+        elif self.param["quadrature"]["method"]=="recurrence":
+
+            lawList = []
+            nbrQuad = 1+self.param["quadrature"]["order_quadrature"]
+            for law in self.param["polynomials"]["parameter_laws"]:
+
+                name = list(law.keys())[0]
+                param = law[name]
+    
+                if name=="uniform": lawList.append(cl.Uniform(*param))
+                elif name=="normal": lawList.append(cl.Normal(*param))
+                elif name=="gamma": lawList.append(cl.Gamma(*param))
+                elif name=="beta": lawList.append(cl.Beta(*param))
+                elif name=="expo": lawList.append(cl.Expo(*param))
+                elif name=="lognorm": lawList.append(cl.Lognorm(*param))
+                else: raise Exception("compute_quadrature: unknown law")
+
+            point,weight = cl.tensquad(nbrQuad,lawList)
+
+        # Weakly admissible mesh
+
+        else:
+            method = self.param["quadrature"]["method"]
+        
+            if method=="fekete": index,weight = cl.fekquad(point,poly)
+            elif method=="leja": index,weight = cl.lejquad(point,poly)
+            elif method=="simplex": index,weight = cl.linquad(point,poly)
+            elif method=="null_space": index,weight = cl.nulquad(point,poly)
+            else: raise Exception("compute_quadrature: unknown method")
+
+            poly.trunc(self.param["quadrature"]["order_truncation"])
+            point = point[index]
+
+        return point,weight
+
+    # %% Evaluates the function
 
     def function_evaluator(self,function,point):
 
@@ -77,6 +128,8 @@ class PCE:
             resp.append(function.model_eval)
 
         return np.array(resp)
+
+    # %% Computes the polynomial chaos expansion
 
     def compute_pce(self,function):
 
@@ -94,33 +147,13 @@ class PCE:
         elif os.path.splitext(weightFile)[1]==".csv": weight = np.loadtxt(weightFile,delimiter=",")
         else: weight = None
 
-        # Computes the polynomials
+        # Computes the pce elements
 
         poly = self.compute_polynomials(point,weight)
-
-        # Computes the quadrature points and the weights
-
-        if self.param["quadrature"]["method"]=="monte_carlo": weight = None
-        elif self.param["quadrature"]["method"]=="quasi_monte_carlo":
-
-            if self.param["quadrature"]["weight_function"]=="None": pdf = None
-            else: pdf = eval(self.param["quadrature"]["weight_function_name"])
-            nbrPts = int(self.param["quadrature"]["number_points"])
-            dom = self.param["quadrature"]["domain"]
-            point,weight = cl.qmcquad(nbrPts,dom,pdf)
-
-        else:
-            index,weight = self.select_quadrature(point,poly)
-            poly.trunc(self.param["quadrature"]["order_truncation"])
-            point = point[index]
-
-        # Computes the response at the points
-
+        point,weight = self.compute_quadrature(point,poly)
         resp = self.function_evaluator(function,point)
-
-        # Computes the coefficients
-
         coef = self.compute_coefficients(resp,poly,point,weight)
+        print(coef)
 
         if isinstance(coef,tuple):
 

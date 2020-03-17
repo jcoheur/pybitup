@@ -1,0 +1,41 @@
+{
+    "emulator": "pce",
+    "pce": {
+        
+        "polynomials":{                                                     // Polynomials Parameters
+
+            "method": "gram_schmidt",                                       // "gram_schmidt" or "recurrence"
+            "point_coordinates": "output/mcmc_chain.csv",                   // "file.csv" or "file.npy"
+            "hyperbolic_truncation": 0.75,                                  // must be > 0
+            "point_weights": "None",                                        // "file.csv", "file.npy" or "None"
+            "order": 4,                                                     // must be integer > 0
+
+            "parameter_laws": [                                             // Laws of the parameters
+                {"uniform": [-1,1]},
+                {"gamma": [2,3]},
+                {"normal": [0,1]},
+                {"expo": [1]}
+            ]
+        },
+
+        "quadrature":{                                                      // Coefficients Quadrature Parameters
+
+            "method": "simplex",                                            // "recurrence", "monte_carlo", "quasi-monte carlo", "fekete", "leja", "simplex" or "null space"
+            
+            "order_truncation": 2,                                          // for weaky admissible meshes, must be integer, generally <= polynomial "order"/2
+
+            "order_quadrature": 12,                                         // for recurrence, must be at least 2x "order" of polynomials
+
+            "weight_function": "None",                                      // for quasi-monte carlo, must be a vectorized callable function fx(var1,var2,...,varN) or "None"
+            "domain": [[0,1],[1,2]],                                        // for quasi-monte carlo, 1D or 2D array [[dom1],[dom2],...[domN]]
+            "number_points": 1e3                                            // for quasi-monte carlo, number of points
+
+        },
+
+        "coefficients":{                                                    // Coefficients Method Parameters
+            
+            "method": "lars_full",                                          // "spectral","colloc","lars" or "lars_full"
+            "iterations": 10                                                // must be integer > 0 and can be "unlimited"
+        }
+    }
+}

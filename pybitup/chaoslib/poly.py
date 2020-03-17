@@ -100,14 +100,14 @@ def gschmidt(order,point,weight=0,trunc=1):
 
 # %% Recurrence Coefficients
 
-def polyrecur(order,lawList,trunc=1):
+def polyrecur(order,distList,trunc=1):
     """Computes the orthogonal polynomial basis using recurrence coefficients"""
 
     printer(0,"Computing polynomials ...")
 
     nbrPoly = order+1
-    lawList = np.atleast_1d(lawList)
-    dim = lawList.shape[0]
+    distList = np.atleast_1d(distList)
+    dim = distList.shape[0]
     expo = np.arange(nbrPoly)
     coef = np.zeros((nbrPoly,nbrPoly))
     norm = np.ones((dim,nbrPoly))
@@ -120,7 +120,7 @@ def polyrecur(order,lawList,trunc=1):
     for i in range(dim):
 
         polyList.append(Polynomial(expo,coef))
-        AB = lawList[i].coef(nbrPoly)
+        AB = distList[i].coef(nbrPoly)
 
         for j in range(1,nbrPoly):
 

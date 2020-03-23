@@ -1,6 +1,7 @@
 from scipy import sparse,linalg
 from .math import indextens
 from .tools import printer
+from .proba import Joint
 import numpy as np
 
 # %% Polynomial Basis
@@ -100,14 +101,14 @@ def gschmidt(order,point,weight=0,trunc=1):
 
 # %% Recurrence Coefficients
 
-def polyrecur(order,distList,trunc=1):
+def polyrecur(order,dist,trunc=1):
     """Computes the orthogonal polynomial basis using recurrence coefficients"""
 
     printer(0,"Computing polynomials ...")
+    if not isinstance(dist,Joint): dist = Joint(dist)
 
     nbrPoly = order+1
-    distList = np.atleast_1d(distList)
-    dim = distList.shape[0]
+    dim = dist[:].shape[0]
     expo = np.arange(nbrPoly)
     coef = np.zeros((nbrPoly,nbrPoly))
     norm = np.ones((dim,nbrPoly))
@@ -120,7 +121,7 @@ def polyrecur(order,distList,trunc=1):
     for i in range(dim):
 
         polyList.append(Polynomial(expo,coef))
-        AB = distList[i].coef(nbrPoly)
+        AB = dist[i].coef(nbrPoly)
 
         for j in range(1,nbrPoly):
 

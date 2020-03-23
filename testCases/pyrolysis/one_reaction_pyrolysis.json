@@ -40,7 +40,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "n_iterations": 1e6, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -54,8 +54,7 @@
     "Propagation": {
         "Model": [ 
             {
-                // Emulator ? 
-                "model_id": "6.1_K_per_Min", // Optional
+                "model_id": "6.1_K_per_Min",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
@@ -69,26 +68,24 @@
                     "polynomials":{
                         "method": "gram_schmidt",
                         "point_coordinates": "output/mcmc_chain.csv",
-                        "hyperbolic_truncation": 0.75,
+                        "hyperbolic_truncation": 1,
                         "point_weights": "None",
                         "order": 4
                     },
                 
                     "quadrature":{
-                        "method": "simplex",
+                        "method": "fekete",
                         "order_truncation": 2
 
                     },
                 
                     "coefficients":{
-                        "method": "lars_full",
-                        "iterations": 10
+                        "method": "spectral"
                     }
                 }
             }, 
             {
-                // Emulator ? 
-                "model_id": "366_K_per_Min", // Optional
+                "model_id": "366_K_per_Min",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0

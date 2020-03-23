@@ -1,3 +1,4 @@
+from .math import halton,sobol,rseq
 from scipy import special
 import numpy as np
 
@@ -9,10 +10,10 @@ class Uniform:
     def __init__(self,a,b):
 
         self.arg = [a,b]
-        self.pdf = lambda x: x**0/(b-a)
-        self.cdf = lambda x: (x-a)/(b-a)
-        self.invcdf = lambda x: (b-a)*x+a
-        self.sampler = lambda x: np.random.uniform(a,b,x)
+        self.pdf = lambda x: np.array(x)**0/(b-a)
+        self.cdf = lambda x: (np.array(x)-a)/(b-a)
+        self.invcdf = lambda x: (b-a)*np.array(x)+a
+        self.random = lambda x: np.random.uniform(a,b,x)
 
     def coef(self,nbrCoef):
 
@@ -23,6 +24,10 @@ class Uniform:
         coef[1] = ((b-a)*n/2)**2/(4*n**2-1)
         return coef
 
+    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
+    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
+    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
+
 # %% Normal Distribution
 
 class Normal:
@@ -31,10 +36,10 @@ class Normal:
     def __init__(self,a,b):
 
         self.arg = [a,b]
-        self.invcdf = lambda x: a+np.sqrt(2)*b*special.erfinv(2*x-1)
-        self.cdf = lambda x: 0.5*(1+special.erf((x-a)/(b*np.sqrt(2))))
-        self.pdf = lambda x: np.exp(-0.5*((x-a)/b)**2)/(b*np.sqrt(2*np.pi))
-        self.sampler = lambda x: np.random.normal(a,b,x)
+        self.invcdf = lambda x: a+np.sqrt(2)*b*special.erfinv(2*np.array(x)-1)
+        self.cdf = lambda x: 0.5*(1+special.erf((np.array(x)-a)/(b*np.sqrt(2))))
+        self.pdf = lambda x: np.exp(-0.5*((np.array(x)-a)/b)**2)/(b*np.sqrt(2*np.pi))
+        self.random = lambda x: np.random.normal(a,b,x)
 
     def coef(self,nbrCoef):
 
@@ -45,6 +50,10 @@ class Normal:
         coef[1] = b**2*n
         return coef
 
+    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
+    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
+    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
+
 # %% Exponential Distribution
 
 class Expo:
@@ -53,10 +62,10 @@ class Expo:
     def __init__(self,a):
 
         self.arg = a
-        self.cdf = lambda x: 1-np.exp(-a*x)
-        self.pdf = lambda x: a*np.exp(-a*x)
-        self.invcdf = lambda x: -np.log(1-x)/a
-        self.sampler = lambda x: np.random.exponential(a,x)
+        self.cdf = lambda x: 1-np.exp(-a*np.array(x))
+        self.pdf = lambda x: a*np.exp(-a*np.array(x))
+        self.invcdf = lambda x: -np.log(1-np.array(x))/a
+        self.random = lambda x: np.random.exponential(a,x)
 
     def coef(self,nbrCoef):
 
@@ -67,6 +76,10 @@ class Expo:
         coef[1] = (a*n)**2
         return coef
 
+    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
+    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
+    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
+
 # %% Gamma Distribution
 
 class Gamma:
@@ -75,10 +88,10 @@ class Gamma:
     def __init__(self,a,b):
 
         self.arg = [a,b]
-        self.cdf = lambda x: special.gammainc(a,x)
-        self.invcdf = lambda x: b*special.gammaincinv(a,x)
-        self.pdf = lambda x: x**(a-1)*np.exp(-x/b)/(special.gamma(a)*b**a)
-        self.sampler = lambda x: np.random.gamma(a,b,x)
+        self.cdf = lambda x: special.gammainc(a,np.array(x))
+        self.invcdf = lambda x: b*special.gammaincinv(a,np.array(x))
+        self.pdf = lambda x: x**(a-1)*np.exp(-np.array(x)/b)/(special.gamma(a)*b**a)
+        self.random = lambda x: np.random.gamma(a,b,x)
 
     def coef(self,nbrCoef):
 
@@ -89,6 +102,10 @@ class Gamma:
         coef[1] = (n+a-1)*n*b**2
         return coef
 
+    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
+    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
+    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
+
 # %% Lognormal Distribution
 
 class Lognorm:
@@ -97,10 +114,10 @@ class Lognorm:
     def __init__(self,a,b):
 
         self.arg = [a,b]
-        self.invcdf = lambda x: np.exp(a+np.sqrt(2)*b*special.erfinv(2*x-1))
-        self.cdf = lambda x: 0.5*(1+special.erf((np.log(x)-a)/(b*np.sqrt(2))))
-        self.pdf = lambda x: np.exp(-0.5*((np.log(x)-a)/b)**2)/(x*b*np.sqrt(2*np.pi))
-        self.sampler = lambda x: np.random.lognormal(a,b,x)
+        self.invcdf = lambda x: np.exp(a+np.sqrt(2)*b*special.erfinv(2*np.array(x)-1))
+        self.cdf = lambda x: 0.5*(1+special.erf((np.log(np.array(x))-a)/(b*np.sqrt(2))))
+        self.pdf = lambda x: np.exp(-0.5*((np.log(np.array(x))-a)/b)**2)/(np.array(x)*b*np.sqrt(2*np.pi))
+        self.random = lambda x: np.random.lognormal(a,b,x)
 
     def coef(self,nbrCoef):
 
@@ -111,6 +128,10 @@ class Lognorm:
         coef[1] = (np.exp(n*b**2)-1)*np.exp((3*n-2)*b**2+2*a)
         return coef
 
+    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
+    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
+    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
+
 # %% Beta Distribution
 
 class Beta:
@@ -119,10 +140,10 @@ class Beta:
     def __init__(self,a,b):
 
         self.arg = [a,b]
-        self.cdf = lambda x: special.betainc(a,b,x)
-        self.invcdf = lambda x: special.betaincinv(a,b,x)
-        self.pdf = lambda x: x**(a-1)*(1-x)**(b-1)/special.beta(a,b)
-        self.sampler = lambda x: np.random.beta(a,b,x)
+        self.cdf = lambda x: special.betainc(a,b,np.array(x))
+        self.invcdf = lambda x: special.betaincinv(a,b,np.array(x))
+        self.pdf = lambda x: x**(a-1)*(1-np.array(x))**(b-1)/special.beta(a,b)
+        self.random = lambda x: np.random.beta(a,b,x)
 
     def coef(self,nbrCoef):
 
@@ -136,3 +157,51 @@ class Beta:
         coef[0] = ((a-1)**2-(b-1)**2)*0.5/(nab*(nab-2)+(nab==0)+(nab==2))+0.5
         coef[1] = np.where((n==0)+(n==1),B1,B2)
         return coef
+
+    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
+    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
+    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
+
+# %% Joint Distribution
+
+class Joint:
+    """Class of joint probability distribution function"""
+
+    def __init__(self,dist): self.dist = np.copy(np.atleast_1d(dist))
+    def __setitem__(self,i,dist): self.dist[i] = dist
+    def __getitem__(self,i): return self.dist[i]
+
+    def pdf(self,point):
+
+        dim = self.dist.shape[0]
+        point = np.atleast_2d(point)
+        resp = [self.dist[i].pdf(point[:,i]) for i in range(dim)]
+        resp = np.squeeze(np.prod(resp,axis=0))
+        return resp
+
+    def random(self,nbrPts):
+
+        dim = self.dist.shape[0]
+        point = np.transpose([self.dist[i].random(nbrPts) for i in range(dim)])
+        return point
+
+    def rseq(self,nbrPts):
+
+        dim = self.dist.shape[0]
+        point = rseq(nbrPts,dim)
+        point = np.transpose([self.dist[i].invcdf(point[:,i]) for i in range(dim)])
+        return point
+
+    def sobol(self,nbrPts):
+
+        dim = self.dist.shape[0]
+        point = sobol(nbrPts,dim)
+        point = np.transpose([self.dist[i].invcdf(point[:,i]) for i in range(dim)])
+        return point
+
+    def halton(self,nbrPts):
+
+        dim = self.dist.shape[0]
+        point = halton(nbrPts,dim)
+        point = np.transpose([self.dist[i].invcdf(point[:,i]) for i in range(dim)])
+        return point

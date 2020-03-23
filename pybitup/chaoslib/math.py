@@ -1,3 +1,4 @@
+from sobol_seq import i4_sobol_generate
 from scipy import linalg
 import numpy as np
 
@@ -22,7 +23,8 @@ def indextens(order,dim,trunc):
         index = index[norm.round(6)<=order]
         index = index[np.argsort(np.sum(index,axis=-1))]
 
-    return index.T
+    index = np.transpose(index)
+    return index
 
 # %% Prime Numbers
 
@@ -46,11 +48,20 @@ def prime(nbrPrime):
         elif check(nbr)!=0: prime.append(nbr)
         nbr += 2
 
-    return np.array(prime)
+    prime = np.array(prime)
+    return prime
+
+# %% Sobol Sequence
+
+def sobol(nbrPts,dim=1):
+    """Computes the Sobol sequence of quasi-random numbers"""
+
+    point = i4_sobol_generate(dim,nbrPts)
+    return point
 
 # %% Halton Sequence
 
-def halton(nbrPts,dom):
+def halton(nbrPts,dim=1):
     """Computes the Halton sequence of quasi-random numbers"""
 
     def vdcseq(idx,nbrBase):
@@ -66,35 +77,23 @@ def halton(nbrPts,dom):
             idx //= nbrBase
             base *= nbrBase
             active = idx>0
-    
+
         return point
 
     # Halton sequence using Van der Corput
 
-    dom = np.atleast_2d(dom)
-    dim = dom.shape[0]
     pr = prime(dim)
     point = np.zeros((nbrPts,dim))
     indices = [idx+pr[-1] for idx in range(nbrPts)]
     for i in range(dim): point[:,i] = vdcseq(indices,pr[i])
-
-    # Expands the hypercube into the provided domain
-
-    for i in range(dim):
-
-        width = dom[i][1]-dom[i][0]
-        point[:,i] = (point[:,i]-0.5)*width+width/2+dom[i][0]
-
     return point
 
 # %% R-Sequence
 
-def rseq(nbrPts,dom):
+def rseq(nbrPts,dim=1):
     """Computes the R-sequence of quasi-random numbers"""
 
     phi = 2
-    dom = np.atleast_2d(dom)
-    dim = dom.shape[0]
     alpha = np.zeros(dim)
     point = np.zeros((nbrPts,dim))
 
@@ -103,14 +102,6 @@ def rseq(nbrPts,dom):
     for i in range(10): phi = (1+phi)**(1/(dim+1))
     for i in range(dim): alpha[i] = (1/phi)**(1+i)%1
     for i in range(nbrPts): point[i] = (0.5+alpha*(1+i))%1
-
-    # Expands the hypercube into the provided domain
-
-    for i in range(dim):
-
-        width = dom[i][1]-dom[i][0]
-        point[:,i] = (point[:,i]-0.5)*width+width/2+dom[i][0]
-
     return point
 
 # %% Quadratic Resampling
@@ -129,7 +120,7 @@ def match(point,mean,cov):
 
 # %% Monte Carlo Sampler
 
-def sampler(nbrPts,dom,pdf):
+def random(nbrPts,dom,pdf):
     """Generates a sample of points according to a probability distribution"""
 
     dom = np.atleast_2d(dom)

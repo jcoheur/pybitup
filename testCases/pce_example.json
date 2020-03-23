@@ -24,11 +24,7 @@
             
             "order_truncation": 2,                                          // for weaky admissible meshes, must be integer, generally <= polynomial "order"/2
 
-            "order_quadrature": 12,                                         // for recurrence, must be at least 2x "order" of polynomials
-
-            "weight_function": "None",                                      // for quasi-monte carlo, must be a vectorized callable function fx(var1,var2,...,varN) or "None"
-            "domain": [[0,1],[1,2]],                                        // for quasi-monte carlo, 1D or 2D array [[dom1],[dom2],...[domN]]
-            "number_points": 1e3                                            // for quasi-monte carlo, number of points
+            "order_quadrature": 12                                          // for recurrence, must be at least 2x "order" of polynomials
 
         },
 

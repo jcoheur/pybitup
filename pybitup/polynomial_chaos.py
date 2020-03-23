@@ -68,14 +68,14 @@ class PCE:
 
         # Quasi-Monte Carlo
 
-        elif self.param["quadrature"]["method"]=="quasi_monte_carlo":
+        # elif self.param["quadrature"]["method"]=="quasi_monte_carlo":
 
-            if self.param["quadrature"]["weight_function"]=="None": pdf = None
-            else: pdf = eval(self.param["quadrature"]["weight_function_name"])
-            nbrPts = int(self.param["quadrature"]["number_points"])
-            dom = self.param["quadrature"]["domain"]
+        #     if self.param["quadrature"]["weight_function"]=="None": pdf = None
+        #     else: pdf = eval(self.param["quadrature"]["weight_function_name"])
+        #     nbrPts = int(self.param["quadrature"]["number_points"])
+        #     dom = self.param["quadrature"]["domain"]
 
-            point,weight = cl.qmcquad(nbrPts,dom,pdf)
+        #     point,weight = cl.qmcquad(nbrPts,dom,pdf)
 
         # Recurrence coefficients
 
@@ -153,7 +153,6 @@ class PCE:
         point,weight = self.compute_quadrature(point,poly)
         resp = self.function_evaluator(function,point)
         coef = self.compute_coefficients(resp,poly,point,weight)
-        print(coef)
 
         if isinstance(coef,tuple):
 

@@ -1,31 +1,42 @@
 from scipy import optimize,linalg
 from .tools import printer,timer
-from .math import rseq
+from .proba import Joint
+from .math import halton
 import numpy as np
 
 # %% Quasi-Monte Carlo
 
 def qmcquad(nbrPts,dom,pdf=0):
-    """Computes the points and weights for quasi-Monte Carlo inregration"""
+    """Quadrature rule for uniform quasi-Monte Carlo inregration"""
 
     dom = np.atleast_2d(dom)
     dim = dom.shape[0]
-    point = rseq(nbrPts,dom)
-    weight = np.ones(nbrPts)/nbrPts
+    point = halton(nbrPts,dim)
+
+    # Expands the sequence into the provided domain
+
+    for i in range(dim):
+
+        d = dom[i][1]-dom[i][0]
+        point[:,i] = d/2+dom[i][0]+d*(point[:,i]-0.5)
 
     # Computes the weights with the density
 
-    for i in range(dim): weight *= (dom[i][1]-dom[i][0])
-    if callable(pdf): weight = np.multiply(weight,pdf(*point.T))
+    vol = np.prod([dom[i][1]-dom[i][0] for i in range(dim)])
+    weight = vol*np.ones(nbrPts)/nbrPts
+    point = np.squeeze(point)
+
+    if callable(pdf): weight = np.multiply(weight,pdf(point))
     return point,weight
 
 # %% Tensor Product
 
-def tensquad(nbrPts,distList):
+def tensquad(nbrPts,dist):
     """Computes the tensor product quadrature rule with recurrence coefficients"""
 
-    distList = np.reshape(distList,-1)
-    dim = distList.shape[0]
+    if not isinstance(dist,Joint): dist = Joint(dist)
+
+    dim = dist[:].shape[0]
     J = np.zeros((2,nbrPts))
     points = np.zeros((nbrPts,dim))
     weights = np.zeros((nbrPts,dim))
@@ -34,7 +45,7 @@ def tensquad(nbrPts,distList):
 
     for i in range(dim):
 
-        coef = distList[i].coef(nbrPts)
+        coef = dist[i].coef(nbrPts)
         J[1] = np.append(np.sqrt(coef[1][1:]),[0])
         J[0] = coef[0]
 

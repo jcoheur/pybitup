@@ -26,7 +26,6 @@ for i in range(len(point)):
 
 resp = np.array(resp)
 respMod = model.eval(point[index])
-respMod = respMod
 
 # %% Monte Carlo and error
 
@@ -45,7 +44,7 @@ plt.rcParams.update({"font.size":16})
 plt.plot(meanMod,'C0',label="PCE")
 plt.plot(mean,'C1--',label="MC")
 plt.legend(prop={'size':16})
-plt.ylabel("Response")
+plt.ylabel("Mean")
 plt.xlabel("Step")
 plt.grid()
 
@@ -54,6 +53,6 @@ plt.rcParams.update({"font.size":16})
 plt.plot(varMod,'C0',label="PCE")
 plt.plot(var,'C1--',label="MC")
 plt.legend(prop={'size':16})
-plt.ylabel("Response")
+plt.ylabel("Variance")
 plt.xlabel("Step")
 plt.grid()

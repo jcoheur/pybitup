@@ -89,16 +89,20 @@ def post_process_data(input_file_name):
             for num_data_set, data_id in enumerate(data_exp.keys()):
 
                 n_x = len(data_exp[data_id].x)
-                n_data_set = int(len(data_exp[data_id].y)/n_x)
+                n_data_set = int(len(data_exp[data_id].y[0])/n_x)
+                
                 for i in range(n_data_set): 
-
+                    
                     #plt.figure(num_plot[num_data_set])
                     plt.figure(i)
-                    plt.plot(data_exp[data_id].x, data_exp[data_id].y[i*n_x:(i+1)*n_x],
+                    plt.plot(data_exp[data_id].x, data_exp[data_id].mean_y[i*n_x:(i+1)*n_x],
                             'o', color=lineColor[num_data_set][0], mfc='none')
 
-                    error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
-                            data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
+                    for j in range(data_exp[data_id].n_runs):
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none')
+
+                    #error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
+                            #data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
 
@@ -114,7 +118,7 @@ def post_process_data(input_file_name):
                 data_init = np.load("output/{}_fun_eval.{}.npy".format(data_id, 0))
 
                 n_x = len(data_exp[data_id].x)
-                n_data_set = int(len(data_exp[data_id].y)/n_x)
+                n_data_set = int(len(data_exp[data_id].y[0])/n_x)
 
 
                 for i in range(n_data_set): 
@@ -516,7 +520,7 @@ def post_process_data(input_file_name):
             #for i in range(data_exp.n_data_set):
             for num_data_set, data_id in enumerate(data_exp.keys()):
                 n_x = len(data_exp[data_id].x)
-                n_data_set = int(len(data_exp[data_id].y)/n_x)
+                n_data_set = int(len(data_exp[data_id].y[0])/n_x)
  
                 for i in range(n_data_set): 
                     #plt.figure(num_plot[num_data_set])
@@ -553,7 +557,7 @@ def post_process_data(input_file_name):
                         data_ij_mean[:] = data_ij_mean[:] + data_set_n[:]
 
                         # Plot all realisation (modify alpha value to see something)
-                        #plt.plot(data_exp.x[ind_1:ind_2+1], data_set_n[:], alpha=0.)
+                        # plt.plot(data_exp[data_id].x, data_set_n[:], alpha=0.5)
 
                     # Compute mean 
                     data_ij_mean = data_ij_mean[:]/n_fun_eval

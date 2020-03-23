@@ -19,6 +19,7 @@ import pybitup.bayesian_inference
 import pybitup.inference_problem
 import pybitup.post_process
 
+
 class SolveProblem(): 
     
 
@@ -173,7 +174,7 @@ class Sampling(SolveProblem):
                 # Data 
                 # -----
                 if c_data['Type'] == "ReadFromFile": 
-                    reader = pd.read_csv(c_data['FileName'])
+                    reader = pd.read_csv(c_data['FileName']+'_0.csv')
 
                     # From the same model (same xField), there can be several yFields for the
                     x = np.array([])
@@ -184,12 +185,20 @@ class Sampling(SolveProblem):
                     x = reader[c_data['xField'][0]].values
                     models[model_id].x = x
 
-                    # For a given model_id, there can be several outputs (several yField) for the inference (e.g. output and its derivative(s))
-                    # for the same design points x. We put those outputs in a large array of dimension 1 x (n*x)  
-                    for nfield, yfield in enumerate(c_data['yField']):     
-                        y = np.concatenate((y, reader[yfield].values))
-                        std_y = np.concatenate((std_y, reader[c_data['sigmaField'][nfield]].values))
-                        dataName = c_data['yField'][0]+"_"+c_data['FileName']
+                    n_runs = c_data['n_runs']
+                    y_tot = {}
+                    for c_run in range(n_runs): 
+                        # For a given model_id, there can be several outputs (several yField) for the inference (e.g. output and its derivative(s))
+                        # for the same design points x. We put those outputs in a large array of dimension 1 x (n*x) 
+                        y = [] 
+                        std_y = []
+                        reader = pd.read_csv(c_data['FileName']+'_'+str(c_run)+'.csv')
+                        for nfield, yfield in enumerate(c_data['yField']):     
+                            y = np.concatenate((y, reader[yfield].values))
+                            std_y = np.concatenate((std_y, reader[c_data['sigmaField'][nfield]].values))
+                            dataName = c_data['yField'][0]+"_"+c_data['FileName']
+                        y_tot[c_run] = y
+
 
                 elif c_data['Type'] == "GenerateSynthetic": 	
                     if  c_data['x']['Type'] == "range": 
@@ -208,7 +217,8 @@ class Sampling(SolveProblem):
                     raise ValueError("Invalid DataType {}".format(c_data['Type'])) 
 
 
-                data[model_id] = pybitup.bayesian_inference.Data(dataName, x, y, std_y)
+                data[model_id] = pybitup.bayesian_inference.Data(dataName, x, y_tot, std_y)
+
 
             # Write the data in output data file 
             with open('output/data', 'wb') as file_data_exp: 

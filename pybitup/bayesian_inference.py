@@ -26,9 +26,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         self.bayes_post = 0
         self.log_bayes_post = 0
 
-
-
-       
+    
     def get_dim(self): 
         return len(self.param_init)
 
@@ -53,8 +51,8 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         prior_log_value = self.prior.compute_log_value(X)
         log_like_val = self.likelihood.compute_log_value(X)
 
-        if prior_log_value is -np.inf or log_like_val is np.nan:
-            # Avoid computation of likelihood if prior is zero 
+        if prior_log_value == -np.inf or log_like_val == np.nan:
+            # Avoid computation of likelihood if prior is zero
             log_bayes_post = -np.inf
         else: 
             log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val

@@ -139,7 +139,7 @@ class MetropolisHastings:
 
         self.distr_fun_new_val = self.distr_fun(self.new_val[:])
        
-        if self.distr_fun_new_val is -np.inf: 
+        if self.distr_fun_new_val == -np.inf: 
             self.r = 0
         else: 
             #self.r = self.distr_fun_new_val/self.distr_fun_current_val

@@ -1,6 +1,6 @@
 import sys
+sys.path.append('../')
 sys.path.append('../../')
-sys.path.append('../../../')
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ from pyrolysis_general.src.pyrolysis import PyrolysisParallel
 
 
 
-T = np.linspace(300,1400, 101) 
+T = np.linspace(300,1400,101) 
 T_0 = 300
 tau = 6.1
 time0 = (T - T_0)/(tau/60)

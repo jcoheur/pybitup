@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 from scipy import stats
 import random
 import matplotlib.pyplot as plt 
@@ -53,7 +53,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         prior_log_value = self.prior.compute_log_value(X)
         log_like_val = self.likelihood.compute_log_value(X)
 
-        if prior_log_value is -np.inf or log_like_val is np.nan:
+        if prior_log_value == -np.inf or log_like_val == np.nan:
             # Avoid computation of likelihood if prior is zero 
             log_bayes_post = -np.inf
         else: 

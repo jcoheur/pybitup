@@ -1,0 +1,17 @@
+{
+  "solids": ["S1","ActSol1","ActSol2", "Char1", "Char2"],
+  "rhoIni": [100, 0, 0, 0, 0],
+  "reactions": [
+                {"S1" : "ActSol1"},
+                {"S1" : "ActSol2"},
+                {"ActSol1" : "Char1 + gas1"},
+                {"ActSol2" : "Char2 + gas2"}
+                ],
+  "parameters": [
+                {"E": (E1), "A":(A1),"g":[0]},
+                {"E": (E2), "A":17.87, "g":[0]},
+                {"E": (E3), "A":0.977, "g":[(gamma1),(gamma2)]},
+                {"E": (E4), "A":2.98,  "g":[0.16,0.02]}
+                ]
+}
+

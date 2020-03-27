@@ -33,7 +33,7 @@ for tmp_filename in tmp_files:
 
 # Remove the converted data
 
-try: os.remove("point.npy")
+try: os.remove("point.npz")
 except: pass
-try: os.remove("resp.npy")
+try: os.remove("resp.npz")
 except: pass

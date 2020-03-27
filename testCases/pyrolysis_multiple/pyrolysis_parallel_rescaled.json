@@ -13,11 +13,11 @@
             ],
             "Model": [
                 {
-                    "model_name": "parallel_pyrolysis", 
+                    "model_name": "parallel_pyrolysis_rescaled", 
                     "input_file": "reaction_scheme.json", 
                     "param_names": ["tau"],
                     "param_values": [6.1],
-                    "parametrization" : "no"
+                    "parametrization" : "yes"
                 }
             ],
             "Prior": { 
@@ -41,12 +41,12 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e3,
+		    "n_iterations": 1e4,
 		    "proposal": {
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-                    "value": [1e4, 1e4, 1e-3, 1e-5, 1e4, 1e4, 1e-3, 1e-5]
+                    "value": [1e-3, 1e-3, 1e-3, 1e-4, 1e-3, 1e-3, 1e-3, 1e-4]
 				}
 			}
 		}

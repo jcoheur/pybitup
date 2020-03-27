@@ -23,5 +23,5 @@ tmp_files = glob.glob('*.tex')
 for tmp_filename in tmp_files: 
     os.remove(tmp_filename)
 
-try: os.remove("point.npy")
+try: os.remove("point.npz")
 except: pass

@@ -34,7 +34,7 @@ def prime(nbrPrime):
     def check(nbr,i=5):
         while i<=np.sqrt(nbr):
             if (nbr%i==0) or nbr%(i+2)==0: return 0
-            i += 6
+            else: i += 6
 
     # Appends the prime numbers to the list
 
@@ -57,6 +57,7 @@ def sobol(nbrPts,dim=1):
     """Computes the Sobol sequence of quasi-random numbers"""
 
     point = i4_sobol_generate(dim,nbrPts)
+    point = np.squeeze(point)
     return point
 
 # %% Halton Sequence
@@ -80,12 +81,14 @@ def halton(nbrPts,dim=1):
 
         return point
 
-    # Halton sequence using Van der Corput
+    # Computes Halton sequence using Van der Corput
 
     pr = prime(dim)
     point = np.zeros((nbrPts,dim))
     indices = [idx+pr[-1] for idx in range(nbrPts)]
     for i in range(dim): point[:,i] = vdcseq(indices,pr[i])
+
+    point = np.squeeze(point)
     return point
 
 # %% R-Sequence
@@ -102,6 +105,8 @@ def rseq(nbrPts,dim=1):
     for i in range(10): phi = (1+phi)**(1/(dim+1))
     for i in range(dim): alpha[i] = (1/phi)**(1+i)%1
     for i in range(nbrPts): point[i] = (0.5+alpha*(1+i))%1
+
+    point = np.squeeze(point)
     return point
 
 # %% Quadratic Resampling
@@ -148,6 +153,42 @@ def random(nbrPts,dom,pdf):
     point = point[index]
     return point
 
+# %% Statistical Moments
+
+def stats(coef,poly,sobol=0):
+    """Computes the first statistical moments and the Sobol coefficients"""
+
+    mean = coef[0]
+    var = np.sum(coef[1:]**2,axis=0)
+
+    if sobol:
+
+        S,St = [],[]
+        expo = poly.expo
+        dim = expo.shape[0]
+        nbrPoly = poly[:].shape[0]
+
+        # Computes the Sobol coefficients
+
+        for i in range(dim):
+    
+            order = np.sum(expo,axis=0)
+            pIdx = np.array([poly[i].nonzero()[-1][-1] for i in range(nbrPoly)])
+    
+            sIdx = np.where(expo[i]-order==0)[0].flatten()[1:]
+            index = np.where(np.in1d(pIdx,sIdx))[0]
+            S.append(np.sum(coef[index]**2)/var)
+    
+            sIdx = np.where(expo[i])[0].flatten()
+            index = np.where(np.in1d(pIdx,sIdx))[0]
+            St.append(np.sum(coef[index]**2)/var)
+    
+        S = np.transpose(S)
+        St = np.transpose(St)
+
+        return mean,var,S,St
+    else: return mean,var
+
 # %% PCA Whitening
 
 class Pca:
@@ -167,13 +208,17 @@ class Pca:
         self.A = np.diag(np.sqrt(1/val)).dot(vec.T)
         self.invA = np.linalg.inv(self.A)
 
-    def decor(self,point):
+    # Mapping from correlated to whitened
+
+    def white(self,point):
 
         point = np.transpose((point-self.mean)/self.std)
         point = np.transpose(self.A.dot(point))
         return point
 
-    def cor(self,point):
+    # Mapping from whitened to correlated
+
+    def corr(self,point):
 
         point = np.dot(self.invA,point.T)
         point = self.std*point.T+self.mean

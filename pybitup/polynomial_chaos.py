@@ -52,7 +52,7 @@ class PCE:
 
             it = self.param["coefficients"]["iterations"]
             if it=="unlimited": it = np.inf
-            return cl.lars(resp,poly,point,it)
+            return cl.lars(resp,poly,point,weight,it)
 
         elif method=="spectral": return cl.spectral(resp,poly,point,weight)
         elif method=="colloc": return cl.colloc(resp,poly,point,weight)

@@ -48,67 +48,18 @@ def colloc(resp,poly,point,weight=0):
 
 # %% Least Angle Regression
 
-def lars(resp,poly,point,it=np.inf):
-    """Performs the least angle regression algorithm"""
+def lars(resp,poly,point,weight=0,it=np.inf):
+    """Computes the expansion coefficients with least angle regression"""
 
-    def fit(V,resp):
-
-        # First variable entering the model
-
-        respMean = np.mean(resp)
-        r = resp-respMean
-        coef = np.zeros(nbrPoly)
-        J = np.atleast_1d(np.argmax(abs(np.dot(V.T,r))))
-        i = 0
-
-        # Least angle regression algorithm
-
-        while (i==0 or alp<1) and (i+1<it):
-
-            alp = 1
-            d = np.zeros(nbrPoly-1)
-            Vj = V[:,J]
-
-            u1 = np.dot(Vj.T,Vj)
-            u2 = np.dot(Vj.T,r)
-            d[J] = np.linalg.solve(u1,u2)
-
-            Vd = np.dot(V,d)
-            J = np.append(J,-1)
-            u1 = np.dot(V[:,J[0]],r)
-
-            for j in range(nbrPoly-1):
-                alp1 = 1
+    def square(V,resp,weight):
+        if np.any(weight):
     
-                if not (j in J):
-                    u2 = np.dot(V[:,j],Vd)
-                    den = u1-u2
+            Vt = V.T
+            v1 = Vt.dot(np.transpose(weight*Vt))
+            v2 = Vt.dot(np.transpose(weight*resp.T))
+            coef = np.linalg.solve(v1,v2)
     
-                    if abs(den)>tol:
-                        u3 = np.dot(V[:,j],r)
-                        alp1 = (u1-u3)/den
-    
-                        if not (tol<alp1<1-tol):
-                            den = u1+u2
-                            alp1 = 1
-
-                            if abs(den)>tol:
-
-                                alp2 = (u1+u3)/den
-                                if (tol<alp2<1-tol): alp1 = alp2
-
-                        if alp1+tol<alp:
-                            alp = alp1
-                            J[-1] = j
-
-            coef[1:] = coef[1:]+alp*d
-            r = r-alp*Vd
-            i += 1
-
-        # Translates coefficient back to original scale
-    
-        coef[1:] = coef[1:]/Vstd
-        coef[0] = respMean-np.dot(coef[1:],Vmean)
+        else: coef = np.linalg.lstsq(V,resp,rcond=None)[0]
         return coef
 
     # Initialization
@@ -117,26 +68,83 @@ def lars(resp,poly,point,it=np.inf):
     shape = (poly[:].shape[0],)+resp.shape[1:]
     resp = resp.reshape(resp.shape[0],-1)
 
-    nbrResp = resp.shape[1]
-    nbrPoly = poly[:].shape[0]
-    coef = np.zeros((nbrPoly,nbrResp))
     V = poly.vander(point)
-    tol = 1e-8
+    nbrResp = resp.shape[1]
+    coef = np.zeros((V.shape[1],nbrResp))
 
-    # Standardizes the Vandermonde matrix
+    # Standardizes V and calls the lars algorithm
 
     V1  = V[:,1:]
-    Vstd = np.std(V1,axis=0,ddof=1)
-    Vmean = np.mean(V1,axis=0)
-    V1 = (V1-Vmean)/Vstd
+    stat = [np.mean(V1,axis=0),np.std(V1,axis=0,ddof=1)]
+    V1 = (V1-stat[0])/stat[1]
 
     for i in range(nbrResp):
 
-        coef[:,i] = fit(V1,resp[:,i])
+        coef[:,i] = fit(V1,resp[:,i],stat,it)
         index = np.argwhere(coef[:,i]!=0).flatten()
-        coef[index,i] = np.linalg.lstsq(V[:,index],resp[:,i],rcond=None)[0]
+        coef[index,i] = square(V[:,index],resp[:,i],weight)
         timer(i+1,nbrResp,"Computing coefficients ")
 
     index = np.argwhere(np.any(coef,axis=1)).flatten()
     coef = coef.reshape(shape)
     return coef,index
+
+# %% Least Angle Regression
+
+def fit(V,resp,stat,it):
+    """Internal function of the least angle regression algorithm"""
+
+    # First variable entering the model
+
+    nbrPoly = V.shape[1]
+    mean = np.mean(resp)
+    coef = np.zeros(nbrPoly+1)
+
+    r = resp-mean
+    J = np.atleast_1d(np.argmax(np.abs(np.dot(V.T,r))))
+    i = 0
+
+    # Performs the least angle regression iterations
+
+    while (i==0 or alp<1) and (i+1<it):
+
+        alp = 1
+        d = np.zeros(nbrPoly)
+        Vj = V[:,J]
+
+        u1 = np.dot(Vj.T,Vj)
+        u2 = np.dot(Vj.T,r)
+        d[J] = np.linalg.solve(u1,u2)
+
+        Vd = np.dot(V,d)
+        J = np.append(J,-1)
+        u1 = np.dot(V[:,J[0]],r)
+
+        for j in range(nbrPoly):
+
+            alp1 = 1
+            if not (j in J):
+
+                u2 = np.dot(V[:,j],Vd)
+                u3 = np.dot(V[:,j],r)
+                alp1 = (u1-u3)/(u1-u2)
+
+                if not (0<alp1<1):
+
+                    alp1 = 1
+                    alp2 = (u1+u3)/(u1+u2)
+                    if (0<alp2<1): alp1 = alp2
+
+                if alp1<alp:
+                    alp = alp1
+                    J[-1] = j
+
+        coef[1:] = coef[1:]+alp*d
+        r = r-alp*Vd
+        i += 1
+
+    # Translates coefficient back to original scale
+
+    coef[1:] = coef[1:]/stat[1]
+    coef[0] = mean-np.dot(coef[1:],stat[0])
+    return coef

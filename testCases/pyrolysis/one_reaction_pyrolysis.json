@@ -40,7 +40,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e6, 
+		    "n_iterations": 1e4,
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -80,7 +80,8 @@
                     },
                 
                     "coefficients":{
-                        "method": "spectral"
+                        "method": "lars",
+                        "iterations": 20
                     }
                 }
             }, 

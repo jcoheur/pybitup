@@ -12,6 +12,7 @@ def qmcquad(nbrPts,dom,pdf=0):
     dom = np.atleast_2d(dom)
     dim = dom.shape[0]
     point = halton(nbrPts,dim)
+    point = np.reshape(point,(-1,dim))
 
     # Expands the sequence into the provided domain
 
@@ -66,35 +67,8 @@ def tensquad(nbrPts,dist):
         point[:,i] = np.tile(v1,nbrPts**i)
 
     weight = np.prod(weight,axis=1)
+    point = np.squeeze(point)
     return point,weight
-
-# %% Leja Points
-
-def lejquad(point,poly):
-    """Selects the discrete Leja points and computes their weights"""
-
-    printer(0,"Selecting points ...")
-    nbrPoly = poly[:].shape[0]
-
-    # Reconditioning of V and LU decomposition
-
-    V = poly.vander(point)
-    for i in range(2): V,R = np.linalg.qr(V)
-    m = np.sum(V,axis=0)/V.shape[0]
-
-    LU,P,info = linalg.lapack.dgetrf(V)
-    L = np.tril(LU[:nbrPoly],-1)
-    U = np.triu(LU[:nbrPoly])
-    np.fill_diagonal(L,1)
-
-    # Computes the weights and Leja points
-
-    index = P[:nbrPoly]
-    u = linalg.solve_triangular(U,m,trans=1)
-    weight = linalg.solve_triangular(L.T,u,unit_diagonal=1)
-
-    printer(1,"Selecting points 100 %")
-    return index,weight
 
 # %% Fekete Points
 
@@ -175,33 +149,6 @@ def linquad(point,poly):
     x = optimize.linprog(c,A_eq=V.T,b_eq=m,method="revised simplex")
     index = np.argwhere(x['x']>tol).flatten()
     weight = x['x'][index]
-
-    printer(1,"Selecting points 100 %")
-    return index,weight
-
-# %% Dual Simplex
-
-def simquad(point,poly):
-    """Computes a positive quadrature rule using the dual-simplex"""
-
-    import subprocess as sub
-    from scipy import io
-    import os
-
-    printer(0,"Selecting points ...")
-
-    V = poly.vander(point)
-    m = np.sum(V,axis=0)/V.shape[0]
-
-    path = os.path.dirname(os.path.realpath(__file__))
-    io.savemat(path+"\data.mat",mdict={"V":V,"m":m})
-    process = sub.Popen([path+"\simplex.exe",path+"\data.mat"],stdout=sub.PIPE)
-    weight = process.stdout.readlines()
-    os.remove(path+"\data.mat")
-
-    weight = np.array(weight[3:-1],dtype=float)
-    index = np.argwhere(weight).flatten()
-    weight = weight[index]
 
     printer(1,"Selecting points 100 %")
     return index,weight

@@ -15,6 +15,10 @@ class Uniform:
         self.invcdf = lambda x: (b-a)*np.array(x)+a
         self.random = lambda x: np.random.uniform(a,b,x)
 
+        self.rseq = lambda x: self.invcdf(rseq(x))
+        self.sobol = lambda x: self.invcdf(sobol(x))
+        self.halton = lambda x: self.invcdf(halton(x))
+
     def coef(self,nbrCoef):
 
         [a,b] = self.arg
@@ -23,10 +27,6 @@ class Uniform:
         coef[0].fill((b+a)/2)
         coef[1] = ((b-a)*n/2)**2/(4*n**2-1)
         return coef
-
-    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
-    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
-    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
 
 # %% Normal Distribution
 
@@ -41,6 +41,10 @@ class Normal:
         self.pdf = lambda x: np.exp(-0.5*((np.array(x)-a)/b)**2)/(b*np.sqrt(2*np.pi))
         self.random = lambda x: np.random.normal(a,b,x)
 
+        self.rseq = lambda x: self.invcdf(rseq(x))
+        self.sobol = lambda x: self.invcdf(sobol(x))
+        self.halton = lambda x: self.invcdf(halton(x))
+
     def coef(self,nbrCoef):
 
         [a,b] = self.arg
@@ -49,10 +53,6 @@ class Normal:
         coef[0].fill(a)
         coef[1] = b**2*n
         return coef
-
-    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
-    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
-    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
 
 # %% Exponential Distribution
 
@@ -67,6 +67,10 @@ class Expo:
         self.invcdf = lambda x: -np.log(1-np.array(x))/a
         self.random = lambda x: np.random.exponential(a,x)
 
+        self.rseq = lambda x: self.invcdf(rseq(x))
+        self.sobol = lambda x: self.invcdf(sobol(x))
+        self.halton = lambda x: self.invcdf(halton(x))
+
     def coef(self,nbrCoef):
 
         a = self.arg
@@ -75,10 +79,6 @@ class Expo:
         coef[0] = a*(1+2*n)
         coef[1] = (a*n)**2
         return coef
-
-    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
-    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
-    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
 
 # %% Gamma Distribution
 
@@ -93,6 +93,10 @@ class Gamma:
         self.pdf = lambda x: x**(a-1)*np.exp(-np.array(x)/b)/(special.gamma(a)*b**a)
         self.random = lambda x: np.random.gamma(a,b,x)
 
+        self.rseq = lambda x: self.invcdf(rseq(x))
+        self.sobol = lambda x: self.invcdf(sobol(x))
+        self.halton = lambda x: self.invcdf(halton(x))
+
     def coef(self,nbrCoef):
 
         [a,b] = self.arg
@@ -101,10 +105,6 @@ class Gamma:
         coef[0] = (2*n+a)*b
         coef[1] = (n+a-1)*n*b**2
         return coef
-
-    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
-    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
-    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
 
 # %% Lognormal Distribution
 
@@ -119,6 +119,10 @@ class Lognorm:
         self.pdf = lambda x: np.exp(-0.5*((np.log(np.array(x))-a)/b)**2)/(np.array(x)*b*np.sqrt(2*np.pi))
         self.random = lambda x: np.random.lognormal(a,b,x)
 
+        self.rseq = lambda x: self.invcdf(rseq(x))
+        self.sobol = lambda x: self.invcdf(sobol(x))
+        self.halton = lambda x: self.invcdf(halton(x))
+
     def coef(self,nbrCoef):
 
         [a,b] = self.arg
@@ -127,10 +131,6 @@ class Lognorm:
         coef[0] = (np.exp((n+1)*b**2)+np.exp(n*b**2)-1)*np.exp(((2*n-1)*b**2)/2+a)
         coef[1] = (np.exp(n*b**2)-1)*np.exp((3*n-2)*b**2+2*a)
         return coef
-
-    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
-    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
-    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
 
 # %% Beta Distribution
 
@@ -145,6 +145,10 @@ class Beta:
         self.pdf = lambda x: x**(a-1)*(1-np.array(x))**(b-1)/special.beta(a,b)
         self.random = lambda x: np.random.beta(a,b,x)
 
+        self.rseq = lambda x: self.invcdf(rseq(x))
+        self.sobol = lambda x: self.invcdf(sobol(x))
+        self.halton = lambda x: self.invcdf(halton(x))
+
     def coef(self,nbrCoef):
 
         [a,b] = self.arg
@@ -157,10 +161,6 @@ class Beta:
         coef[0] = ((a-1)**2-(b-1)**2)*0.5/(nab*(nab-2)+(nab==0)+(nab==2))+0.5
         coef[1] = np.where((n==0)+(n==1),B1,B2)
         return coef
-
-    def rseq(self,nbrPts): return self.invcdf(rseq(nbrPts))
-    def sobol(self,nbrPts): return self.invcdf(sobol(nbrPts))
-    def halton(self,nbrPts): return self.invcdf(halton(nbrPts))
 
 # %% Joint Distribution
 

@@ -1,6 +1,7 @@
-import numpy as np 
+import numpy as np
 from scipy import linalg
 from scipy import stats
+#from scipy import special
 from scipy.integrate import simps
 
 import matplotlib.pyplot as plt
@@ -183,9 +184,23 @@ class Gaussian(ProbabilityDistribution):
 
         return 1
 
+    def invcdf(self,x):
+
+        [a,b] = [self.mean,self.cov]
+        return  a+np.sqrt(2)*b*special.erfinv(2*np.array(x)-1)
+
+    def coef(self,nbrCoef):
+
+        [a,b] = [self.mean,self.cov]
+        n = np.arange(nbrCoef)
+        coef = np.zeros((2,nbrCoef))
+        coef[0].fill(a)
+        coef[1] = b**2*n
+        return coef
 
 
-class Uniform(ProbabilityDistribution):  
+
+class Uniform(ProbabilityDistribution):
 
     def __init__(self, hyperparam, n_rand_var): 
         ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
@@ -203,7 +218,139 @@ class Uniform(ProbabilityDistribution):
         else: 
             prob = self.prob 
 
-        return prob 
+        return prob
+
+    def invcdf(self,x):
+
+        [a,b] = [self.lb,self.ub]
+        return (b-a)*np.array(x)+a
+
+    def coef(self,nbrCoef):
+
+        [a,b] = [self.lb,self.ub]
+        n = np.arange(nbrCoef)
+        coef = np.zeros((2,nbrCoef))
+        coef[0].fill((b+a)/2)
+        coef[1] = ((b-a)*n/2)**2/(4*n**2-1)
+        return coef
+
+
+
+class Exponential(ProbabilityDistribution):
+
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
+
+        self.lamb = np.array(hyperparam)
+
+    def coef(self,nbrCoef):
+
+        a = self.lamb
+        n = np.arange(nbrCoef)
+        coef = np.zeros((2,nbrCoef))
+        coef[0] = a*(1+2*n)
+        coef[1] = (a*n)**2
+        return coef
+
+    def invcdf(self,x):
+
+        a = self.lamb
+        return -np.log(1-np.array(x))/a
+
+    def compute_value(self,x):
+
+        a = self.lamb
+        return a*np.exp(-a*np.array(x))
+
+
+class Gamma(ProbabilityDistribution):
+
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
+
+        self.k = np.array(hyperparam[0])
+        self.theta = np.array(hyperparam[1])
+
+    def coef(self,nbrCoef):
+
+        [a,b] = [self.k,self.theta]
+        n = np.arange(nbrCoef)
+        coef = np.zeros((2,nbrCoef))
+        coef[0] = (2*n+a)*b
+        coef[1] = (n+a-1)*n*b**2
+        return coef
+
+    def invcdf(x):
+
+        [a,b] = [self.k,self.theta]
+        return b*special.gammaincinv(a,np.array(x))
+
+
+    def compute_value(self,x):
+
+        [a,b] = [self.k,self.theta]
+        return x**(a-1)*np.exp(-np.array(x)/b)/(special.gamma(a)*b**a)
+
+
+
+class Lognormal(ProbabilityDistribution):
+
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
+
+        self.mean = np.array(hyperparam[0]).T
+        self.cov = np.array(hyperparam[1])
+
+    def coef(self,nbrCoef):
+
+        [a,b] = [self.mean,self.cov]
+        n = np.arange(nbrCoef)
+        coef = np.zeros((2,nbrCoef))
+        coef[0] = (np.exp((n+1)*b**2)+np.exp(n*b**2)-1)*np.exp(((2*n-1)*b**2)/2+a)
+        coef[1] = (np.exp(n*b**2)-1)*np.exp((3*n-2)*b**2+2*a)
+        return coef
+
+    def invcdf(self,x):
+
+        [a,b] = [self.mean,self.cov]
+        return np.exp(a+np.sqrt(2)*b*special.erfinv(2*np.array(x)-1))
+
+    def compute_value(self,x):
+
+        [a,b] = [self.mean,self.cov]
+        return np.exp(-0.5*((np.log(np.array(x))-a)/b)**2)/(np.array(x)*b*np.sqrt(2*np.pi))
+
+
+class Beta(ProbabilityDistribution):
+
+    def __init__(self, hyperparam, n_rand_var): 
+        ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
+
+        self.alpha = np.array(hyperparam[0])
+        self.beta = np.array(hyperparam[1])
+
+    def coef(self,nbrCoef):
+
+        [a,b] = [self.alpha,self.beta]
+        n = np.arange(nbrCoef)
+        coef = np.zeros((2,nbrCoef))
+
+        nab = 2*n+a+b
+        B1 = a*b*1./((a+b+1)*(a+b)**2)
+        B2 = (n+a-1)*(n+b-1)*n*(n+a+b-2)/((nab-1)*(nab-3)*(nab-2)**2+2*((n==0)+(n==1)))
+        coef[0] = ((a-1)**2-(b-1)**2)*0.5/(nab*(nab-2)+(nab==0)+(nab==2))+0.5
+        coef[1] = np.where((n==0)+(n==1),B1,B2)
+        return coef
+
+    def invcdf(self,x):
+
+        [a,b] = [self.alpha,self.beta]
+        return special.betaincinv(a,b,np.array(x))
+
+    def compute_value(self,x):
+
+        [a,b] = [self.alpha,self.beta]
+        return x**(a-1)*(1-np.array(x))**(b-1)/special.beta(a,b)
 
 
 class Mixture(ProbabilityDistribution):
@@ -273,3 +420,19 @@ class SoizePDF(ProbabilityDistribution):
     def compute_grad_log_value(self, X):
 
         return 1
+
+
+class Joint:
+    """Class of joint probability distribution function"""
+
+    def __init__(self,dist): self.dist = np.copy(np.atleast_1d(dist))
+    def __setitem__(self,i,dist): self.dist[i] = dist
+    def __getitem__(self,i): return self.dist[i]
+
+    def compute_value(self,point):
+
+        dim = self.dist.shape[0]
+        point = np.atleast_2d(point)
+        resp = [self.dist[i].compute_value(point[:,i]) for i in range(dim)]
+        resp = np.squeeze(np.prod(resp,axis=0))
+        return resp

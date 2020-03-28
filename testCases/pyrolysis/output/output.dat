@@ -1,0 +1,131 @@
+$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.71000000000001 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[2.22143645e+06 1.11307557e+06 2.33662974e+01 4.12443556e-02]
+ [1.11307557e+06 1.72047784e+06 2.77255778e+01 4.28541635e-01]
+ [2.33662974e+01 2.77255778e+01 6.19582896e-03 4.90330522e-05]
+ [4.12443556e-02 4.28541635e-01 4.90330522e-05 7.93660363e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 81.57 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[ 9.01209022e+06  4.90748812e+06  9.49475435e+01 -6.59587128e-02]
+ [ 4.90748812e+06  3.83009209e+06  6.68142782e+01  3.52187909e-01]
+ [ 9.49475435e+01  6.68142782e+01  4.79337440e-03  3.19133358e-05]
+ [-6.59587128e-02  3.52187909e-01  3.19133358e-05  6.41043478e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.5 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[ 2.21368257e+06  1.20161637e+06  2.17562574e+01 -4.09466009e-02]
+ [ 1.20161637e+06  1.82019741e+06  2.48162293e+01  3.60662021e-01]
+ [ 2.17562574e+01  2.48162293e+01  6.26831823e-03  4.66182382e-05]
+ [-4.09466009e-02  3.60662021e-01  4.66182382e-05  7.60174208e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.67 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[ 2.11445464e+06  1.02916587e+06  1.10043912e+01 -1.00559310e-02]
+ [ 1.02916587e+06  1.67066797e+06  2.15163921e+01  3.92334858e-01]
+ [ 1.10043912e+01  2.15163921e+01  5.33242098e-03  4.28915889e-05]
+ [-1.00559310e-02  3.92334858e-01  4.28915889e-05  7.42206392e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.56 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[8.39983472e+06 2.76800462e+06 9.06097306e+01 2.41050231e-01]
+ [2.76800462e+06 2.11271368e+06 4.70906220e+01 4.97154567e-01]
+ [9.06097306e+01 4.70906220e+01 6.47786832e-03 4.70110669e-05]
+ [2.41050231e-01 4.97154567e-01 4.70110669e-05 7.40711479e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.64 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[3.16647121e+06 1.35480010e+06 5.17800915e+01 2.00995768e-01]
+ [1.35480010e+06 1.75100657e+06 3.89885089e+01 5.04399086e-01]
+ [5.17800915e+01 3.89885089e+01 7.10616558e-03 5.16189979e-05]
+ [2.00995768e-01 5.04399086e-01 5.16189979e-05 8.07131039e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 81.11 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[6.43890953e+05 3.99038723e+05 1.23770571e+01 8.38551846e-02]
+ [3.99038723e+05 1.40048970e+06 2.11678070e+01 4.25363140e-01]
+ [1.23770571e+01 2.11678070e+01 4.87459930e-03 3.87614942e-05]
+ [8.38551846e-02 4.25363140e-01 3.87614942e-05 6.82124580e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.81 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[3.17658788e+06 1.24270094e+06 3.75588251e+01 1.15522462e-01]
+ [1.24270094e+06 1.66884128e+06 2.83983791e+01 4.26077415e-01]
+ [3.75588251e+01 2.83983791e+01 6.19752831e-03 4.49311924e-05]
+ [1.15522462e-01 4.26077415e-01 4.49311924e-05 7.33025761e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 81.45 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[3.50242052e+06 1.86906940e+06 4.04670511e+01 5.00484323e-02]
+ [1.86906940e+06 2.13810231e+06 3.57049830e+01 4.22161474e-01]
+ [4.04670511e+01 3.57049830e+01 4.57601392e-03 3.54109195e-05]
+ [5.00484323e-02 4.22161474e-01 3.54109195e-05 6.64427212e-07]]$RandomVarName$
+A E n F 
+$IterationNumber$
+10000
+
+Rejection rate is 80.92 % 
+Maximum Likelihood Estimator (MLE) 
+Log-likelihood value 
+
+Covariance Matrix is 
+[[ 5.34644736e+06  2.07677138e+06  2.77405023e+01 -5.76169514e-02]
+ [ 2.07677138e+06  2.01337424e+06  2.58437273e+01  3.81111261e-01]
+ [ 2.77405023e+01  2.58437273e+01  4.37744254e-03  3.45183778e-05]
+ [-5.76169514e-02  3.81111261e-01  3.45183778e-05  6.61117824e-07]]

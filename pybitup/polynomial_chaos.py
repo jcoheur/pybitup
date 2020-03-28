@@ -1,3 +1,4 @@
+from pybitup.distributions import *
 import pybitup.chaoslib as cl
 from jsmin import jsmin
 from json import loads
@@ -30,12 +31,12 @@ class PCE:
                 name = list(law.keys())[0]
                 param = law[name]
 
-                if name=="uniform": lawList.append(cl.Uniform(*param))
-                elif name=="normal": lawList.append(cl.Normal(*param))
-                elif name=="gamma": lawList.append(cl.Gamma(*param))
-                elif name=="beta": lawList.append(cl.Beta(*param))
-                elif name=="expo": lawList.append(cl.Expo(*param))
-                elif name=="lognorm": lawList.append(cl.Lognorm(*param))
+                if name=="uniform": lawList.append(Uniform(param,0))
+                elif name=="normal": lawList.append(Gaussian(param,0))
+                elif name=="gamma": lawList.append(Gamma(param,0))
+                elif name=="beta": lawList.append(Beta(param,0))
+                elif name=="expo": lawList.append(Exponential(param,0))
+                elif name=="lognorm": lawList.append(Lognormal(param,0))
                 else: raise Exception("compute_polynomials: unknown law")
                 
             return cl.polyrecur(order,lawList,trunc)

@@ -31,11 +31,12 @@ def qmcquad(nbrPts,dom,pdf=0):
 
 # %% Tensor Product
 
-def tensquad(nbrPts,dist):
+def tensquad(order,dist):
     """Computes the tensor product quadrature rule with recurrence coefficients"""
 
     if not isinstance(dist,Joint): dist = Joint(dist)
 
+    nbrPts = order+1
     dim = dist[:].shape[0]
     J = np.zeros((2,nbrPts))
     points = np.zeros((nbrPts,dim))

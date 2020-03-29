@@ -83,7 +83,7 @@ class PCE:
         elif self.param["quadrature"]["method"]=="recurrence":
 
             dist = []
-            nbrQuad = 1+self.param["quadrature"]["order_quadrature"]
+            order = self.param["quadrature"]["order_quadrature"]
             for law in self.param["polynomials"]["parameter_laws"]:
 
                 name = list(law.keys())[0]
@@ -97,7 +97,7 @@ class PCE:
                 elif name=="lognorm": dist.append(Lognormal(param,0))
                 else: raise Exception("compute_quadrature: unknown law")
 
-            point,weight = cl.tensquad(nbrQuad,dist)
+            point,weight = cl.tensquad(order,dist)
             print(weight)
 
         # Weakly admissible mesh

@@ -25,21 +25,21 @@ class PCE:
         if method=="gram_schmidt": return cl.gschmidt(order,point,weight,trunc)
         elif method=="recurrence":
 
-            lawList = []
+            dist = []
             for law in self.param["polynomials"]["parameter_laws"]:
 
                 name = list(law.keys())[0]
                 param = law[name]
 
-                if name=="uniform": lawList.append(Uniform(param,0))
-                elif name=="normal": lawList.append(Gaussian(param,0))
-                elif name=="gamma": lawList.append(Gamma(param,0))
-                elif name=="beta": lawList.append(Beta(param,0))
-                elif name=="expo": lawList.append(Exponential(param,0))
-                elif name=="lognorm": lawList.append(Lognormal(param,0))
+                if name=="uniform": dist.append(Uniform(param,0))
+                elif name=="normal": dist.append(Gaussian(param,0))
+                elif name=="gamma": dist.append(Gamma(param,0))
+                elif name=="beta": dist.append(Beta(param,0))
+                elif name=="expo": dist.append(Exponential(param,0))
+                elif name=="lognorm": dist.append(Lognormal(param,0))
                 else: raise Exception("compute_polynomials: unknown law")
                 
-            return cl.polyrecur(order,lawList,trunc)
+            return cl.polyrecur(order,dist,trunc)
 
         else: raise Exception("compute_polynomials: unknown method")
 
@@ -82,22 +82,23 @@ class PCE:
 
         elif self.param["quadrature"]["method"]=="recurrence":
 
-            lawList = []
+            dist = []
             nbrQuad = 1+self.param["quadrature"]["order_quadrature"]
             for law in self.param["polynomials"]["parameter_laws"]:
 
                 name = list(law.keys())[0]
                 param = law[name]
     
-                if name=="uniform": lawList.append(cl.Uniform(*param))
-                elif name=="normal": lawList.append(cl.Normal(*param))
-                elif name=="gamma": lawList.append(cl.Gamma(*param))
-                elif name=="beta": lawList.append(cl.Beta(*param))
-                elif name=="expo": lawList.append(cl.Expo(*param))
-                elif name=="lognorm": lawList.append(cl.Lognorm(*param))
+                if name=="uniform": dist.append(Uniform(param,0))
+                elif name=="normal": dist.append(Gaussian(param,0))
+                elif name=="gamma": dist.append(Gamma(param,0))
+                elif name=="beta": dist.append(Beta(param,0))
+                elif name=="expo": dist.append(Exponential(param,0))
+                elif name=="lognorm": dist.append(Lognormal(param,0))
                 else: raise Exception("compute_quadrature: unknown law")
 
-            point,weight = cl.tensquad(nbrQuad,lawList)
+            point,weight = cl.tensquad(nbrQuad,dist)
+            print(weight)
 
         # Weakly admissible mesh
 

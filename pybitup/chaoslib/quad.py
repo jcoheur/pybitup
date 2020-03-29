@@ -1,6 +1,5 @@
 from scipy import optimize,linalg
 from .tools import printer,timer
-from .proba import Joint
 from .math import halton
 import numpy as np
 

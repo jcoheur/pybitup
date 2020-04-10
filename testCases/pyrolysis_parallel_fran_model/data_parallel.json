@@ -1,5 +1,6 @@
 {
   "solids": ["S1"],
+  "species": ["Gas1"],
   "rhoIni": [1],
   "reactions": [
                 {"S1" : "Gas1"}

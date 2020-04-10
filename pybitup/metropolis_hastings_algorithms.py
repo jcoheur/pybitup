@@ -107,10 +107,11 @@ class MetropolisHastings:
             self.compute_new_val()
             self.compute_acceptance_ratio()
             self.accept_reject()
-            # self.update_sigma() 
+            #self.update_sigma() 
+            #self.update_sigma_Gelman()
 
             # We estimate time and monitor acceptance ratio 
-            self.mean_r = self.mean_r + self.r 
+            self.mean_r = self.mean_r + self.alpha 
             if self.it % (self.nIterations/1000) == 0:
                 self.compute_time(self.t1)
 
@@ -138,15 +139,18 @@ class MetropolisHastings:
     def compute_acceptance_ratio(self):
 
         self.distr_fun_new_val = self.distr_fun(self.new_val[:])
-       
+        # print(self.distr_fun_new_val, self.distr_fun_current_val)
+        # print(self.distr_fun_new_val - self.distr_fun_current_val)
         if self.distr_fun_new_val == -np.inf: 
             self.r = 0
         else: 
             #self.r = self.distr_fun_new_val/self.distr_fun_current_val
+            
             self.r = np.exp(self.distr_fun_new_val - self.distr_fun_current_val)
 
         self.alpha = min(1, self.r)
-
+        #print(self.r, self.alpha)
+        
     def accept_reject(self):
 
         # Update
@@ -160,15 +164,42 @@ class MetropolisHastings:
             self.n_rejected += 1
 
     def update_sigma(self): 
-        ns = .01
-        self.prob_distr.likelihood.sum_of_square(self.current_val)
+        """ Smith, (2013)."""
+        ns = 0.01
+        self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
         for model_id in self.prob_distr.likelihood.data.keys():
-            #print(self.prob_distr.likelihood.data[model_id].std_y)
-            a = 0.5 * (ns + self.prob_distr.likelihood.data[model_id].num_points) 
-            b = 0.5 * (ns * 0.2604**2 +  self.prob_distr.likelihood.SS_X)
 
-            self.prob_distr.likelihood.data[model_id].std_y = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b))
             #print(self.prob_distr.likelihood.data[model_id].std_y)
+            a = 0.5 * (ns + self.prob_distr.likelihood.data[model_id].n_runs) 
+
+            for n in range(int(self.prob_distr.likelihood.data[model_id].num_points)):
+                # self.prob_distr.likelihood.data[model_id].var_s[n] 
+                
+                b = 0.5 * (ns * self.prob_distr.likelihood.data[model_id].var_s[n]  + self.prob_distr.likelihood.SS_X[n]/self.prob_distr.likelihood.data[model_id].n_runs)
+                self.prob_distr.likelihood.data[model_id].std_y[n] = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b))
+                #if self.prob_distr.likelihood.data[model_id].std_y[n] < 1e-4: 
+                self.prob_distr.likelihood.data[model_id].std_y[n] = self.prob_distr.likelihood.data[model_id].n_runs * self.prob_distr.likelihood.data[model_id].std_y[n]
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+            self.prob_distr.likelihood.data[model_id].std_s += self.prob_distr.likelihood.data[model_id].std_y / self.prob_distr.likelihood.data[model_id].n_runs
+
+    def update_sigma_Gelman(self): 
+        """ Gelman Bayesian Data Analysis, 3rd Edition.
+        Sigma is in the family of inverse chi squared distribution, which is equivalent to a 
+        inverse gamma with an other parametrization. (see wikipedia, scaled inverse chi-squared distribution 
+        for the relation between the two distributions. """ 
+        
+        self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
+        for model_id in self.prob_distr.likelihood.data.keys():
+
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+            a = 0.5 * (self.prob_distr.likelihood.data[model_id].n_runs - 1) 
+
+            for n in range(int(self.prob_distr.likelihood.data[model_id].num_points)):
+                # self.prob_distr.likelihood.data[model_id].var_s[n] 
+                b = a * self.prob_distr.likelihood.data[model_id].var_s[n]
+                self.prob_distr.likelihood.data[model_id].std_y[n] = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b) + 1e-10)  
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+            self.prob_distr.likelihood.data[model_id].std_s += self.prob_distr.likelihood.data[model_id].std_y 
 
     def compute_covariance(self, n_iterations):
 
@@ -209,12 +240,18 @@ class MetropolisHastings:
         else: 
             rejection_rate = self.n_rejected/self.nIterations*100
             print("\nRejection rate is {} %".format(rejection_rate))
-      
+        for model_id in self.prob_distr.likelihood.data.keys():
+            est_sigma = self.prob_distr.likelihood.data[model_id].std_y
+            print("\n Experimental error std is {} %".format(est_sigma))
+
+            myfile = {'model_id': est_sigma} 
+            df = pd.DataFrame(myfile, columns=['model_id'])
+            df.to_csv(self.IO_fileID['estimated_sigma'])
+
         self.IO_fileID['out_data'].write("$RandomVarName$\n")
         for i in range(self.n_param): 
             #self.IO_fileID['out_data'].write("X{} ".format(i))
             self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
-
         self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
@@ -227,7 +264,7 @@ class MetropolisHastings:
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
 
-        print("\rEstimated time: {}; acceptance ratio: {}\t".format(time.strftime("%H:%M:%S",
+        print("\rEstimated time: {}; mean acceptance probability: {}\t".format(time.strftime("%H:%M:%S",
                                                 time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='', flush=True)
 
 

@@ -75,10 +75,13 @@ class ProbabilityDistribution:
 
             #int_post = np.sum(f_post)*delta_param_i
             int_post = simps(f_post, vec_param_i)
+            norm_f_post = f_post / int_post
 
             plt.figure(200)
-            plt.plot(vec_param_i, f_post/int_post)
+            plt.plot(vec_param_i, norm_f_post)
 
+            x = np.linspace(stats.norm.ppf(0.01, loc=113000, scale=1000), stats.norm.ppf(0.99, loc=113000, scale=1000), 100)
+            plt.plot(x, stats.norm.pdf(x, loc=113000, scale=1000), 'r-', lw=2, alpha=1.0, label='norm pdf')
 
         elif self.dim == 2:
             vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 200)
@@ -102,7 +105,7 @@ class ProbabilityDistribution:
             plt.figure(201)
             plt.plot(vec_param_j, marginal_post_norm_2)
 
-            np.save("output/2d_post.npy", f_post)
+        np.save("output/posterior_numerical_evaluation.npy", norm_f_post)
 
         return f_post 
 

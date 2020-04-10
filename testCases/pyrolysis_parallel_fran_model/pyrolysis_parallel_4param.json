@@ -5,17 +5,17 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "data_files/fakePyroData",
+                    "FileName": "fakePyroData",
                     "xField": ["temperature"], 
                     "yField": ["dRho"], 
                     "sigmaField": ["std_dRho"], 
-                    "n_runs": 100
+                    "n_runs": 3
                 }
             ],
             "Model": [
                 {
                     "model_name": "parallel_pyrolysis", 
-                    "input_file": "reaction_scheme_2param.json", 
+                    "input_file": "reaction_scheme_4param.json", 
                     "param_names": ["tau"],
                     "param_values": [6.1],
                     "parametrization" : "no"
@@ -24,8 +24,10 @@
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A0": {"initial_val" : 17186.14327286153,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
-                    "E0": {"initial_val" : 111638.61037567662,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]} // [0, 1e10]   
+                    "A0": {"initial_val" : 12537.151002,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, // [0, 1e10]
+                    "E0": {"initial_val" : 111155.295440,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]}, // [0, 1e10]   
+                    "n0": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
+                    "g0": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
                 }
             },
             "Likelihood": {
@@ -35,12 +37,12 @@
         },
 	    "Algorithm": {
             "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
-                    "type": "full", // [[0.03945913, 0.0022852 ], [0.0022852, 0.00013557]]
-                    "value":[[0.0001, 0.0], [0.0, 1e3]]  
+                    "type": "diag", // [[0.03945913, 0.0022852 ], [0.0022852, 0.00013557]]
+                    "value":[1e-5, 1e3, 1e-4, 1e-8]  
 				}
 			}
         }
@@ -64,14 +66,14 @@
 		},
         "Posterior": {
             "display": "yes", 
-            "distribution": "bivariate", // marginal, bivariate
-            "estimation": "scatter", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 1
 		},
 	    "Propagation": {
 		    "display": "yes",
 		    "shaded_area": "yes",
-		    "burnin": 0,
+		    "burnin": 1,
 		    "num_plot": 1
 		}
 	}

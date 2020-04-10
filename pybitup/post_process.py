@@ -589,17 +589,24 @@ def post_process_data(input_file_name):
                     # Plot mean 
                     # ---------
                     plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5)
+
                     # Plot 95% credible interval
                     # ---------------------------
                     low_cred_int = np.percentile(data_hist, 2.5, axis=0)
                     high_cred_int = np.percentile(data_hist, 97.5, axis=0)
                     plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3)
+                    
                     # Plot 95% prediction interval
                     # -----------------------------
                     # For the prediction interval, we add the std to the result
+                    reader = pd.read_csv('output/estimated_sigma.csv')
+                    estimated_sigma = reader['model_id'].values
 
-                    plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
-                                    high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+                    plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
+                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1)
+
+                    #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
+                    #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
 
                     # Values are saved in csv format using Panda dataframe  
                     df = pd.DataFrame({"x": data_exp[data_id].x,

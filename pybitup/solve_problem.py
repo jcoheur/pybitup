@@ -86,7 +86,7 @@ class Sampling(SolveProblem):
 
         SolveProblem.__init__(self, input_file_name)
 
-        new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'aux_variables']
+        new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'aux_variables', 'estimated_sigma']
         # Define output file for sampling 
         self.IO_path[new_file_keys[0]] = self.IO_path['out_folder']+"/mcmc_chain.dat"
         self.IO_path[new_file_keys[1]] = self.IO_path['out_folder']+"/mcmc_chain_reparam.dat"
@@ -94,6 +94,7 @@ class Sampling(SolveProblem):
         self.IO_path[new_file_keys[3]] = self.IO_path['out_folder']+"/distribution_values.csv"
         self.IO_path[new_file_keys[4]] = self.IO_path['out_folder']+"/gp.dat" # Gaussian proposal 
         self.IO_path[new_file_keys[5]] = self.IO_path['out_folder']+"/aux_variables.dat" # momentum variables in HMC and Ito 
+        self.IO_path[new_file_keys[6]] = self.IO_path['out_folder']+"/estimated_sigma.csv"
 
         # Create and open files in read-write ('+') mode (w mode erase previous existing files) 
         for file_keys in new_file_keys:

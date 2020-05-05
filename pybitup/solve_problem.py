@@ -232,11 +232,16 @@ class Sampling(SolveProblem):
             # Get uncertain parameters 
             # -------------------------
             unpar_name = []
-            for name in BP_inputs['Prior']['Param'].keys():
+            unpar_name_dict = {}
+            for i, name in enumerate(BP_inputs['Prior']['Param'].keys()):
                 unpar_name.append(name)
+                unpar_name_dict[name] = i
 
             for model_id in models.keys(): 
                 models[model_id].unpar_name = unpar_name
+                models[model_id].unpar_name_dict = unpar_name_dict
+
+
 
             # Get a priori information on the uncertain parameters
             # ----------------------------------------------------
@@ -258,7 +263,12 @@ class Sampling(SolveProblem):
            
             # Likelihood 
             # -----------
-            likelihood_fun = pybitup.bayesian_inference.Likelihood(data, models)
+
+            input_likelihood = self.user_inputs["Sampling"]["BayesianPosterior"]["Likelihood"]
+            if input_likelihood['function'] == "Gaussian": 
+                likelihood_fun = pybitup.bayesian_inference.Likelihood(data, models)
+            elif input_likelihood['function'] == "KDE":
+                likelihood_fun = pybitup.bayesian_inference.Likelihood_kde(data, models)
 
             # ----------------------
             # Posterior computation 

@@ -27,10 +27,10 @@ class MetropolisHastings:
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        if self.nIterations < 100:
+        if self.nIterations < 1000:
             self.save_freq = 1
         else:
-            self.save_freq = nIterations/100
+            self.save_freq = nIterations/1000
         self.V = V
         self.prob_distr = prob_distr 
         self.distr_fun = prob_distr.compute_log_value
@@ -99,6 +99,20 @@ class MetropolisHastings:
         self.mean_r = 0
         self.r = 0
 
+        update_sigma = "Gelman"
+        # Estimating sigma 
+        # "Smith" methods give more flexibility than "Gelman" one
+        # "Gelman" is based on sample empirical estimate of variance
+        if update_sigma == "Smith":
+            # Not ready to be used 
+            self.update_sigma = self.update_sigma_Smith
+        elif update_sigma == "Gelman": 
+            print("Estimating sigma from inverse gamma distribution")
+            self.update_sigma = self.update_sigma_Gelman 
+        else: 
+            # Not very elegant 
+            self.update_sigma = lambda : 0 
+
         
     @time_it
     def run_algorithm(self):
@@ -107,12 +121,11 @@ class MetropolisHastings:
             self.compute_new_val()
             self.compute_acceptance_ratio()
             self.accept_reject()
-            #self.update_sigma() 
-            #self.update_sigma_Gelman()
+            self.update_sigma() 
 
             # We estimate time and monitor acceptance ratio 
             self.mean_r = self.mean_r + self.alpha 
-            if self.it % (self.nIterations/1000) == 0:
+            if self.it % (100) == 0:
                 self.compute_time(self.t1)
 
             # Write the sample values and function evaluation in a file 
@@ -163,9 +176,11 @@ class MetropolisHastings:
         else:  # Rejected, current val remains the same
             self.n_rejected += 1
 
-    def update_sigma(self): 
+
+    
+    def update_sigma_Smith(self): 
         """ Smith, (2013)."""
-        ns = 0.01
+        ns = 0.1
         self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
         for model_id in self.prob_distr.likelihood.data.keys():
 
@@ -192,12 +207,13 @@ class MetropolisHastings:
         for model_id in self.prob_distr.likelihood.data.keys():
 
             #print(self.prob_distr.likelihood.data[model_id].std_y)
-            a = 0.5 * (self.prob_distr.likelihood.data[model_id].n_runs - 1) 
+            #a = 0.5 * (self.prob_distr.likelihood.data[model_id].n_runs - 1) 
+            a = 0.5 * (3 - 1) 
 
             for n in range(int(self.prob_distr.likelihood.data[model_id].num_points)):
                 # self.prob_distr.likelihood.data[model_id].var_s[n] 
                 b = a * self.prob_distr.likelihood.data[model_id].var_s[n]
-                self.prob_distr.likelihood.data[model_id].std_y[n] = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b) + 1e-10)  
+                self.prob_distr.likelihood.data[model_id].std_y[n] = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b)) + 1e-10  
             #print(self.prob_distr.likelihood.data[model_id].std_y)
             self.prob_distr.likelihood.data[model_id].std_s += self.prob_distr.likelihood.data[model_id].std_y 
 
@@ -240,6 +256,7 @@ class MetropolisHastings:
         else: 
             rejection_rate = self.n_rejected/self.nIterations*100
             print("\nRejection rate is {} %".format(rejection_rate))
+
         for model_id in self.prob_distr.likelihood.data.keys():
             est_sigma = self.prob_distr.likelihood.data[model_id].std_y
             print("\n Experimental error std is {} %".format(est_sigma))
@@ -264,8 +281,8 @@ class MetropolisHastings:
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
 
-        print("\rEstimated time: {}; mean acceptance probability: {}\t".format(time.strftime("%H:%M:%S",
-                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='', flush=True)
+        print("\rIteration {}/{} ({:.2f}%); Remaining time: {}; mean acceptance probability: {}\t".format(self.it, self.nIterations, self.it/self.nIterations*100, time.strftime("%H:%M:%S",
+                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations - (time.clock()-t1) )), self.mean_r/self.it), end='', flush=True)
 
 
     def write_fun_distr_val(self, current_it):
@@ -556,7 +573,7 @@ class GradientBasedMCMC(MetropolisHastings):
             if self.it == self.update_it: 
                 self._set_algo_param(*args)
             
-            print("\n{}\n".format(self.V_i))
+            #print("\n{}\n".format(self.V_i))
 
             self.C_approx = self.V_i
             self.L_c = linalg.cholesky(self.C_approx)
@@ -747,7 +764,7 @@ class ito_SDE(GradientBasedMCMC):
 
             # We estimate time and monitor acceptance ratio 
             self.mean_r = self.it
-            if self.it % (self.nIterations/100) == 0:
+            if self.it % (100) == 0:
                 self.compute_time(self.t1)
 
             # Update values 

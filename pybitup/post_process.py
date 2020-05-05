@@ -98,11 +98,12 @@ def post_process_data(input_file_name):
                     plt.plot(data_exp[data_id].x, data_exp[data_id].mean_y[i*n_x:(i+1)*n_x],
                             'o', color=lineColor[num_data_set][0], mfc='none')
 
-                    for j in range(data_exp[data_id].n_runs):
+                    for j in range(data_exp[data_id].n_runs-1):
                         plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none')
 
-                    #error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
-                            #data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
+                    c_run = data_exp[data_id].y[0]
+                    error_bar (data_exp[data_id].x,c_run[i*n_x:i*n_x+n_x], 
+                            data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
 
@@ -509,7 +510,7 @@ def post_process_data(input_file_name):
         if inputFields["Propagation"]["display"] == "yes":
 
             # By default, we have saved 100 function evaluations
-            n_fun_eval = 100
+            n_fun_eval = 1000
             delta_it = int(n_samples/n_fun_eval)
 
             start_val = int(inputFields["Propagation"]["burnin"]*delta_it)
@@ -564,7 +565,6 @@ def post_process_data(input_file_name):
 
                     # Identical loop to compute the variance 
                     for j in range(start_val+delta_it, end_val, delta_it):
-
                         # Load current data
                         data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
                         data_set_n = data_ij[ind_1:ind_2]
@@ -602,8 +602,9 @@ def post_process_data(input_file_name):
                     reader = pd.read_csv('output/estimated_sigma.csv')
                     estimated_sigma = reader['model_id'].values
 
-                    plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
-                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1)
+
+                    #plt.fill_between(data_exp[data_id].x, data_ij_mean-estimated_sigma, 
+                                    #data_ij_mean+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1)
 
                     #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
                     #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)

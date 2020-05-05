@@ -82,6 +82,9 @@ class ProbabilityDistribution:
 
             x = np.linspace(stats.norm.ppf(0.01, loc=113000, scale=1000), stats.norm.ppf(0.99, loc=113000, scale=1000), 100)
             plt.plot(x, stats.norm.pdf(x, loc=113000, scale=1000), 'r-', lw=2, alpha=1.0, label='norm pdf')
+            # x = np.linspace(stats.norm.ppf(0.01, loc=10, scale=1), stats.norm.ppf(0.99, loc=10, scale=1), 100)
+            # plt.plot(x, stats.norm.pdf(x, loc=10, scale=1), 'r-', lw=2, alpha=1.0, label='norm pdf')
+
 
         elif self.dim == 2:
             vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 200)

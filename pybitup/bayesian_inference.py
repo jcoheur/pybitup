@@ -154,7 +154,7 @@ class Data:
 
 
         self.mean_y = np.array(self.y[0])
-        self.var_s = np.zeros(self.num_points)
+        self.var_s = self.std_y**2
         self.std_s = np.array(self.std_y)
         # Estimate sample Statitics if there is more than one experimental run  
         if self.n_runs > 1: 
@@ -164,19 +164,21 @@ class Data:
             self.mean_y = self.mean_y/self.n_runs
 
             # Estimate sample standard deviation and variance  
+            self.var_s = np.zeros(self.num_points)
             for c_run in range(self.n_runs): 
                 self.var_s += (self.y[c_run] - self.mean_y)**2
             self.var_s = self.var_s/(self.n_runs-1)   
-
-            
             self.std_s = np.array(self.var_s**(1/2))
-            
-            # Use the standard deviation estimated from the provided data set 
-            # self.std_y =  self.std_s*np.sqrt(self.n_runs * self.num_points) + 1e-10 # To avoid very small values 
-            # Use the standard deviation provided in input file 
-            self.std_y =  self.std_y*np.sqrt(self.n_runs * self.num_points) + 1e-10 # To avoid very small values 
 
-            print(self.std_y)
+
+        sigma_init_val = "Sample"
+        if sigma_init_val == "Sample":
+            # Use the standard deviation estimated from the provided data set 
+            self.std_y =  self.std_s + 1e-10 # To avoid very small values
+        else: 
+            # Use the standard deviation provided in input file 
+            self.std_y =  self.std_y  + 1e-10 # To avoid very small values    
+        print(self.std_y)
 
     def size_x(self, i):
         """Return the length of the i-th data x"""
@@ -257,6 +259,7 @@ class Model:
         self.param_names = []
         self.input_file_name = [] 
         self.unpar_name = {}
+        self.unpar_name_dict = {}
 
         # Value of the model f(param, x) 
         self.model_eval = 0
@@ -376,6 +379,8 @@ class Model:
         """ Evaluate the gradient of the model with respect to its parameter at var_param""" 
 
         self.model_grad = self.d_fx_dparam()
+       
+
 
 
 class Likelihood: 
@@ -485,22 +490,8 @@ class Likelihood:
             
             # Compute the weighted sum of square 
             for c_run in range(self.data[model_id].n_runs): 
-                dy = self.data[model_id].y[c_run] - self.models[model_id].model_eval
-
-
-                int1 = np.sum(self.models[model_id].model_eval * self.data[model_id].dx/self.data[model_id].std_y)
-                int2 = np.sum(self.data[model_id].y[c_run] * self.data[model_id].dx/self.data[model_id].std_y)
-                frac_y = np.array(int1 / int2)
-                new_std_y = np.array(dy) / 100
-                new_std_y2 = np.array(self.data[model_id].y[0])*1e-3 + 1e-18
-
-
-                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y)
-                arg_exp2 = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y2)
-
-                #arg_exp = (int1 - int2)
-                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y)
-                #arg_exp = arg_exp[9]
+                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y*np.sqrt(self.data[model_id].num_points * self.data[model_id].n_runs))
+                #arg_exp = arg_exp[7]
                 J = J  + np.sum(arg_exp**2, axis=0)
 
                 # plt.figure(1)
@@ -561,7 +552,8 @@ class Likelihood:
             inv_jac = self.models[model_id].parametrization_inv_jac(X)
 
             # Compute grad log LL 
-            ss_x = (self.data[model_id].y - self.models[model_id].model_eval)/(self.data[model_id].std_y**2) 
+            # c_run = 0, we do not consider several runs here
+            ss_x = (self.data[model_id].y[0] - self.models[model_id].model_eval)/(self.data[model_id].std_y**2*(self.data[model_id].num_points * self.data[model_id].n_runs)) 
 
             for i, pn in enumerate(self.models[model_id].unpar_name):
 
@@ -654,6 +646,75 @@ class Likelihood:
 
 
 
+
+class Likelihood_kde(Likelihood): 
+    """ Build the likelihood based on a kerned density estimation at each time steps.""" 
+
+    def __init__(self, exp_data, model_list): 
+        Likelihood.__init__(self, exp_data, model_list) 
+
+        self.n_t = len(self.data)
+
+        # Create data list 
+        y_t = {}
+        self.kde_list = {}
+        for model_id in self.models.keys(): 
+            # Sort data as a function of time 
+            self.n_t = len(self.data[model_id].y[0])
+            y_t[model_id] = np.zeros((self.data[model_id].n_runs, self.n_t))
+            for c_run in range(self.data[model_id].n_runs): 
+                y_t[model_id][c_run, :] = self.data[model_id].y[c_run]
+
+
+            # Create the list object of kernel density estimation on the data 
+            self.kde_list[model_id] = []
+            for t in range(self.n_t):   
+                # Case where the data is very low 
+                c_data = y_t[model_id][:, t]
+                if c_data[0] < 1e-8: 
+                    # If the data are not informative, we set a lambda function which returns 1 
+                    # Thus the likelihood for those data will not change anything 
+                    self.kde_list[model_id].append(lambda x: 1)
+                    continue  
+
+                self.kde_list[model_id].append(stats.gaussian_kde(c_data))
+
+        #         print(len(self.kde_list[model_id]))
+        #         x = np.linspace(c_data.min(), c_data.max(), 150)
+        #         c_kde = self.kde_list[model_id][t] # kde at data point 
+        #         plt.figure(1)
+        #         p = c_kde(x)
+        #         plt.plot(x, p/p.max())
+
+        # plt.show() 
+
+    def compute_value(self, X): 
+        """ Compute the log of the likelihood function from kde. """
+
+        like_val = 0 # Initialise likelihood value # 0 
+        for model_id in self.models.keys(): 
+
+            # Compute value for the model at X 
+            self.models[model_id].run_model(X)
+
+            # Iterate of the number of time steps in the data points  
+            for t in range(self.n_t): 
+
+                c_kde = self.kde_list[model_id][t] # kde at data point 
+                like_val += c_kde(self.models[model_id].model_eval[t]) # + 
+        c_kde = self.kde_list[model_id][11]     
+        like_val = c_kde(self.models[model_id].model_eval[11]) 
+
+        c_kde = self.kde_list[model_id][12]     
+        like_val*= c_kde(self.models[model_id].model_eval[12]) 
+
+
+        return like_val 
+
+    def compute_log_value(self, X): 
+        """ Compute the log of the likelihood function from kde. """
+
+        return np.log(self.compute_value(X))
 
 
 

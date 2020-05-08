@@ -1,8 +1,10 @@
 from .poly import polyrecur
 from scipy import integrate
+from .tools import printer
+from copy import deepcopy
 import numpy as np
 
-# %% PCE Model
+# %% Polynomial Chaos
 
 class Expansion:
     """Class of polynomial chaos expansion"""
@@ -46,3 +48,108 @@ def transfo(invcdf,order,dist):
     expan = Expansion(coef,poly)
     transfo = lambda x: expan.eval(x)
     return transfo
+
+# %% Statistical Moments
+
+def anova(coef,poly,sobol=0):
+    """Computes the statistical moments and the Sobol indices"""
+
+    mean = coef[0]
+    var = np.sum(coef[1:]**2,axis=0)
+
+    if sobol:
+
+        S,ST = [[],[]]
+        expo = poly.expo
+        dim = expo.shape[0]
+        nbrPoly = poly[:].shape[0]
+
+        # Computes the first and total Sobol indices
+
+        for i in range(dim):
+    
+            order = np.sum(expo,axis=0)
+            pIdx = np.array([poly[i].nonzero()[-1][-1] for i in range(nbrPoly)])
+    
+            sIdx = np.where(expo[i]-order==0)[0].flatten()[1:]
+            index = np.where(np.in1d(pIdx,sIdx))[0]
+            S.append(np.sum(coef[index]**2,axis=0)/var)
+    
+            sIdx = np.where(expo[i])[0].flatten()
+            index = np.where(np.in1d(pIdx,sIdx))[0]
+            ST.append(np.sum(coef[index]**2,axis=0)/var)
+
+        S = np.array(S)
+        ST = np.array(ST)
+        sobol = dict(zip(['S','ST'],[S,ST]))
+
+        return mean,var,sobol
+    else: return mean,var
+
+# %% Analysis of Covariance
+    
+def ancova(model,point,weight=0):
+    """Computes the sensitivity indices by analysis of covariance"""
+
+    printer(0,'Computing covariances ...')
+    nbrPts = np.array(point)[...].shape[0]
+    if not np.any(weight): weight = np.ones(nbrPts)/nbrPts
+
+    expo = model.expo
+    coef = model.coef
+    nbrIdx = expo.shape[1]
+    index,ST,SS = [[],[],[]]
+
+    model = deepcopy(model)
+    resp = model.eval(point)
+    difMod = resp-np.dot(resp.T,weight).T
+    varMod = np.dot(difMod.T**2,weight).T
+    
+    # Computes the total and structural indices
+
+    for i in range(nbrIdx):
+
+        model.expo = expo[:,i,None]
+        model.coef = coef[...,i,None]
+        resp = model.eval(point)
+        
+        dif = resp-np.dot(resp.T,weight).T
+        cov = np.dot((dif*difMod).T,weight).T
+        var = np.dot(dif.T**2,weight).T
+        S = cov/varMod
+        
+        if not np.allclose(S,0):
+
+            index.append(expo[:,i])
+            SS.append(var/varMod)
+            ST.append(S)
+            
+    # Combines the different powers of a same monomial
+
+    index,SS,ST = combine(index,SS,ST)
+    ancova = dict(zip(['SS','SC','ST'],[SS,ST-SS,ST]))
+    
+    printer(1,'Computing covariances 100 %')
+    return index,ancova
+
+# %% Combine Power
+
+def combine(index,SS,ST):
+    """Combines the indices from different powers of the same monomial"""
+    
+    index = np.transpose(index)
+    index = (index/np.max(index,axis=0)).T
+    
+    minIdx = np.min(index,axis=1)
+    idx = np.argwhere(minIdx).flatten()
+    index[idx] = (index[idx].T/minIdx[idx]).T
+    index = index.astype(int)
+    
+    index,old = np.unique(index,return_inverse=1,axis=0)
+    shape = (index.shape[0],)+np.array(SS).shape[1:]
+    SS2 = np.zeros(shape)
+    ST2 = np.zeros(shape)
+    
+    for i in range(old.shape[0]): SS2[old[i]] += SS[i]
+    for i in range(old.shape[0]): ST2[old[i]] += ST[i]
+    return index,SS2,ST2

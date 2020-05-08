@@ -106,9 +106,8 @@ class PCE:
             method = self.param["quadrature"]["method"]
         
             if method=="fekete": index,weight = cl.fekquad(point,poly)
-            elif method=="leja": index,weight = cl.lejquad(point,poly)
-            elif method=="simplex": index,weight = cl.linquad(point,poly)
-            elif method=="null_space": index,weight = cl.nulquad(point,poly)
+            elif method=="simplex": index,weight = cl.simquad(point,poly)
+            elif method=="iterative": index,weight = cl.nulquad(point,poly)
             else: raise Exception("compute_quadrature: unknown method")
 
             poly.trunc(self.param["quadrature"]["order_truncation"])

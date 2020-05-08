@@ -1,5 +1,4 @@
 from sobol_seq import i4_sobol_generate
-from scipy import linalg
 import numpy as np
 
 # %% Multi-index
@@ -109,20 +108,6 @@ def rseq(nbrPts,dim=1):
     point = np.squeeze(point)
     return point
 
-# %% Quadratic Resampling
-
-def match(point,mean,cov):
-    """Performs a quadratic resampling according to imposed moments"""
-
-    sCov = np.cov(point.T)
-    sMean = np.mean(point,axis=0)
-    v2 = np.linalg.inv(linalg.sqrtm(sCov))
-    v1 = linalg.sqrtm(cov)
-    H = np.dot(v1,v2)
-
-    point = (point-sMean).dot(H.T)+mean
-    return point
-
 # %% Monte Carlo Sampler
 
 def random(nbrPts,dom,pdf):
@@ -133,7 +118,9 @@ def random(nbrPts,dom,pdf):
 
     y = np.random.uniform(0,1,nbrPts)
     x = np.array([np.random.uniform(a,b,nbrPts) for [a,b] in dom])
-    index = np.argwhere(y<pdf(*x)).flatten()
+    
+    proba = pdf(np.squeeze(x).T)
+    index = np.argwhere(y<proba).flatten()
     point = np.transpose(x[:,index])
 
     # Repeats the operation to obtain the desired size
@@ -142,52 +129,16 @@ def random(nbrPts,dom,pdf):
 
         y = np.random.uniform(0,1,nbrPts)
         x = np.array([np.random.uniform(a,b,nbrPts) for [a,b] in dom])
-        index = np.argwhere(y<pdf(*x)).flatten()
-
-        x = np.transpose(x[:,index])
-        point = np.concatenate((point,x),axis=0)
+        
+        proba = pdf(np.squeeze(x).T)
+        index = np.argwhere(y<proba).flatten()
+        point = np.concatenate((point,x[:,index].T),axis=0)
 
     # Removes the overflow of points
 
     index = np.random.choice(point.shape[0],nbrPts)
     point = point[index]
     return point
-
-# %% Statistical Moments
-
-def stats(coef,poly,sobol=0):
-    """Computes the first statistical moments and the Sobol coefficients"""
-
-    mean = coef[0]
-    var = np.sum(coef[1:]**2,axis=0)
-
-    if sobol:
-
-        S,St = [],[]
-        expo = poly.expo
-        dim = expo.shape[0]
-        nbrPoly = poly[:].shape[0]
-
-        # Computes the Sobol coefficients
-
-        for i in range(dim):
-    
-            order = np.sum(expo,axis=0)
-            pIdx = np.array([poly[i].nonzero()[-1][-1] for i in range(nbrPoly)])
-    
-            sIdx = np.where(expo[i]-order==0)[0].flatten()[1:]
-            index = np.where(np.in1d(pIdx,sIdx))[0]
-            S.append(np.sum(coef[index]**2)/var)
-    
-            sIdx = np.where(expo[i])[0].flatten()
-            index = np.where(np.in1d(pIdx,sIdx))[0]
-            St.append(np.sum(coef[index]**2)/var)
-    
-        S = np.transpose(S)
-        St = np.transpose(St)
-
-        return mean,var,S,St
-    else: return mean,var
 
 # %% PCA Whitening
 

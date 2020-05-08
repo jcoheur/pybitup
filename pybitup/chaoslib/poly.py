@@ -1,6 +1,7 @@
 from scipy import sparse,linalg
 from .math import indextens
 from .tools import printer
+from pybitup.distributions import Joint
 import numpy as np
 
 # %% Polynomial Basis
@@ -71,7 +72,7 @@ class Polynomial:
 def gschmidt(order,point,weight=0,trunc=1):
     """Computes the orthonormal polynomial basis using Gram-Schmidt"""
 
-    printer(0,"Computing polynomials ...")
+    printer(0,'Computing polynomials ...')
 
     point = np.atleast_2d(np.transpose(point)).T
     if not np.any(weight): weight = 1/point.shape[0]
@@ -89,13 +90,13 @@ def gschmidt(order,point,weight=0,trunc=1):
 
     V = base.vander(point)
     V = np.transpose(np.sqrt(weight)*V.T)
-    R = np.linalg.qr(V,"r")
+    R = np.linalg.qr(V,'r')
 
     coef = linalg.lapack.dtrtri(R)[0].T
     coef[0,0] = 1
 
     poly = Polynomial(expo,coef,1)
-    printer(1,"Computing polynomials 100 %")
+    printer(1,'Computing polynomials 100 %')
     return poly
 
 # %% Recurrence Coefficients
@@ -103,7 +104,7 @@ def gschmidt(order,point,weight=0,trunc=1):
 def polyrecur(order,dist,trunc=1):
     """Computes the orthogonal polynomial basis using recurrence coefficients"""
 
-    printer(0,"Computing polynomials ...")
+    printer(0,'Computing polynomials ...')
     if not isinstance(dist,Joint): dist = Joint(dist)
 
     nbrPoly = order+1
@@ -133,7 +134,7 @@ def polyrecur(order,dist,trunc=1):
     for i in range(dim): polyList[i][:] /= np.sqrt(norm[i,:,None])
     poly = tensdot(polyList,order,trunc)
 
-    printer(1,"Computing polynomials 100 %")
+    printer(1,'Computing polynomials 100 %')
     return poly
 
 # %% Tensor Product

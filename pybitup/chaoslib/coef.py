@@ -6,7 +6,7 @@ import numpy as np
 def spectral(resp,poly,point,weight=0):
     """Computes the expansion coefficients with spectral projection"""
 
-    printer(0,"Computing coefficients ...")
+    printer(0,'Computing coefficients ...')
 
     V = poly.vander(point)
     if not np.any(weight): weight = 1/V.shape[0]
@@ -16,7 +16,7 @@ def spectral(resp,poly,point,weight=0):
     V = np.transpose(weight*V.T)
     coef = np.transpose(np.dot(resp.T,V))
 
-    printer(1,"Computing coefficients 100 %")
+    printer(1,'Computing coefficients 100 %')
     return coef
 
 # %% Point Collocation
@@ -24,7 +24,7 @@ def spectral(resp,poly,point,weight=0):
 def colloc(resp,poly,point,weight=0):
     """Computes the expansion coefficients with least-square collocation"""
 
-    printer(0,"Computing coefficients ...")
+    printer(0,'Computing coefficients ...')
 
     resp = np.array(resp)
     shape = (poly[:].shape[0],)+resp.shape[1:]
@@ -43,7 +43,7 @@ def colloc(resp,poly,point,weight=0):
     else: coef = np.linalg.lstsq(V,resp,rcond=None)[0]
 
     coef = coef.reshape(shape)
-    printer(1,"Computing coefficients 100 %")
+    printer(1,'Computing coefficients 100 %')
     return coef
 
 # %% Least Angle Regression
@@ -83,7 +83,7 @@ def lars(resp,poly,point,weight=0,it=np.inf):
         coef[:,i] = fit(V1,resp[:,i],stat,it)
         index = np.argwhere(coef[:,i]!=0).flatten()
         coef[index,i] = square(V[:,index],resp[:,i],weight)
-        timer(i+1,nbrResp,"Computing coefficients ")
+        timer(i+1,nbrResp,'Computing coefficients ')
 
     index = np.argwhere(np.any(coef,axis=1)).flatten()
     coef = coef.reshape(shape)

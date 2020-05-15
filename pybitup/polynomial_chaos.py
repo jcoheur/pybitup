@@ -67,17 +67,6 @@ class PCE:
 
         if self.param["quadrature"]["method"]=="monte_carlo": weight = None
 
-        # Quasi-Monte Carlo
-
-        # elif self.param["quadrature"]["method"]=="quasi_monte_carlo":
-
-        #     if self.param["quadrature"]["weight_function"]=="None": pdf = None
-        #     else: pdf = eval(self.param["quadrature"]["weight_function_name"])
-        #     nbrPts = int(self.param["quadrature"]["number_points"])
-        #     dom = self.param["quadrature"]["domain"]
-
-        #     point,weight = cl.qmcquad(nbrPts,dom,pdf)
-
         # Recurrence coefficients
 
         elif self.param["quadrature"]["method"]=="recurrence":
@@ -98,8 +87,7 @@ class PCE:
                 else: raise Exception("compute_quadrature: unknown law")
 
             point,weight = cl.tensquad(order,dist)
-            print(weight)
-
+            
         # Weakly admissible mesh
 
         else:

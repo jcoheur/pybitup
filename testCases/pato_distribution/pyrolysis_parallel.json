@@ -16,21 +16,21 @@
                     "model_name": "parallel_pyrolysis", 
                     "input_file": "reaction_scheme.json", 
                     "param_names": ["tau"],
-                    "param_values": [6.1],
+                    "param_values": [3.0],
                     "parametrization" : "no"
                 }
             ],
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A0": {"initial_val" : 18000,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
-                    "E0": {"initial_val" : 92000,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
-                    "n0": {"initial_val" : 2.5,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]},
-                    "g0": {"initial_val" : 0.1,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
-                    "A1": {"initial_val" : 15000,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
-                    "E1": {"initial_val" : 122000,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
-                    "n1": {"initial_val" : 1.3,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]},
-                    "g1": {"initial_val" : 0.05,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+                    "A0": {"initial_val" : 12000.0,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+                    "E0": {"initial_val" : 71130.89,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+                    "n0": {"initial_val" : 3.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]},
+                    "g0": {"initial_val" : 0.25,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
+                    "A1": {"initial_val" : 4.97777e8,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+                    "E1": {"initial_val" : 1.69975e5,    "prior_name" : "Uniform", "prior_param" : [0.0, 1e10]},
+                    "n1": {"initial_val" : 3.0,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]},
+                    "g1": {"initial_val" : 0.19,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
                 }
             },
             "Likelihood": {
@@ -46,13 +46,12 @@
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-                    "value": [1e4, 1e4, 1e-3, 1e-5, 1e4, 1e4, 1e-3, 1e-5]
+                    "value": [1e4, 1e4, 1e-3, 1e-5, 1e7, 1e4, 1e-3, 1e-5]
 				}
 			}
 		}
     },
     
-
     "Propagation": {
         "Model": [ 
             {
@@ -62,7 +61,7 @@
                     "field": 0
                 },  
                 "param_names": ["tau"],
-                "param_values": [6.1],
+                "param_values": [3.0],
                 "parametrization" : "no",
                 "emulator": "pce",
                 "pce": {
@@ -72,18 +71,16 @@
                         "point_coordinates": "output/mcmc_chain.csv",
                         "hyperbolic_truncation": 1,
                         "point_weights": "None",
-                        "order": 5
+                        "order": 4
                     },
                 
                     "quadrature":{
-                        "method": "fekete",
-                        "order_truncation": 2
+                        "method": "monte_carlo"
 
                     },
                 
                     "coefficients":{
-                        "method": "lars",
-                        "iterations": 20
+                        "method": "colloc"
                     }
                 }
             }
@@ -116,16 +113,17 @@
 		    "num_plot": 1
 		},
 	    "MarkovChain": {
-		    "display": "no",
+		    "display": "false",
 		    "thinning": 1
 		},
         "Posterior": {
-            "display": "no", 
-            "distribution": "marginal",
-            "estimation": "ksdensity+hist"
+            "display": "yes", 
+            "distribution": "bivariate",
+            "estimation": "contour",
+            "burnin": 1
 		},
 	    "Propagation": {
-		    "display": "yes",
+		    "display": "no",
 		    "shaded_area": "yes",
 		    "burnin": 0,
 		    "num_plot": 1

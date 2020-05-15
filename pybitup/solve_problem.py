@@ -454,10 +454,15 @@ class Propagation(SolveProblem):
 
                     # Update model evaluation 
                     models[model_id].run_model(c_param)
+                    
+                    # response = model.eval(point)
+                    
+                    
 
                     # Get model evaluations
                     fun_eval[model_id][i, :] = models[model_id].model_eval 
                     #fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
+                
 
                     c_eval = fun_eval[model_id][i, :]
                     data_hist[model_id][i, :] = c_eval 

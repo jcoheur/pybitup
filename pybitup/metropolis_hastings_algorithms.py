@@ -57,6 +57,10 @@ class MetropolisHastings:
         self.distr_grad_log_like_current_val = 1 
         self.distr_grad_log_like_new_val = 1
 
+        # Maximum of the probability distribution 
+        # estimated from markov chain 
+        self.log_max_distr = self.distr_fun_current_val
+        self.arg_max_distr = self.param_init
 
         # -------------------------
         # Initial variance estimate 
@@ -128,11 +132,13 @@ class MetropolisHastings:
             if self.it % (100) == 0:
                 self.compute_time(self.t1)
 
-            # Write the sample values and function evaluation in a file 
+            # Write the sample values (and function evaluation for Bayesian inference) in a file 
             #self.prob_distr.save_log_post(self.IO_fileID)
             self.prob_distr.save_sample(self.IO_fileID, self.current_val)
             self.write_fun_distr_val(self.it)
 
+            # Estimate maximum of the distribution (e.g. MAP for Bayesian posterior)
+            self.estimate_max_distr(self.distr_fun_current_val, self.current_val)
 
         self.compute_covariance(self.nIterations+2)
 
@@ -203,7 +209,7 @@ class MetropolisHastings:
         inverse gamma with an other parametrization. (see wikipedia, scaled inverse chi-squared distribution 
         for the relation between the two distributions. """ 
         
-        self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
+        #self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
         for model_id in self.prob_distr.likelihood.data.keys():
 
             #print(self.prob_distr.likelihood.data[model_id].std_y)
@@ -216,6 +222,7 @@ class MetropolisHastings:
                 self.prob_distr.likelihood.data[model_id].std_y[n] = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b)) + 1e-10  
             #print(self.prob_distr.likelihood.data[model_id].std_y)
             self.prob_distr.likelihood.data[model_id].std_s += self.prob_distr.likelihood.data[model_id].std_y 
+            
 
     def compute_covariance(self, n_iterations):
 
@@ -248,6 +255,16 @@ class MetropolisHastings:
 
         return mv_norm
 
+    def estimate_max_distr(self, current_log_value, current_argument):
+        """ Estimate maximum of the distribution (e.g. MAP for Bayesian posterior). 
+        The log of the maximum value and its argument is written in the output file. 
+        In the case of Bayesian posterior, this corresponds to the Maximum a Posteriori (MAP) 
+        and the function evaluation at the MAP is written in a separate output file."""
+
+        if current_log_value >= self.log_max_distr: 
+            self.log_max_distr = current_log_value
+            self.arg_max_distr = current_argument
+            self.write_fun_distr_val(0, type_eval='MAP_fun_eval')
 
     def terminate_loop(self):
 
@@ -272,10 +289,10 @@ class MetropolisHastings:
         self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
-        self.IO_fileID['out_data'].write("Maximum Likelihood Estimator (MLE) \n")
-        #self.IO_fileID['out_data'].write("{} \n".format(self.arg_max_LL))
-        self.IO_fileID['out_data'].write("Log-likelihood value \n")
-        #self.IO_fileID['out_data'].write("{}".format(self.max_LL))
+        self.IO_fileID['out_data'].write("Max Log-likelihood value (MLE)\n")
+        self.IO_fileID['out_data'].write("{}".format(self.log_max_distr))
+        self.IO_fileID['out_data'].write("\nMaximum Likelihood Estimator Argument \n")
+        self.IO_fileID['out_data'].write("{} \n".format(self.arg_max_distr))
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
     def compute_time(self, t1):
@@ -285,10 +302,10 @@ class MetropolisHastings:
                                                 time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations - (time.clock()-t1) )), self.mean_r/self.it), end='', flush=True)
 
 
-    def write_fun_distr_val(self, current_it):
+    def write_fun_distr_val(self, current_it, type_eval='fun_eval'):
         if current_it % (self.save_freq) == 0:
             #self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
-            self.prob_distr.save_value(current_it)
+            self.prob_distr.save_value(current_it, type_eval)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
 
@@ -322,6 +339,9 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
             #self.prob_distr.save_log_post(self.IO_fileID)
             self.prob_distr.save_sample(self.IO_fileID, self.current_val)
             self.write_fun_distr_val(self.it)
+
+            # Estimate maximum of the distribution (e.g. MAP for Bayesian posterior)
+            self.estimate_max_distr(self.distr_fun_current_val, self.current_val)
 
         self.compute_covariance(self.nIterations+2)
 
@@ -512,7 +532,7 @@ class GradientBasedMCMC(MetropolisHastings):
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix_estimation))
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
-        print(self.C_approx)
+        #print(self.C_approx)
         self.L_c = linalg.cholesky(self.C_approx)
 
         try: 
@@ -762,6 +782,8 @@ class ito_SDE(GradientBasedMCMC):
             self.P_nm = P_np
             self.xi_nm = xi_np
 
+            self.update_sigma() 
+
             # We estimate time and monitor acceptance ratio 
             self.mean_r = self.it
             if self.it % (100) == 0:
@@ -770,6 +792,9 @@ class ito_SDE(GradientBasedMCMC):
             # Update values 
             self.z_k=P_np 
             self.prob_distr.update_eval()
+
+            # Estimate maximum of the distribution (e.g. MAP for Bayesian posterior)
+            self.estimate_max_distr(self.prob_distr.log_bayes_post, xi_n)
 
             # Write the sample values and function evaluation in a file 
             #self.prob_distr.save_log_post(self.IO_fileID)

@@ -23,6 +23,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         self.dim = len(param_init)
         self.name_random_var = self.model.unpar_name 
         
+        # Value and log value of probability 
         self.bayes_post = 0
         self.log_bayes_post = 0
 
@@ -77,12 +78,16 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         account the likelihood, the determinant of the jacobian and the prior (!!!! prior still needs to be added here, 
         only constant prior works so far). """
 
+        # Compute log value first to update model evaluation 
+        self.compute_log_value(Y)
+
+        # Compute grad log value 
         X = self.model.parametrization_backward(Y)
 
         grad_log_like = self.likelihood.compute_grad_log_value(X)
         grad_log_det_jac = self.likelihood.compute_grad_log_det_jac(X)
 
-        return grad_log_like - grad_log_det_jac 
+        return grad_log_like - grad_log_det_jac
 
 
     def estimate_hessian_model(self, Y): 
@@ -112,9 +117,9 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
     #     IO_fileID['Distribution_values'].write("{}\n".format(str(self.log_bayes_post).replace('\n', '')))
 
-    def save_value(self, current_it): 
+    def save_value(self, current_it, type_eval): 
 
-        self.likelihood.write_fun_eval(current_it)
+        self.likelihood.write_fun_eval(current_it, type_eval)
 
     def save_sample(self, IO_fileID, value):
 
@@ -178,7 +183,6 @@ class Data:
         else: 
             # Use the standard deviation provided in input file 
             self.std_y =  self.std_y  + 1e-10 # To avoid very small values    
-        print(self.std_y)
 
     def size_x(self, i):
         """Return the length of the i-th data x"""
@@ -201,7 +205,10 @@ class Data:
         # Increase the number of dataset
         self.n_data_set += 1
 
+
 class Data_2:
+    """ NOT USED. 
+    An other proposition for Data structure using _get and _set functionnalities."""
 
     def __init__(self, x=np.array([1]), y=np.array([1]), std_y=np.array([1])):
         self._x=x
@@ -396,6 +403,7 @@ class Likelihood:
         # We initialise it here as a list  
         self.model_eval = {}
 
+        self.compute_data_relative_weights()
 
     def compute_value(self, X):
         """ Compute value of the likelihood at the current point X.
@@ -431,12 +439,12 @@ class Likelihood:
         for model_id in self.models.keys(): 
             self.model_eval[model_id] = np.concatenate((self.model_eval[model_id], self.models[model_id].model_eval))
 
-    def write_fun_eval(self, num_it):
+    def write_fun_eval(self, num_it, type_eval):
         """ Save the function evaluation in an output file. 
         The name of the output file is fixed.""" 
 
         for model_id in self.models.keys(): 
-            np.save('output/'+model_id+'_fun_eval.'+str(num_it), self.model_eval[model_id]) 
+            np.save('output/'+model_id+'_'+type_eval+'.'+str(num_it), self.model_eval[model_id]) 
 
             # n_x = len(self.data[model_id].x)
             # n_data_set = int(len(self.data[model_id].y)/n_x)
@@ -544,10 +552,10 @@ class Likelihood:
     def compute_grad_log_value(self, X): 
 
         grad = np.zeros(len(X))
+
         for model_id in self.models.keys(): 
 
             # Compute gradient of the model 
-            self.models[model_id].run_model(X)
             self.models[model_id].get_gradient_model(X)
             inv_jac = self.models[model_id].parametrization_inv_jac(X)
 
@@ -644,6 +652,18 @@ class Likelihood:
 
         return X_n
 
+
+    def compute_data_relative_weights(self): 
+
+        for model_id in self.models.keys(): 
+            # Compute the weighted sum of square 
+            for c_run in range(self.data[model_id].n_runs): 
+                arg_exp = (self.data[model_id].y[c_run])/(self.data[model_id].std_y*np.sqrt(self.data[model_id].num_points * self.data[model_id].n_runs))
+
+        plt.plot(arg_exp)
+        plt.plot(self.data[model_id].y[c_run]*100000) 
+
+        plt.show()
 
 
 

@@ -590,6 +590,11 @@ def post_process_data(input_file_name):
                     # ---------
                     plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5)
 
+                    # Plot MAP function evaluation 
+                    # -------------------------------
+                    MAP_fun_eval = np.load("output/{}_MAP_fun_eval.0.npy".format(data_id))
+                    plt.plot(data_exp[data_id].x, MAP_fun_eval[ind_1:ind_2], color=lineColor[1][0], alpha=0.5)
+
                     # Plot 95% credible interval
                     # ---------------------------
                     low_cred_int = np.percentile(data_hist, 2.5, axis=0)
@@ -631,8 +636,10 @@ def post_process_data(input_file_name):
 def saveToTikz(nameTikzFile):
 
     plt.grid(True)
-    tikz_save(nameTikzFile, figureheight='\\figureheight', figurewidth='\\figurewidth',
-              extra_axis_parameters=['/pgf/number format/.cd, 1000 sep={}', 'title=\\figuretitle', 'xlabel=\\figurexlabel', 'ylabel=\\figureylabel'])
+    tikz_save(nameTikzFile, figureheight='\\figureheight', figurewidth='\\figurewidth', wrap=False,
+              extra_axis_parameters=['/pgf/number format/.cd, 1000 sep={}', 'title=\\figuretitle', 'xlabel=\\figurexlabel', 'ylabel=\\figureylabel'],
+              float_format='{:.15g}')
+    # Default is .15g
 			  
 			  
 def error_bar (x_data, y_data, error, col, line_width=1): 

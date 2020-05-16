@@ -91,7 +91,7 @@ def anova(coef,poly,sobol=0):
 def ancova(model,point,weight=0):
     """Computes the sensitivity indices by analysis of covariance"""
 
-    printer(0,'Computing covariances ...')
+    printer(0,'Computing ancova ...')
     nbrPts = np.array(point)[...].shape[0]
     if not np.any(weight): weight = np.ones(nbrPts)/nbrPts
 
@@ -107,7 +107,7 @@ def ancova(model,point,weight=0):
     
     # Computes the total and structural indices
 
-    for i in range(nbrIdx):
+    for i in range(1,nbrIdx):
 
         model.expo = expo[:,i,None]
         model.coef = coef[...,i,None]
@@ -125,11 +125,11 @@ def ancova(model,point,weight=0):
             ST.append(S)
             
     # Combines the different powers of a same monomial
-
+    
     index,SS,ST = combine(index,SS,ST)
     ancova = dict(zip(['SS','SC','ST'],[SS,ST-SS,ST]))
     
-    printer(1,'Computing covariances 100 %')
+    printer(1,'Computing ancova 100 %')
     return index,ancova
 
 # %% Combine Power
@@ -140,6 +140,8 @@ def combine(index,SS,ST):
     index = np.transpose(index)
     index = (index/np.max(index,axis=0)).T
     
+    # Normalizes and eliminates the duplicates
+    
     minIdx = np.min(index,axis=1)
     idx = np.argwhere(minIdx).flatten()
     index[idx] = (index[idx].T/minIdx[idx]).T
@@ -149,6 +151,8 @@ def combine(index,SS,ST):
     shape = (index.shape[0],)+np.array(SS).shape[1:]
     SS2 = np.zeros(shape)
     ST2 = np.zeros(shape)
+    
+    # Combines duplicates ancova indices
     
     for i in range(old.shape[0]): SS2[old[i]] += SS[i]
     for i in range(old.shape[0]): ST2[old[i]] += ST[i]

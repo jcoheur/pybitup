@@ -12,6 +12,9 @@ class Expansion:
     def __init__(self,coef,poly):
 
         coef = np.array(coef)
+        self.var = np.sum(coef[1:]**2,axis=0)
+        self.mean = coef[0]
+        
         shape = (poly[:].shape[1],)+coef.shape[1:]
         coef = coef.reshape(poly[:].shape[0],-1)
 
@@ -51,40 +54,35 @@ def transfo(invcdf,order,dist):
 
 # %% Statistical Moments
 
-def anova(coef,poly,sobol=0):
+def anova(coef,poly):
     """Computes the statistical moments and the Sobol indices"""
 
-    mean = coef[0]
+    S,ST = [[],[]]
+    expo = poly.expo
+    dim = expo.shape[0]
+    coef = np.array(coef)
+    nbrPoly = poly[:].shape[0]
     var = np.sum(coef[1:]**2,axis=0)
 
-    if sobol:
+    # Computes the first and total Sobol indices
 
-        S,ST = [[],[]]
-        expo = poly.expo
-        dim = expo.shape[0]
-        nbrPoly = poly[:].shape[0]
+    for i in range(dim):
 
-        # Computes the first and total Sobol indices
+        order = np.sum(expo,axis=0)
+        pIdx = np.array([poly[i].nonzero()[-1][-1] for i in range(nbrPoly)])
 
-        for i in range(dim):
-    
-            order = np.sum(expo,axis=0)
-            pIdx = np.array([poly[i].nonzero()[-1][-1] for i in range(nbrPoly)])
-    
-            sIdx = np.where(expo[i]-order==0)[0].flatten()[1:]
-            index = np.where(np.in1d(pIdx,sIdx))[0]
-            S.append(np.sum(coef[index]**2,axis=0)/var)
-    
-            sIdx = np.where(expo[i])[0].flatten()
-            index = np.where(np.in1d(pIdx,sIdx))[0]
-            ST.append(np.sum(coef[index]**2,axis=0)/var)
+        sIdx = np.where(expo[i]-order==0)[0].flatten()[1:]
+        index = np.where(np.in1d(pIdx,sIdx))[0]
+        S.append(np.sum(coef[index]**2,axis=0)/var)
 
-        S = np.array(S)
-        ST = np.array(ST)
-        sobol = dict(zip(['S','ST'],[S,ST]))
+        sIdx = np.where(expo[i])[0].flatten()
+        index = np.where(np.in1d(pIdx,sIdx))[0]
+        ST.append(np.sum(coef[index]**2,axis=0)/var)
 
-        return mean,var,sobol
-    else: return mean,var
+    S = np.array(S)
+    ST = np.array(ST)
+    sobol = dict(zip(['S','ST'],[S,ST]))
+    return sobol
 
 # %% Analysis of Covariance
     

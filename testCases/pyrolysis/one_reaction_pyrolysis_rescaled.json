@@ -40,7 +40,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "n_iterations": 1e6, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 

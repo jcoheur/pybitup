@@ -111,13 +111,17 @@ def nulquad(point,poly):
         z = np.append(1,z)
         z /= np.linalg.norm(z)
         return z
+    
+    # Reconditioning of Vandermonde
 
-    V = poly.vander(point)
+    V = poly.eval(point)
+    for i in range(2): V,R = np.linalg.qr(V)
+    A = V.T
+    
     nbrPts = V.shape[0]
     index = np.arange(nbrPts)
     nbrIter = nbrPts-V.shape[1]
     weight = np.ones(nbrPts)/nbrPts
-    A = V.T
 
     for i in range(nbrIter):
 
@@ -137,6 +141,7 @@ def nulquad(point,poly):
         A = np.delete(A,idx,axis=1)
         index = np.delete(index,idx)
         
+    weight/np.sum(weight)
     return index,weight
 
 # %% Revised Simplex
@@ -145,12 +150,14 @@ def simquad(point,poly):
     """Computes a positive quadrature rule using the revised simplex"""
 
     printer(0,'Selecting points ...')
-
+    
+    # Reconditioning of Vandermonde
+    
+    V = poly.eval(point)
+    for i in range(2): V,R = np.linalg.qr(V)
+    m = np.sum(V,axis=0)/V.shape[0]
+    c = np.ones(V.shape[0])
     tol = 1e-20
-    V = poly.vander(point)
-    nbrPts = V.shape[0]
-    c = np.ones(nbrPts)
-    m = np.sum(V,axis=0)/nbrPts
 
     # Performs the revised simplex
 
@@ -159,4 +166,5 @@ def simquad(point,poly):
     weight = x['x'][index]
 
     printer(1,'Selecting points 100 %')
-    return index,weight
+    if x['success']: return index,weight
+    else: raise Exception('Simplex failure')

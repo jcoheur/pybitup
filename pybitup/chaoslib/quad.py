@@ -82,20 +82,20 @@ def fekquad(point,poly):
     printer(0,'Selecting points ...')
     nbrPoly = poly[:].shape[0]
 
-    # Reconditioning of V and QR factorization
+    # Reconditioning of the Vandermonde matrix
 
-    V = poly.vander(point)
+    V = poly.eval(point)
     for i in range(2): V,R = np.linalg.qr(V)
     m = np.sum(V,axis=0)/V.shape[0]
 
+    # Computes the weights and Fekete points
+    
     Q,R,P = linalg.qr(V.T,pivoting=1,mode='economic')
     R = R[:,:nbrPoly]
     q = np.dot(Q.T,m)
 
-    # Computes the weights and Fekete points
-
-    index = P[:nbrPoly]
     weight = linalg.solve_triangular(R,q)
+    index = P[:nbrPoly]
 
     printer(1,'Selecting points 100 %')
     return index,weight
@@ -112,16 +112,14 @@ def nulquad(point,poly):
         z /= np.linalg.norm(z)
         return z
     
-    # Reconditioning of Vandermonde
+    # Initialization and Vandermonde matrix
 
     V = poly.eval(point)
-    for i in range(2): V,R = np.linalg.qr(V)
-    A = V.T
-    
     nbrPts = V.shape[0]
     index = np.arange(nbrPts)
     nbrIter = nbrPts-V.shape[1]
     weight = np.ones(nbrPts)/nbrPts
+    A = V.T
 
     for i in range(nbrIter):
 
@@ -151,10 +149,9 @@ def simquad(point,poly):
 
     printer(0,'Selecting points ...')
     
-    # Reconditioning of Vandermonde
+    # Initialization and Vandermonde matrix
     
     V = poly.eval(point)
-    for i in range(2): V,R = np.linalg.qr(V)
     m = np.sum(V,axis=0)/V.shape[0]
     c = np.ones(V.shape[0])
     tol = 1e-20

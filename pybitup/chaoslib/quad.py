@@ -104,15 +104,6 @@ def fekquad(point,poly):
 
 def nulquad(point,poly):
     """Computes a positive quadrature rule by iterative node removal"""
-    
-    def null(A):
-    
-        z = np.linalg.lstsq(A[:,1:],-A[:,0],rcond=None)[0]
-        z = np.append(1,z)
-        z /= np.linalg.norm(z)
-        return z
-    
-    # Initialization and Vandermonde matrix
 
     V = poly.eval(point)
     nbrPts = V.shape[0]
@@ -120,14 +111,18 @@ def nulquad(point,poly):
     nbrIter = nbrPts-V.shape[1]
     weight = np.ones(nbrPts)/nbrPts
     A = V.T
+    
+    # Computes the null space of the Vandermonde matrix
 
     for i in range(nbrIter):
 
         timer(i+1,nbrIter,'Selecting points ')
+        if i==0: Q,R,P = linalg.qr(V,mode='full',pivoting=1)
+        else: Q,R = linalg.qr_delete(Q,R,idx,overwrite_qr=1,check_finite=0)
+        z = Q[:,-1]
 
         # Selects the coefficient to cancel a weight
 
-        z = null(A)
         wz = weight/z
         idx = np.argmin(np.abs(wz))
         alp = wz[idx]

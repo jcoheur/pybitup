@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import linalg
 from scipy import stats
-#from scipy import special
+from scipy import special
 from scipy.integrate import simps
 
 import matplotlib.pyplot as plt

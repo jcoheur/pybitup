@@ -1,7 +1,7 @@
 from scipy import sparse,linalg
 from .math import indextens
 from .tools import printer
-from pybitup.distributions import Joint
+from .proba import Joint
 import numpy as np
 
 # %% Polynomial Basis
@@ -21,19 +21,9 @@ class Polynomial:
     def __getitem__(self,i): return self.coef[i]
     def __setitem__(self,i,coef): self.coef[i] = coef
 
-    # Evaluates the k-th polynomial at the points
+    # Computes the Vandermonde matrix by evaluating the basis at the points
 
-    def eval(self,k,point):
-
-        resp = 1
-        point = np.reshape(np.transpose(point),(self.dim,-1)).T
-        for i in range(self.dim): resp *= np.power(point[:,i,None],self.expo[i])
-        resp = self.coef[k].dot(resp.T).flatten()
-        return resp
-
-    # Computes the Vandermonde-like matrix of the basis
-
-    def vander(self,point):
+    def eval(self,point):
 
         V = 1
         point = np.reshape(np.transpose(point),(self.dim,-1)).T
@@ -88,10 +78,11 @@ def gschmidt(order,point,weight=0,trunc=1):
 
     # Computes modified Gram-Schmidt algorithm
 
-    V = base.vander(point)
+    V = base.eval(point)
     V = np.transpose(np.sqrt(weight)*V.T)
     R = np.linalg.qr(V,'r')
 
+    if V.shape[0]<nbrPoly: raise Exception('Underdetermined system')
     coef = linalg.lapack.dtrtri(R)[0].T
     coef[0,0] = 1
 

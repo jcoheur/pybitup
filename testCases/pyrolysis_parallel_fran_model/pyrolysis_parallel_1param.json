@@ -32,12 +32,18 @@
             }
         },
 	    "Algorithm": {
-            "name": "Ito-SDE", 
-            "Ito-SDE" : {
-                "h" : 0.1, 
-                "f0" : 4
+            "name": "ISDE", // Ito-SDE
+            "ISDE" : {
+                "h" : 0.1, // 0.8
+                "f0" : 4.0 // 0.06 
             },
-		    "n_iterations": 2e4,
+            "covariance" : { 
+                "value": "Identity", 
+                "update_it": 500, 
+                "starting_it": 500
+            },
+            "gradient": "Numerical",
+		    "n_iterations": 1e3,
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 

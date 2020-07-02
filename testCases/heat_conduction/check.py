@@ -63,3 +63,5 @@ plt.plot(point[:,0],point[:,1],".C0")
 plt.xlabel("$O$")
 plt.ylabel("$h$")
 plt.grid()
+
+plt.show()

@@ -4,11 +4,11 @@ import numpy as np
 # %% Spectral Projection
 
 def spectral(resp,poly,point,weight=0):
-    """Computes the expansion coefficients with spectral projection"""
+    """Computes the expansion coefficients with a spectral projection"""
 
     printer(0,'Computing coefficients ...')
 
-    V = poly.vander(point)
+    V = poly.eval(point)
     if not np.any(weight): weight = 1/V.shape[0]
 
     # Computes the polynomial chaos coefficients
@@ -38,6 +38,35 @@ def colloc(resp,poly,point,weight=0):
     
     printer(1,'Computing coefficients 100 %')
     return coef
+
+# %% Least Angle Regression
+
+def lars(resp,poly,point,weight=0,it=np.inf):
+    """Computes the expansion coefficients with a least angle regression"""
+
+    resp = np.array(resp)
+    shape = (poly[:].shape[0],)+resp.shape[1:]
+    resp = resp.reshape(resp.shape[0],-1)
+    nbrResp = resp.shape[1]
+    V = poly.eval(point)
+
+    # Standardizes V and calls the lars algorithm
+
+    V1  = V[:,1:]
+    coef = np.zeros((V.shape[1],nbrResp))
+    stat = [np.mean(V1,axis=0),np.std(V1,axis=0,ddof=1)]
+    V1 = (V1-stat[0])/stat[1]
+
+    for i in range(nbrResp):
+
+        coef[:,i] = angle(V1,resp[:,i],stat,it)
+        index = np.argwhere(coef[:,i]!=0).flatten()
+        coef[index,i] = square(V[:,index],resp[:,i],weight)
+        timer(i+1,nbrResp,'Computing coefficients ')
+
+    index = np.argwhere(np.any(coef,axis=1)).flatten()
+    coef = coef.reshape(shape)
+    return coef,index
 
 # %% Least Absolute Shrinkage Operator
 

@@ -45,17 +45,17 @@ def transfo(invcdf,order,dist):
 
     for i in range(nbrPoly):
 
-        fun = lambda x: invcdf(x)*poly.eval(i,dist.invcdf(x))
+        fun = lambda x: invcdf(x)*poly.eval(dist.invcdf(x))[:,i]
         coef[i] = integrate.quad(fun,0,1)[0]
 
     expan = Expansion(coef,poly)
     transfo = lambda x: expan.eval(x)
     return transfo
 
-# %% Statistical Moments
+# %% Analysis of Variance
 
 def anova(coef,poly):
-    """Computes the statistical moments and the Sobol indices"""
+    """Computes the first and total order Sobol sensitivity indices"""
 
     S,ST = [[],[]]
     expo = poly.expo
@@ -69,7 +69,7 @@ def anova(coef,poly):
     for i in range(dim):
 
         order = np.sum(expo,axis=0)
-        pIdx = np.array([poly[i].nonzero()[-1][-1] for i in range(nbrPoly)])
+        pIdx = np.array([poly[j].nonzero()[-1][-1] for j in range(nbrPoly)])
 
         sIdx = np.where(expo[i]-order==0)[0].flatten()[1:]
         index = np.where(np.in1d(pIdx,sIdx))[0]
@@ -126,7 +126,6 @@ def ancova(model,point,weight=0):
     
     index,SS,ST = combine(index,SS,ST)
     ancova = dict(zip(['SS','SC','ST'],[SS,ST-SS,ST]))
-    
     printer(1,'Computing ancova 100 %')
     return index,ancova
 
@@ -143,7 +142,7 @@ def combine(index,SS,ST):
     minIdx = np.min(index,axis=1)
     idx = np.argwhere(minIdx).flatten()
     index[idx] = (index[idx].T/minIdx[idx]).T
-    index = index.astype(int)
+    index = np.rint(index).astype(int)
     
     index,old = np.unique(index,return_inverse=1,axis=0)
     shape = (index.shape[0],)+np.array(SS).shape[1:]

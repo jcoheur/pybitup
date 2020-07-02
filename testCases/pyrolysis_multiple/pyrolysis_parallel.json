@@ -57,6 +57,7 @@
         "Model": [ 
             {
                 "model_id": "6.1_K_per_Min",
+                "input_file": "reaction_scheme.json", 
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0

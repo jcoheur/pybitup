@@ -5,5 +5,5 @@ import pybitup.distributions
 import pybitup.solve_problem
 import pybitup.bayesian_inference
 
-import pybitup.chaoslib
+import pybitup.pce
 import pybitup.polynomial_chaos

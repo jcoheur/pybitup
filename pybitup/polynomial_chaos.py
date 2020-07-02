@@ -1,5 +1,5 @@
 from pybitup.distributions import *
-import pybitup.chaoslib as cl
+import pybitup.pce as pce
 from jsmin import jsmin
 from json import loads
 import numpy as np
@@ -12,7 +12,7 @@ class PCE:
     """Wrapper for chaoslib, the class takes a json file containing the polynomial expansion parameters"""
 
     def __init__(self,parameters): self.param = parameters
-    def save_pickle(self,item,name): cl.save(item,name)
+    def save_pickle(self,item,name): pce.save(item,name)
 
     # %% Computes the polynomials
 
@@ -22,7 +22,7 @@ class PCE:
         order = self.param["polynomials"]["order"]
         trunc = self.param["polynomials"]["hyperbolic_truncation"]
 
-        if method=="gram_schmidt": return cl.gschmidt(order,point,weight,trunc)
+        if method=="gram_schmidt": return pce.gschmidt(order,point,weight,trunc)
         elif method=="recurrence":
 
             dist = []
@@ -39,7 +39,7 @@ class PCE:
                 elif name=="lognorm": dist.append(Lognormal(param,0))
                 else: raise Exception("compute_polynomials: unknown law")
                 
-            return cl.polyrecur(order,dist,trunc)
+            return pce.polyrecur(order,dist,trunc)
 
         else: raise Exception("compute_polynomials: unknown method")
 
@@ -53,16 +53,16 @@ class PCE:
 
             it = self.param["coefficients"]["iterations"]
             if it=="unlimited": it = np.inf
-            return cl.lars(resp,poly,point,weight,it)
+            return pce.lars(resp,poly,point,weight,it)
         
         elif method=="lasso":
 
             it = self.param["coefficients"]["iterations"]
             if it=="unlimited": it = np.inf
-            return cl.lasso(resp,poly,point,weight,it)
+            return pce.lasso(resp,poly,point,weight,it)
 
-        elif method=="spectral": return cl.spectral(resp,poly,point,weight)
-        elif method=="colloc": return cl.colloc(resp,poly,point,weight)
+        elif method=="spectral": return pce.spectral(resp,poly,point,weight)
+        elif method=="colloc": return pce.colloc(resp,poly,point,weight)
         else: raise Exception("compute_coefficients: unknown method")
 
     # %% Computes the quadrature
@@ -92,16 +92,16 @@ class PCE:
                 elif name=="lognorm": dist.append(Lognormal(param,0))
                 else: raise Exception("compute_quadrature: unknown law")
 
-            point,weight = cl.tensquad(order,dist)
+            point,weight = pce.tensquad(order,dist)
             
         # Weakly admissible mesh
 
         else:
             method = self.param["quadrature"]["method"]
         
-            if method=="fekete": index,weight = cl.fekquad(point,poly)
-            elif method=="simplex": index,weight = cl.simquad(point,poly)
-            elif method=="iterative": index,weight = cl.nulquad(point,poly)
+            if method=="fekete": index,weight = pce.fekquad(point,poly)
+            elif method=="simplex": index,weight = pce.simquad(point,poly)
+            elif method=="iterative": index,weight = pce.nulquad(point,poly)
             else: raise Exception("compute_quadrature: unknown method")
 
             poly.trunc(self.param["quadrature"]["order_truncation"])
@@ -158,5 +158,5 @@ class PCE:
 
         # Computes the pce model
 
-        model = cl.Expansion(coef,poly)
+        model = pce.Expansion(coef,poly)
         return poly,coef,model

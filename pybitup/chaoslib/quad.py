@@ -110,6 +110,7 @@ def nulquad(point,poly):
     index = np.arange(nbrPts)
     nbrIter = nbrPts-V.shape[1]
     weight = np.ones(nbrPts)/nbrPts
+    for i in range(2): V,R = np.linalg.qr(V)
     A = V.T
     
     # Computes the null space of the Vandermonde matrix

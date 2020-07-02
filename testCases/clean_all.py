@@ -8,7 +8,7 @@ list_test_cases = [ 'heat_capacity',
                     'pyrolysis_parallel_fran_model', 
                     'sampling', 
                     'spring_model',
-                    'pyrolysis_multiple',]
+                    'pyrolysis_multiple']
 
 for test_name in list_test_cases: 
     os.chdir(test_name)

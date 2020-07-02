@@ -4,7 +4,7 @@ sys.path.append('../../')
 import heat_conduction
 import pybitup
 
-case_name = "heat_conduction"
+case_name = "heat_conduction_3"
 input_file_name = "{}.json".format(case_name) 
 
 heat_conduction_model = {}

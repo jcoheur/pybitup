@@ -51,6 +51,33 @@
             "DistributionSupport" : [[-20, -18], [0.0019, 0.00204]]
         }
 	}, 
+	
+    "PostProcess": { 
+	    "Data": { 
+		    "display": "yes", 
+		    "num_plot": [1]
+		},
+	    "InitialGuess": {
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+		},
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 10
+        },
+        "Propagation": {
+		    "display": "yes",
+		    "shaded_area": "yes",
+		    "burnin": 0,
+		    "num_plot": 1
+		}
+    },
     
     "Propagation": {
         "Model": [
@@ -89,32 +116,5 @@
                 "sample_concurrency_evaluation" : 1
             }
         }
-    },
-
-    "PostProcess": { 
-	    "Data": { 
-		    "display": "yes", 
-		    "num_plot": [1]
-		},
-	    "InitialGuess": {
-		    "display": "yes",
-		    "num_plot": 1
-		},
-	    "MarkovChain": {
-		    "display": "yes",
-		    "thinning": 1
-		},
-        "Posterior": {
-            "display": "yes", 
-            "distribution": "marginal", // marginal, bivariate
-            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
-            "burnin": 10
-        },
-        "Propagation": {
-		    "display": "yes",
-		    "shaded_area": "yes",
-		    "burnin": 0,
-		    "num_plot": 1
-		}
     }
 }

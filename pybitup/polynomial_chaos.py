@@ -49,11 +49,17 @@ class PCE:
 
         method = self.param["coefficients"]["method"]
 
-        if method=="lars" or method=="lars_full":
+        if method=="lars":
 
             it = self.param["coefficients"]["iterations"]
             if it=="unlimited": it = np.inf
             return cl.lars(resp,poly,point,weight,it)
+        
+        elif method=="lasso":
+
+            it = self.param["coefficients"]["iterations"]
+            if it=="unlimited": it = np.inf
+            return cl.lasso(resp,poly,point,weight,it)
 
         elif method=="spectral": return cl.spectral(resp,poly,point,weight)
         elif method=="colloc": return cl.colloc(resp,poly,point,weight)
@@ -149,8 +155,6 @@ class PCE:
             coef = coef[0]
             poly.clean(index)
             coef = coef[index]
-
-        if self.param["coefficients"]["method"]=="lars_full": coef = cl.colloc(resp,poly,point)
 
         # Computes the pce model
 

@@ -1,7 +1,7 @@
 from scipy import sparse,linalg
 from .math import indextens
 from .tools import printer
-from .proba import Joint
+from pybitup.distributions import Joint
 import numpy as np
 
 # %% Polynomial Basis

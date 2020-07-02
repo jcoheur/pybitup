@@ -1,7 +1,7 @@
 from .math import halton,sobol,rseq
 from scipy import optimize,linalg
 from .tools import printer,timer
-from .proba import Joint
+from pybitup.distributions import Joint
 import numpy as np
 
 # %% Quasi-Monte Carlo

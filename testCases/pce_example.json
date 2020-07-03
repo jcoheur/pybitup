@@ -30,7 +30,7 @@
 
         "coefficients":{                                                    // Coefficients Method Parameters
             
-            "method": "lars_full",                                          // "spectral","colloc","lars" or "lars_full"
+            "method": "lars",                                               // "spectral","colloc","lars" or "larsso"
             "iterations": 10                                                // must be integer > 0 and can be "unlimited"
         }
     }

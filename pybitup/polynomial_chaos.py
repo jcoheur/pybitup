@@ -130,17 +130,23 @@ class PCE:
 
         # Stores the points and eventual weights
 
-        pointFile = self.param["polynomials"]["point_coordinates"]
+        try:
+            pointFile = self.param["polynomials"]["point_coordinates"]
+            if pointFile=="None": point = None
+            elif os.path.splitext(pointFile)[1]==".npy": point = np.load(pointFile)
+            elif os.path.splitext(pointFile)[1]==".csv": point = np.loadtxt(pointFile,delimiter=",")
+            else: raise Exception("point_coordinates file not found")
+            
+        except: point = None
 
-        if os.path.splitext(pointFile)[1]==".npy": point = np.load(pointFile)
-        elif os.path.splitext(pointFile)[1]==".csv": point = np.loadtxt(pointFile,delimiter=",")
-        else: raise Exception("point_coordinates file not found")
-
-        weightFile = self.param["polynomials"]["point_weights"]
-
-        if os.path.splitext(weightFile)[1]==".npy": weight = np.load(weightFile)
-        elif os.path.splitext(weightFile)[1]==".csv": weight = np.loadtxt(weightFile,delimiter=",")
-        else: weight = None
+        try:
+            weightFile = self.param["polynomials"]["point_weights"]
+            if weightFile=="None": weight = None
+            if os.path.splitext(weightFile)[1]==".npy": weight = np.load(weightFile)
+            elif os.path.splitext(weightFile)[1]==".csv": weight = np.loadtxt(weightFile,delimiter=",")
+            else: raise Exception("point_weights file not found")
+            
+        except: weight = None
 
         # Computes the pce elements
 

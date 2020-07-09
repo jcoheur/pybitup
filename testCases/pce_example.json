@@ -5,7 +5,7 @@
         "polynomials":{                                                     // Polynomials Parameters
 
             "method": "gram_schmidt",                                       // "gram_schmidt" or "recurrence"
-            "point_coordinates": "output/mcmc_chain.csv",                   // "file.csv" or "file.npy"
+            "point_coordinates": "output/mcmc_chain.csv",                   // "file.csv", "file.npy" or "None"
             "hyperbolic_truncation": 0.75,                                  // must be > 0
             "point_weights": "None",                                        // "file.csv", "file.npy" or "None"
             "order": 4,                                                     // must be integer > 0

@@ -152,5 +152,4 @@ class PCE:
         # Computes the pce model
 
         model = pce.Expansion(coef,poly)
-        print(resp)
         return poly,coef,model

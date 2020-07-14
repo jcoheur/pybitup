@@ -329,8 +329,6 @@ class Model:
 
                 self.param = vec_param
 
-                print(self.unpar_name)
-
             else: # All parameters are uncertain
                 self.param = var_param
 

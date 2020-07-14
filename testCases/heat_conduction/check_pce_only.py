@@ -34,3 +34,6 @@ plt.legend(prop={'size':16})
 plt.ylabel("Variance")
 plt.xlabel("Step")
 plt.grid()
+
+
+plt.show()

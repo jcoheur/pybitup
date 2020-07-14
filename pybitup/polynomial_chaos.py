@@ -11,53 +11,54 @@ import sys
 class PCE:
     """Wrapper for chaoslib, the class takes a json file containing the polynomial expansion parameters"""
 
-    def __init__(self,parameters): self.param = parameters
+    def __init__(self,input_pce,parameters): 
+        self.input_pce = input_pce
+        self.param = parameters
+        self.dist = []
+
+        for param_name in self.param.keys():
+
+            if (self.param[param_name].get("distribution") is not None):
+                name = self.param[param_name]["distribution"]
+                param = self.param[param_name]["hyperparameters"]
+                
+                if name=="uniform": self.dist.append(Uniform(param,0))
+                elif name=="normal": self.dist.append(Gaussian(param,0))
+                elif name=="gamma": self.dist.append(Gamma(param,0))
+                elif name=="beta": self.dist.append(Beta(param,0))
+                elif name=="expo": self.dist.append(Exponential(param,0))
+                elif name=="lognorm": self.dist.append(Lognormal(param,0))
+                else: raise Exception("compute_quadrature or compute_polynomials: unknown law")
+
     def save_pickle(self,item,name): pce.save(item,name)
 
     # %% Computes the polynomials
 
     def compute_polynomials(self,point,weight):
 
-        method = self.param["polynomials"]["method"]
-        order = self.param["polynomials"]["order"]
-        trunc = self.param["polynomials"]["hyperbolic_truncation"]
+        method = self.input_pce["polynomials"]["method"]
+        order = self.input_pce["polynomials"]["order"]
+        trunc = self.input_pce["polynomials"]["hyperbolic_truncation"]
 
         if method=="gram_schmidt": return pce.gschmidt(order,point,weight,trunc)
-        elif method=="recurrence":
-
-            dist = []
-            for law in self.param["polynomials"]["parameter_laws"]:
-
-                name = list(law.keys())[0]
-                param = law[name]
-
-                if name=="uniform": dist.append(Uniform(param,0))
-                elif name=="normal": dist.append(Gaussian(param,0))
-                elif name=="gamma": dist.append(Gamma(param,0))
-                elif name=="beta": dist.append(Beta(param,0))
-                elif name=="expo": dist.append(Exponential(param,0))
-                elif name=="lognorm": dist.append(Lognormal(param,0))
-                else: raise Exception("compute_polynomials: unknown law")
-                
-            return pce.polyrecur(order,dist,trunc)
-
+        elif method=="recurrence": return pce.polyrecur(order,self.dist,trunc)
         else: raise Exception("compute_polynomials: unknown method")
 
     # %% Selects the coefficients
 
     def compute_coefficients(self,resp,poly,point,weight):
 
-        method = self.param["coefficients"]["method"]
+        method = self.input_pce["coefficients"]["method"]
 
         if method=="lars":
 
-            it = self.param["coefficients"]["iterations"]
+            it = self.input_pce["coefficients"]["iterations"]
             if it=="unlimited": it = np.inf
             return pce.lars(resp,poly,point,weight,it)
         
         elif method=="lasso":
 
-            it = self.param["coefficients"]["iterations"]
+            it = self.input_pce["coefficients"]["iterations"]
             if it=="unlimited": it = np.inf
             return pce.lasso(resp,poly,point,weight,it)
 
@@ -71,40 +72,26 @@ class PCE:
 
         # Monte Carlo
 
-        if self.param["quadrature"]["method"]=="monte_carlo": weight = None
+        if self.input_pce["quadrature"]["method"]=="monte_carlo": weight = None
 
         # Recurrence coefficients
 
-        elif self.param["quadrature"]["method"]=="recurrence":
+        elif self.input_pce["quadrature"]["method"]=="recurrence":
 
-            dist = []
-            order = self.param["quadrature"]["order_quadrature"]
-            for law in self.param["polynomials"]["parameter_laws"]:
-
-                name = list(law.keys())[0]
-                param = law[name]
-    
-                if name=="uniform": dist.append(Uniform(param,0))
-                elif name=="normal": dist.append(Gaussian(param,0))
-                elif name=="gamma": dist.append(Gamma(param,0))
-                elif name=="beta": dist.append(Beta(param,0))
-                elif name=="expo": dist.append(Exponential(param,0))
-                elif name=="lognorm": dist.append(Lognormal(param,0))
-                else: raise Exception("compute_quadrature: unknown law")
-
-            point,weight = pce.tensquad(order,dist)
+            order = self.input_pce["quadrature"]["order_quadrature"]
+            point,weight = pce.tensquad(order,self.dist)
             
         # Weakly admissible mesh
 
         else:
-            method = self.param["quadrature"]["method"]
+            method = self.input_pce["quadrature"]["method"]
         
             if method=="fekete": index,weight = pce.fekquad(point,poly)
             elif method=="simplex": index,weight = pce.simquad(point,poly)
             elif method=="iterative": index,weight = pce.nulquad(point,poly)
             else: raise Exception("compute_quadrature: unknown method")
 
-            poly.trunc(self.param["quadrature"]["order_truncation"])
+            poly.trunc(self.input_pce["quadrature"]["order_truncation"])
             point = point[index]
 
         return point,weight
@@ -165,4 +152,5 @@ class PCE:
         # Computes the pce model
 
         model = pce.Expansion(coef,poly)
+        print(resp)
         return poly,coef,model

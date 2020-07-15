@@ -34,27 +34,27 @@ mean = np.mean(resp,axis=0)
 meanMod = np.mean(respMod,axis=0)
 varMod = np.var(respMod,axis=0)
 
-error = abs(np.divide(resp-respMod,resp))
-error = 100*np.mean(error,axis=0)
+x = [10,14,18,22,26,30,34,38,42,46,50,54,58,62,66]
+xMod = np.linspace(0,70,71)
 
 # %% Figures
 
 plt.figure(1)
 plt.rcParams.update({"font.size":16})
-plt.plot(meanMod,'C0',label="PCE")
-plt.plot(mean,'C1--',label="MC")
+plt.plot(xMod,meanMod,'C0',label="PCE")
+plt.plot(x,mean,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Mean")
-plt.xlabel("Step")
+plt.xlabel("x")
 plt.grid()
 
 plt.figure(2)
 plt.rcParams.update({"font.size":16})
-plt.plot(varMod,'C0',label="PCE")
-plt.plot(var,'C1--',label="MC")
+plt.plot(xMod,varMod,'C0',label="PCE")
+plt.plot(x,var,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Variance")
-plt.xlabel("Step")
+plt.xlabel("x")
 plt.grid()
 
 plt.figure(3)
@@ -63,3 +63,5 @@ plt.plot(point[:,0],point[:,1],".C0")
 plt.xlabel("$O$")
 plt.ylabel("$h$")
 plt.grid()
+
+plt.show()

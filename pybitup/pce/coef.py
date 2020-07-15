@@ -47,25 +47,27 @@ def lars(resp,poly,point,weight=0,it=np.inf):
     resp = np.array(resp)
     shape = (poly[:].shape[0],)+resp.shape[1:]
     resp = resp.reshape(resp.shape[0],-1)
-    nbrResp = resp.shape[1]
     V = poly.eval(point)
+    end = resp.shape[1]
 
     # Standardizes V and calls the lars algorithm
 
-    V1  = V[:,1:]
-    coef = np.zeros((V.shape[1],nbrResp))
+    V1  = V[:,1:].copy()
+    coef = np.zeros((V.shape[1],end))
     stat = [np.mean(V1,axis=0),np.std(V1,axis=0,ddof=1)]
     V1 = (V1-stat[0])/stat[1]
 
-    for i in range(nbrResp):
+    for i in range(end):
 
         coef[:,i] = angle(V1,resp[:,i],stat,it)
         index = np.argwhere(coef[:,i]!=0).flatten()
         coef[index,i] = square(V[:,index],resp[:,i],weight)
-        timer(i+1,nbrResp,'Computing coefficients ')
+        timer(i,end,'Computing coefficients ')
 
     index = np.argwhere(np.any(coef,axis=1)).flatten()
     coef = coef.reshape(shape)
+    
+    printer(1,'Computing coefficients 100 %')
     return coef,index
 
 # %% Least Absolute Shrinkage Operator
@@ -76,25 +78,27 @@ def lasso(resp,poly,point,weight=0,it=np.inf):
     resp = np.array(resp)
     shape = (poly[:].shape[0],)+resp.shape[1:]
     resp = resp.reshape(resp.shape[0],-1)
-    nbrResp = resp.shape[1]
     V = poly.eval(point)
+    end = resp.shape[1]
 
     # Standardizes V and calls the lasso algorithm
 
-    V1  = V[:,1:]
-    coef = np.zeros((V.shape[1],nbrResp))
+    V1  = V[:,1:].copy()
+    coef = np.zeros((V.shape[1],end))
     stat = [np.mean(V1,axis=0),np.std(V1,axis=0,ddof=1)]
     V1 = (V1-stat[0])/stat[1]
 
-    for i in range(nbrResp):
+    for i in range(end):
 
         coef[:,i] = shrink(V1,resp[:,i],stat,it)
         index = np.argwhere(coef[:,i]!=0).flatten()
         coef[index,i] = square(V[:,index],resp[:,i],weight)
-        timer(i+1,nbrResp,'Computing coefficients ')
+        timer(i,end,'Computing coefficients ')
 
     index = np.argwhere(np.any(coef,axis=1)).flatten()
     coef = coef.reshape(shape)
+    
+    printer(1,'Computing coefficients 100 %')
     return coef,index
 
 # %% Least Squares Regression

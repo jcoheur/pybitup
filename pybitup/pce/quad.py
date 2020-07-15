@@ -79,13 +79,13 @@ def tensquad(order,dist):
 def fekquad(point,poly):
     """Selects the approximate Fekete points and computes their weights"""
 
-    printer(0,'Selecting points ...')
+    printer(0,'Computing quadrature ...')
     nbrPoly = poly[:].shape[0]
 
     # Reconditioning of the Vandermonde matrix
 
     V = poly.eval(point)
-    for i in range(2): V,R = np.linalg.qr(V)
+    V,R = np.linalg.qr(V)
     m = np.sum(V,axis=0)/V.shape[0]
 
     # Computes the weights and Fekete points
@@ -97,29 +97,28 @@ def fekquad(point,poly):
     weight = linalg.solve_triangular(R,q)
     index = P[:nbrPoly]
 
-    printer(1,'Selecting points 100 %')
+    printer(1,'Computing quadrature 100 %')
     return index,weight
 
 # %% Positive Quadrature
 
-def nulquad(point,poly):
-    """Computes a positive quadrature rule by iterative node removal"""
+def nulquad(point,poly,weight=0):
+    """Computes a positive quadrature rule by node removal with QR downgrade"""
 
     V = poly.eval(point)
     nbrPts = V.shape[0]
+    V,R = np.linalg.qr(V)
+    end = nbrPts-V.shape[1]
     index = np.arange(nbrPts)
-    nbrIter = nbrPts-V.shape[1]
-    weight = np.ones(nbrPts)/nbrPts
-    for i in range(2): V,R = np.linalg.qr(V)
-    A = V.T
+    if not np.any(weight): weight = np.ones(nbrPts)/nbrPts
     
-    # Computes the null space of the Vandermonde matrix
+    # Iteratively updates the quadrature rule
 
-    for i in range(nbrIter):
+    for i in range(end):
 
-        timer(i+1,nbrIter,'Selecting points ')
-        if i==0: Q,R,P = linalg.qr(V,mode='full',pivoting=1)
-        else: Q,R = linalg.qr_delete(Q,R,idx,overwrite_qr=1,check_finite=0)
+        timer(i,end,'Computing quadrature ')
+        if i!=0: Q,R = linalg.qr_delete(Q,R,idx,overwrite_qr=1,check_finite=0)
+        else: Q,R = linalg.qr(V,mode='full')
         z = Q[:,-1]
 
         # Selects the coefficient to cancel a weight
@@ -131,11 +130,62 @@ def nulquad(point,poly):
         # Updates the weights and the matrix
 
         weight -= alp*z
-        weight = np.delete(weight,idx)
-        A = np.delete(A,idx,axis=1)
         index = np.delete(index,idx)
+        weight = np.delete(weight,idx)
+    
+    printer(1,'Computing quadrature 100 %')
+    return index,weight
+
+# %% Positive Quadrature
+
+def newquad(point,poly,weight=0):
+    """Computes a positive quadrature rule by node removal with Newton-Raphson"""
+    
+    def null(Vt,Jinv,z):
         
-    weight/np.sum(weight)
+        for i in range(50):
+            F = Vt.dot(z)
+            z -= np.dot(Jinv,F)
+            z = z/np.linalg.norm(z)
+            if np.max(np.abs(F))<1e-16: break
+
+        if i==49: return 0
+        else: return z
+        
+    # First null space and initialization
+
+    V = poly.eval(point)
+    nbrPts = V.shape[0]
+    V,R = np.linalg.qr(V)
+    end = nbrPts-V.shape[1]
+    index = np.arange(nbrPts)
+    if not np.any(weight): weight = np.ones(nbrPts)/nbrPts
+    z = np.ones(nbrPts)
+    
+     # Iteratively updates the quadrature rule
+
+    for i in range(end):
+        
+        timer(i,end,'Computing quadrature ')
+
+        z = null(V.T,V,z)
+        if not np.any(z): break
+
+        # Selects the coefficient to cancel a weight
+
+        wz = weight/z
+        idx = np.argmin(np.abs(wz))
+        alp = wz[idx]
+
+        # Updates the weights and the matrices
+
+        weight -= alp*z
+        z = np.delete(z,idx)
+        index = np.delete(index,idx)
+        weight = np.delete(weight,idx)
+        V,R = linalg.qr_delete(V,R,idx,overwrite_qr=1,check_finite=0)
+    
+    printer(1,'Computing quadrature 100 %')
     return index,weight
 
 # %% Revised Simplex
@@ -143,7 +193,7 @@ def nulquad(point,poly):
 def simquad(point,poly):
     """Computes a positive quadrature rule using the revised simplex"""
 
-    printer(0,'Selecting points ...')
+    printer(0,'Computing quadrature ...')
     
     # Initialization and Vandermonde matrix
     
@@ -158,6 +208,6 @@ def simquad(point,poly):
     index = np.argwhere(x['x']>tol).flatten()
     weight = x['x'][index]
 
-    printer(1,'Selecting points 100 %')
+    printer(1,'Computing quadrature 100 %')
     if x['success']: return index,weight
     else: raise Exception('Simplex failure')

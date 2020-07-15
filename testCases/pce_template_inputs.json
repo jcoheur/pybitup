@@ -20,7 +20,7 @@
 
         "quadrature":{                                                      // Coefficients Quadrature Parameters
 
-            "method": "simplex",                                            // "recurrence", "monte_carlo", "fekete", "simplex" or "iterative"
+            "method": "simplex",                                            // "recurrence", "monte_carlo", "fekete", "simplex", "positive_nullspace" or "positive_newton"
             
             "order_truncation": 2,                                          // for weaky admissible meshes, must be integer, generally <= polynomial "order"/2
 

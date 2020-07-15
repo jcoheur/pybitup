@@ -103,7 +103,7 @@
                 
                     "quadrature":{
 
-                        "method": "iterative",
+                        "method": "positive_newton",
                         "order_truncation": 4
                     },
                     "coefficients":{

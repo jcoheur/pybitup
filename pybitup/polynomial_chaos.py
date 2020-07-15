@@ -88,7 +88,8 @@ class PCE:
         
             if method=="fekete": index,weight = pce.fekquad(point,poly)
             elif method=="simplex": index,weight = pce.simquad(point,poly)
-            elif method=="iterative": index,weight = pce.nulquad(point,poly)
+            elif method=="positive_nullspace": index,weight = pce.nulquad(point,poly)
+            elif method=="positive_newton": index,weight = pce.newquad(point,poly)
             else: raise Exception("compute_quadrature: unknown method")
 
             poly.trunc(self.input_pce["quadrature"]["order_truncation"])
@@ -118,7 +119,7 @@ class PCE:
         # Stores the points and eventual weights
 
         try:
-            pointFile = self.param["polynomials"]["point_coordinates"]
+            pointFile = self.input_pce["polynomials"]["point_coordinates"]
             if pointFile=="None": point = None
             elif os.path.splitext(pointFile)[1]==".npy": point = np.load(pointFile)
             elif os.path.splitext(pointFile)[1]==".csv": point = np.loadtxt(pointFile,delimiter=",")
@@ -127,7 +128,7 @@ class PCE:
         except: point = None
 
         try:
-            weightFile = self.param["polynomials"]["point_weights"]
+            weightFile = self.input_pce["polynomials"]["point_weights"]
             if weightFile=="None": weight = None
             if os.path.splitext(weightFile)[1]==".npy": weight = np.load(weightFile)
             elif os.path.splitext(weightFile)[1]==".csv": weight = np.loadtxt(weightFile,delimiter=",")

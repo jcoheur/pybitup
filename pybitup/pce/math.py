@@ -140,6 +140,24 @@ def random(nbrPts,dom,pdf):
     point = point[index]
     return point
 
+# %% Pseudo-Inverse Downgrade
+
+def invdown(A,Ainv,index):
+    """Downgrade the Moore–Penrose inverse of a matrix with for column removal"""
+
+    v1 = A[:,index]
+    v2 = Ainv[index]
+    alp = np.dot(v2,v1)
+    Ainv = np.delete(Ainv,index,axis=0)
+    tol = 1-1e-9
+    
+    if alp<tol: v = np.tensordot(v1/(1-alp),v2,axes=0)
+    else: v = -np.tensordot(v2/np.dot(v2,v2),v2,axes=0)
+    
+    np.fill_diagonal(v,v.diagonal()+1)
+    Ainv = np.dot(Ainv,v)
+    return Ainv
+
 # %% PCA Whitening
 
 class Pca:

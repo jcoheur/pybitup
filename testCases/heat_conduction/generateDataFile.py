@@ -6,9 +6,8 @@ import pandas as pd
 
 
 import heat_conduction
+
 # Create fake data in a tsv (tab-separated values) file 
-
-
 param = [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191]
 x = np.arange(10.0, 70.0, 4.0)
 model_def = heat_conduction.HeatConduction()
@@ -28,7 +27,7 @@ array_std_y *= std_y
 #	rn_data[0,i]=random.gauss(0, std_y)
 #y += rn_data[0,:]
 
-# Experimental data provided (see Smith. Tab. 3.2, aluminium rod)
+# Experimental data provided (see Smith. Tab. 3.2 p. 57, aluminium rod)
 y = [96.14, 80.12, 67.66, 57.96, 50.90, 44.84, 39.75, 36.16, 33.31, 31.15, 29.28, 27.88, 27.18, 26.40, 25.86]
 
 df = pd.DataFrame({'x': x, 'T': y, 'std_T': array_std_y})

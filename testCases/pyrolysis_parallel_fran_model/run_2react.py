@@ -1,3 +1,7 @@
+import sys
+sys.path.append('../../')
+sys.path.append('../')
+
 # Packages for the pyrolysis model
 from pyrolysis_general.src.pyrolysis import PyrolysisParallel 
 

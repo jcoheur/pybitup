@@ -3,6 +3,14 @@ import pathlib
 import shutil
 import glob
 
+# os.chdir("ito_sde/1_param")
+# os.system('clean.py')
+# os.chdir("../../")
+
+# os.chdir("ito_sde/2_param")
+# os.system('clean.py')
+# os.chdir("../../")
+
 
 # Remove the output folder
 path_output = pathlib.Path('output')
@@ -23,5 +31,9 @@ tmp_files = glob.glob('*.tex')
 for tmp_filename in tmp_files: 
     os.remove(tmp_filename)
 
+# Remove the converted data
+
 try: os.remove("point.npz")
+except: pass
+try: os.remove("resp.npz")
 except: pass

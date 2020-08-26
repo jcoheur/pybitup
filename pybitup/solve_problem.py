@@ -85,7 +85,6 @@ class Sampling(SolveProblem):
     def __init__(self, input_file_name): 
 
         SolveProblem.__init__(self, input_file_name)
-
         new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'aux_variables', 'estimated_sigma']
         # Define output file for sampling 
         self.IO_path[new_file_keys[0]] = self.IO_path['out_folder']+"/mcmc_chain.dat"
@@ -306,23 +305,22 @@ class Propagation(SolveProblem):
             n_unpar = len(unpar_inputs)
 
             unpar = {} # Dictionnary containing uncertain parameters and their value
+            unpar_dist = {}
             for name in unpar_inputs.keys():
                 c_unpar_input = unpar_inputs[name]
                 if c_unpar_input["filename"] == "None":
-                    a = 1 # Get from distribution 
+                    # Get the uncertain parameters from 'labelled' distribution 
+                    unpar_dist[name] = {} 
+                    unpar_dist[name]["distribution"]=c_unpar_input['distribution']
+                    unpar_dist[name]["hyperparameters"]=c_unpar_input['hyperparameters']
+
+                    unpar[name] = unpar_dist[name] 
+                       
                 else: # Get the parameter values from the file 
                     reader = pd.read_csv(c_unpar_input["filename"]) 
                     unpar_value = reader.values[:,c_unpar_input["field"]]
 
                     unpar[name] = unpar_value
-
-            if (self.user_inputs["Propagation"]["Model_evaluation"].get("Sample_number") is not None):
-                 # Number of sample is provided in the input file 
-                n_sample_param = self.user_inputs["Propagation"]["Model_evaluation"]["Sample_number"]
-            else:
-                # Default number of sample to propagate
-                n_sample_param = len(unpar[name])
-    
 
 
             # Get the design points
@@ -335,7 +333,7 @@ class Propagation(SolveProblem):
                 c_model = propagation_inputs["Model"][model_num]
 
                 design_point_input = c_model["design_points"]
-                reader = pd.read_csv(design_point_input["filename"])
+                reader = pd.read_csv(design_point_input["filename"],header=None)
             
                 c_design_points = reader.values[:,design_point_input["field"]]
 
@@ -355,167 +353,202 @@ class Propagation(SolveProblem):
                 models[model_id].param_names = c_model['param_names']
                 models[model_id].unpar_name = unpar.keys()
 
+            # Create surrogate
+            # ----------------
+            # Polynomial Chaos Method
 
-            # Run propagation 
-            # ---------------
-            # Evaluate the model at the parameter values
+            for model_id in models.keys():
 
-            c_param = np.zeros(n_unpar)
+                if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="pce":
 
-            if rank==0:
-                
-                # Initialize output files 
-                output_file_model_eval = {}
-                for model_id in models.keys(): 
-                    output_file_model_eval[model_id]=open('output/'+model_id+'_eval.csv','ab')
+                    print("Computing pce of ",model_id)
 
-                # Print current time and start clock count
-                print("Start time {}" .format(time.asctime(time.localtime())))
-                sys.stdout.flush()
-                self.t1 = time.clock()
+                    # Set pce parameters
+                    pce_param = self.user_inputs["Propagation"]["Model"][0]["pce"]
+                    pce = pybitup.polynomial_chaos.PCE(pce_param, unpar_dist)
 
+                    # Compute pce
+                    poly,coef,model = pce.compute_pce(models[model_id])
 
-            if (self.user_inputs["Propagation"]["Model_evaluation"].get("Parallel_evaluation") is not None):
-                mce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["model_concurrency_evaluation"]
-                sce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["sample_concurrency_evaluation"]
-                if mce*sce > size: 
-                    raise ValueError('Ask for {} model concurrency and {} sample concurrency evaluations but only {} processor(s) were provided'.format(mce, sce, size))
-            else: 
-                mce = sce = 1
-
-            # Create the list of model evaluation id per rank 
-            # The ranks fill first from low to higher number 
-            # Initialize 
-            model_rank_list = {} 
-            for i in range(size):
-                 model_rank_list[i] = []
+                    # Save the pce model in output
+                    pce.save_pickle(model,self.IO_path['out_folder']+"/pce_model")
+                    pce.save_pickle(poly,self.IO_path['out_folder']+"/pce_poly")
 
 
-            # Fill the list 
-            for model_num, model_id in enumerate(models.keys()): 
-                model_rank_list[model_num%mce].append(model_id)
+            if (self.user_inputs["Propagation"].get("Propagate") is not None):
 
-            # If concurrent sample evaluation are asked, we divide
-            n_sample_per_proc = int(np.floor(n_sample_param / sce))
-            n_sample_per_rank = {}
-            rank_sample_list = {} # sample range per rank 
+                if (self.user_inputs["Propagation"]["Model_evaluation"].get("Sample_number") is not None):
+                    # Number of sample is provided in the input file 
+                    n_sample_param = self.user_inputs["Propagation"]["Model_evaluation"]["Sample_number"]
+                else:
+                    # Default number of sample to propagate
+                    n_sample_param = len(unpar[name])
 
-            for i in range(sce):
-                for j in range(mce):
-                    model_rank_list[i*mce+j] = model_rank_list[j]
-                    n_sample_per_rank[i*mce + j] = n_sample_per_proc
-                    rank_sample_list[i*mce + j] = [k for k in range(i*n_sample_per_proc, (i+1)*n_sample_per_proc)]
-                    if i == (sce-1): 
-                        n_sample_per_rank[i*mce + j] = n_sample_per_proc + n_sample_param % sce
-                        rank_sample_list[i*mce + j] = [k for k in range(i*n_sample_per_proc, n_sample_param)]
+                # Run propagation
+                # ---------------
+                # Evaluate the model at the parameter values
 
-            if rank == 0: 
-                for n in model_rank_list.keys(): 
-                    print("Proc {} model evaluations: {}; for {} samples in range [{}:{}]".format(n, model_rank_list[n], n_sample_per_rank[n], rank_sample_list[n][0], rank_sample_list[n][-1]))
-                    sys.stdout.flush()             
+                c_param = np.zeros(n_unpar)
 
-            fun_eval = {}
-            data_hist = {}
-            for model_id in model_rank_list[rank]: 
-                fun_eval[model_id] = np.zeros([n_sample_per_rank[rank], n_points[model_id]])
-                data_hist[model_id] = np.zeros([n_sample_per_rank[rank], n_points[model_id]])
+                if rank==0:
+                    
+                    # Initialize output files 
+                    output_file_model_eval = {}
+                    for model_id in models.keys(): 
+                        output_file_model_eval[model_id]=open('output/'+model_id+'_eval.csv','ab')
 
-            # Iterate over all the parameter values 
-            for i, sample_num in enumerate(rank_sample_list[rank]): 
-            #for i in range(n_sample_param): 
+                    # Print current time and start clock count
+                    print("Start time {}" .format(time.asctime(time.localtime())))
+                    sys.stdout.flush()
+                    self.t1 = time.clock()
+
+
+                if (self.user_inputs["Propagation"]["Model_evaluation"].get("Parallel_evaluation") is not None):
+                    mce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["model_concurrency_evaluation"]
+                    sce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["sample_concurrency_evaluation"]
+                    if mce*sce > size: 
+                        raise ValueError('Ask for {} model concurrency and {} sample concurrency evaluations but only {} processor(s) were provided'.format(mce, sce, size))
+                else: 
+                    mce = sce = 1
+
+                # Create the list of model evaluation id per rank 
+                # The ranks fill first from low to higher number 
+                # Initialize 
+                model_rank_list = {} 
+                for i in range(size):
+                    model_rank_list[i] = []
+
+
+                # Fill the list 
+                for model_num, model_id in enumerate(models.keys()): 
+                    model_rank_list[model_num%mce].append(model_id)
+
+                # If concurrent sample evaluation are asked, we divide
+                n_sample_per_proc = int(np.floor(n_sample_param / sce))
+                n_sample_per_rank = {}
+                rank_sample_list = {} # sample range per rank 
+
+                for i in range(sce):
+                    for j in range(mce):
+                        model_rank_list[i*mce+j] = model_rank_list[j]
+                        n_sample_per_rank[i*mce + j] = n_sample_per_proc
+                        rank_sample_list[i*mce + j] = [k for k in range(i*n_sample_per_proc, (i+1)*n_sample_per_proc)]
+                        if i == (sce-1): 
+                            n_sample_per_rank[i*mce + j] = n_sample_per_proc + n_sample_param % sce
+                            rank_sample_list[i*mce + j] = [k for k in range(i*n_sample_per_proc, n_sample_param)]
+
+                if rank == 0: 
+                    for n in model_rank_list.keys(): 
+                        print("Proc {} model evaluations: {}; for {} samples in range [{}:{}]".format(n, model_rank_list[n], n_sample_per_rank[n], rank_sample_list[n][0], rank_sample_list[n][-1]))
+                        sys.stdout.flush()             
+
+                fun_eval = {}
+                data_hist = {}
+                for model_id in model_rank_list[rank]: 
+                    fun_eval[model_id] = np.zeros([n_sample_per_rank[rank], n_points[model_id]])
+                    data_hist[model_id] = np.zeros([n_sample_per_rank[rank], n_points[model_id]])
+
+                # Iterate over all the parameter values 
+                for i, sample_num in enumerate(rank_sample_list[rank]): 
+                #for i in range(n_sample_param): 
+
+                    if rank==0: 
+                        # We estimate time after a hundred iterations
+                        if i == 100:
+                            print("Estimated time: {}".format(time.strftime("%H:%M:%S",
+                                                            time.gmtime((time.clock()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
+                            sys.stdout.flush()
+
+                    # Get the parameter values 
+                    for j, name in enumerate(unpar_inputs.keys()):
+
+                        c_param[j] = unpar[name][sample_num]
+
+                    # Each proc evaluates the models attributed
+                    #model_list_per_rank 
+                    for model_id in model_rank_list[rank]:                 
+                        model_num = model_id_to_num[model_id]
+
+                        # Update model evaluation 
+                        models[model_id].run_model(c_param)
+                        
+                        # response = model.eval(point)
+                        
+                        
+
+                        # Get model evaluations
+                        fun_eval[model_id][i, :] = models[model_id].model_eval 
+                        #fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
+                    
+
+                        c_eval = fun_eval[model_id][i, :]
+                        data_hist[model_id][i, :] = c_eval 
+
+                if rank != 0:
+                    comm.send(fun_eval, dest=0, tag=10)
+                    comm.send(data_hist, dest=0, tag=11)
 
                 if rank==0: 
-                    # We estimate time after a hundred iterations
-                    if i == 100:
-                        print("Estimated time: {}".format(time.strftime("%H:%M:%S",
-                                                        time.gmtime((time.clock()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
-                        sys.stdout.flush()
-
-                # Get the parameter values 
-                for j, name in enumerate(unpar_inputs.keys()):
-
-                    c_param[j] = unpar[name][sample_num]
-
-                # Each proc evaluates the models attributed
-                #model_list_per_rank 
-                for model_id in model_rank_list[rank]:                 
-                    model_num = model_id_to_num[model_id]
-
-                    # Update model evaluation 
-                    models[model_id].run_model(c_param)
-
-                    # Get model evaluations
-                    fun_eval[model_id][i, :] = models[model_id].model_eval 
-                    #fun_eval[model_id][i, :] = self.f_X(c_param, models[model_id], propagation_inputs["Model"][model_num], unpar.keys())
-
-                    c_eval = fun_eval[model_id][i, :]
-                    data_hist[model_id][i, :] = c_eval 
-
-            if rank != 0:
-                comm.send(fun_eval, dest=0, tag=10)
-                comm.send(data_hist, dest=0, tag=11)
-
-            if rank==0: 
-                for rank_rcv in range(1, size):   
-                    fun_eval_other_proc = comm.recv(source=rank_rcv, tag=10)
-                    data_hist_other_proc = comm.recv(source=rank_rcv, tag=11)
-                    for model_id in fun_eval_other_proc.keys():     
-                        if rank_rcv < mce : 
-                            fun_eval[model_id] = fun_eval_other_proc[model_id]
-                            data_hist[model_id] = data_hist_other_proc[model_id]
-                        else: 
-                            fun_eval[model_id] = np.concatenate((fun_eval[model_id], fun_eval_other_proc[model_id]), axis=0)
-                            data_hist[model_id] = np.concatenate((data_hist[model_id], data_hist_other_proc[model_id]), axis=0)
-                           
+                    for rank_rcv in range(1, size):   
+                        fun_eval_other_proc = comm.recv(source=rank_rcv, tag=10)
+                        data_hist_other_proc = comm.recv(source=rank_rcv, tag=11)
+                        for model_id in fun_eval_other_proc.keys():     
+                            if rank_rcv < mce : 
+                                fun_eval[model_id] = fun_eval_other_proc[model_id]
+                                data_hist[model_id] = data_hist_other_proc[model_id]
+                            else: 
+                                fun_eval[model_id] = np.concatenate((fun_eval[model_id], fun_eval_other_proc[model_id]), axis=0)
+                                data_hist[model_id] = np.concatenate((data_hist[model_id], data_hist_other_proc[model_id]), axis=0)
+                            
 
 
-                # Rank 0 will compute the statistics 
-                data_ij_max = {}
-                data_ij_min = {}
-                data_ij_mean = {}
-                data_ij_var = {}
-                for model_id in models.keys(): 
-                    data_ij_max[model_id] = -1e5*np.ones(n_points[model_id])
-                    data_ij_min[model_id] = 1e5*np.ones(n_points[model_id])
-                    data_ij_mean[model_id] = np.zeros(n_points[model_id])
-                    data_ij_var[model_id] = np.zeros(n_points[model_id])
-
-                # Iterate over the propagated sample to compute statistics 
-                for i in range(n_sample_param):
+                    # Rank 0 will compute the statistics 
+                    data_ij_max = {}
+                    data_ij_min = {}
+                    data_ij_mean = {}
+                    data_ij_var = {}
                     for model_id in models.keys(): 
-                        # Write the csv for the function evaluation 
-                        np.savetxt(output_file_model_eval[model_id], np.array([fun_eval[model_id][i,:]]), fmt="%f", delimiter=",")
+                        data_ij_max[model_id] = -1e5*np.ones(n_points[model_id])
+                        data_ij_min[model_id] = 1e5*np.ones(n_points[model_id])
+                        data_ij_mean[model_id] = np.zeros(n_points[model_id])
+                        data_ij_var[model_id] = np.zeros(n_points[model_id])
 
-                        c_eval = fun_eval[model_id][i,:]
-                            # Update bounds
-                        for k in range(n_points[model_id]):
-                            if data_ij_max[model_id][k] < c_eval[k]:
-                                data_ij_max[model_id][k] = c_eval[k]
-                            elif data_ij_min[model_id][k] > c_eval[k]:
-                                data_ij_min[model_id][k] = c_eval[k]
+                    # Iterate over the propagated sample to compute statistics 
+                    for i in range(n_sample_param):
+                        for model_id in models.keys(): 
+                            # Write the csv for the function evaluation 
+                            np.savetxt(output_file_model_eval[model_id], np.array([fun_eval[model_id][i,:]]), fmt="%f", delimiter=",")
 
-                        # Update mean 
-                        data_ij_mean[model_id][:] = data_ij_mean[model_id][:] + c_eval[:]
+                            c_eval = fun_eval[model_id][i,:]
+                                # Update bounds
+                            for k in range(n_points[model_id]):
+                                if data_ij_max[model_id][k] < c_eval[k]:
+                                    data_ij_max[model_id][k] = c_eval[k]
+                                elif data_ij_min[model_id][k] > c_eval[k]:
+                                    data_ij_min[model_id][k] = c_eval[k]
 
-                print("End time {}" .format(time.asctime(time.localtime())))
-                print("Elapsed time: {} sec".format(time.strftime(
-                    "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
-                
-                # Save results in output files 
-                for model_id in models.keys(): 
+                            # Update mean 
+                            data_ij_mean[model_id][:] = data_ij_mean[model_id][:] + c_eval[:]
 
-                    # Divide by the number of sample to compute the final mean  
-                    data_ij_mean[model_id][:] = data_ij_mean[model_id][:]/n_sample_param
+                    print("End time {}" .format(time.asctime(time.localtime())))
+                    print("Elapsed time: {} sec".format(time.strftime(
+                        "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
+                    
+                    # Save results in output files 
+                    for model_id in models.keys(): 
 
-                    # Values are saved in csv format using Panda dataframe  
-                    df = pd.DataFrame({"mean" : data_ij_mean[model_id][:], 
-                                    "lower_bound": data_ij_min[model_id][:], 
-                                    "upper_bound": data_ij_max[model_id][:]})
-                    df.to_csv('output/'+model_id+"_interval.csv", index=None)
+                        # Divide by the number of sample to compute the final mean  
+                        data_ij_mean[model_id][:] = data_ij_mean[model_id][:]/n_sample_param
 
-                    df_CI = pd.DataFrame({"CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
-                                        "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
-                    df_CI.to_csv('output/'+model_id+"_CI.csv", index=None) 
+                        # Values are saved in csv format using Panda dataframe  
+                        df = pd.DataFrame({"mean" : data_ij_mean[model_id][:], 
+                                        "lower_bound": data_ij_min[model_id][:], 
+                                        "upper_bound": data_ij_max[model_id][:]})
+                        df.to_csv('output/'+model_id+"_interval.csv", index=None)
+
+                        df_CI = pd.DataFrame({"CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
+                                            "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
+                        df_CI.to_csv('output/'+model_id+"_CI.csv", index=None) 
 
 
 

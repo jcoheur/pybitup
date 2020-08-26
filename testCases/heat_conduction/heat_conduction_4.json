@@ -38,7 +38,7 @@
 				"eps_v": 0.0, 
 				"gamma": 0.2
 			},
-		    "n_iterations": 1e4, 
+		    "n_iterations": 5e3, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -77,5 +77,51 @@
 		    "burnin": 0,
 		    "num_plot": 1
 		}
-	}
+    },
+    
+    "Propagation": {
+        "Model": [
+            {
+            "model_id": "heat_pce_test",
+            "design_points": {
+                "filename": "test_design_points.dat", 
+                "field": 0
+            },  
+            "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
+            "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
+            "parametrization" : "no",
+            "emulator": "pce",
+                "pce": {
+                    
+                    "polynomials":{
+                        "method": "gram_schmidt",
+                        "point_coordinates": "output/mcmc_chain.csv",
+                        "hyperbolic_truncation": 1,
+                        "point_weights": "None",
+                        "order": 8
+                    },
+                
+                    "quadrature":{
+
+                        "method": "positive_newton",
+                        "order_truncation": 4
+                    },
+                    "coefficients":{
+                        "method": "spectral",
+                        "iterations": 20
+                    }
+                }
+            }
+        ],
+        "Uncertain_param": {
+            "phi":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            "h":  {"filename": "output/mcmc_chain.csv", "field": 1}
+        },
+        "Model_evaluation": {
+            "Parallel_evaluation": {
+                "model_concurrency_evaluation" : 1, 
+                "sample_concurrency_evaluation" : 1
+            }
+        }
+    }
 }

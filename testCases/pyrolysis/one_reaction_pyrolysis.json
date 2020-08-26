@@ -40,7 +40,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e5, 
+		    "n_iterations": 1e4,
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -54,19 +54,39 @@
     "Propagation": {
         "Model": [ 
             {
-                // Emulator ? 
-                "model_id": "6.1_K_per_Min", // Optional
+                "model_id": "6.1_K_per_Min",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
                 },  
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
-                "parametrization" : "no"
+                "parametrization" : "no",
+                "emulator": "pce",
+                "pce": {
+                    
+                    "polynomials":{
+                        "method": "gram_schmidt",
+                        "point_coordinates": "output/mcmc_chain.csv",
+                        "hyperbolic_truncation": 1,
+                        "point_weights": "None",
+                        "order": 4
+                    },
+                
+                    "quadrature":{
+                        "method": "fekete",
+                        "order_truncation": 2
+
+                    },
+                
+                    "coefficients":{
+                        "method": "lars",
+                        "iterations": 20
+                    }
+                }
             }, 
             {
-                // Emulator ? 
-                "model_id": "366_K_per_Min", // Optional
+                "model_id": "366_K_per_Min",
                 "design_points": {
                     "filename": "test_design_points.dat", 
                     "field": 0
@@ -78,7 +98,6 @@
         ],
         "Uncertain_param": {
             "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
-            //"A":  {"filename": "None, "distribution": "Gaussian", "hyperparam": [mean, sigma]}, 
             "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
             "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
             "F":  {"filename": "output/mcmc_chain.csv", "field": 3}

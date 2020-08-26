@@ -24,29 +24,30 @@
             "Prior": { 
                 "Distribution": "Mixture",
                 "Param" : {
-                    "A0": {"initial_val" : 16635.020942,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, 
-                    "E0": {"initial_val" : 112998.868630,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]}, 
-                    "n0": {"initial_val" : 1.930950,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-                    "g0": {"initial_val" : 0.040942,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
-                    "A1": {"initial_val" : 1663.351154,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]}, 
-                    "E1": {"initial_val" : 77999.941151,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]}, 
-                    "n1": {"initial_val" : 3.256541,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]}, 
-                    "g1": {"initial_val" : 0.000509,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+                    "A0": {"initial_val" : 16635.039617,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]},
+                    "E0": {"initial_val" : 112999.682249,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]},
+                    "n0": {"initial_val" : 1.971695,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]},
+                    "g0": {"initial_val" : 0.041457,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]},
+                    "A1": {"initial_val" : 1663.317274,    "prior_name" : "Uniform", "prior_param" : [0, 1e10]},
+                    "E1": {"initial_val" : 78000.429963,    "prior_name" : "Uniform", "prior_param" : [10, 1e10]},
+                    "n1": {"initial_val" : 4.154728,    "prior_name" : "Uniform", "prior_param" : [1.01, 1e2]},
+                    "g1": {"initial_val" : 0.000337,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
                 }
             },
             "Likelihood": {
                 "function": "Gaussian",
                 "distance": "L2"
             }
+
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e4,
-		    "proposal": { 
+		    "n_iterations": 1e6,
+		    "proposal": {
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-				    "value": [1e-4, 1e-3, 1e-4, 1e-8, 1e-4, 1e-3, 1e-4, 1e-8]
+				    "value": [1e4, 1e4, 1e-3, 1e-5, 1e3, 1e3, 1e-3, 1e-6]
 				}
 			}
 		}

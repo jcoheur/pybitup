@@ -1,0 +1,37 @@
+{
+    "emulator": "pce",
+    "pce": {
+        
+        "polynomials":{                                                     // Polynomials Parameters
+
+            "method": "gram_schmidt",                                       // "gram_schmidt" or "recurrence"
+            "point_coordinates": "output/mcmc_chain.csv",                   // "file.csv", "file.npy" or "None"
+            "hyperbolic_truncation": 0.75,                                  // must be > 0
+            "point_weights": "None",                                        // "file.csv", "file.npy" or "None"
+            "order": 4,                                                     // must be integer > 0
+
+            "parameter_laws": [                                             // Laws of the parameters
+                {"uniform": [-1,1]},
+                {"gamma": [2,3]},
+                {"normal": [0,1]},
+                {"expo": [1]}
+            ]
+        },
+
+        "quadrature":{                                                      // Coefficients Quadrature Parameters
+
+            "method": "simplex",                                            // "recurrence", "monte_carlo", "fekete", "simplex", "positive_nullspace" or "positive_newton"
+            
+            "order_truncation": 2,                                          // for weaky admissible meshes, must be integer, generally <= polynomial "order"/2
+
+            "order_quadrature": 12                                          // for recurrence, must be at least 2x "order" of polynomials
+
+        },
+
+        "coefficients":{                                                    // Coefficients Method Parameters
+            
+            "method": "lars",                                               // "spectral","colloc","lars" or "larsso"
+            "iterations": 10                                                // must be integer > 0 and can be "unlimited"
+        }
+    }
+}

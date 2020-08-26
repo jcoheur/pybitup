@@ -1,0 +1,41 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+    
+    "Propagation": {
+        "Model": [
+            {
+                "model_id": "heat_pce_test",
+                "design_points": {
+                    "filename": "test_design_points.dat", 
+                    "field": 0
+                },  
+                "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
+                "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
+                "parametrization" : "no",
+                "emulator": "pce",
+                "pce": {
+                    "polynomials":{
+                        "method": "recurrence",
+                        "hyperbolic_truncation": 1,
+                        "order": 4
+                    },
+                    "quadrature":{
+                        "method": "recurrence",
+                        "order_quadrature": 12
+                    },
+                    "coefficients":{"method": "spectral"}
+                }
+            }
+        ],
+        "Uncertain_param": {
+            "phi":  {"filename": "None", "distribution": "normal", "hyperparameters": [-18,2]}, 
+            "h":  {"filename": "None", "distribution": "uniform", "hyperparameters": [ 0.0018, 0.00195]}
+        },
+        "Model_evaluation": {
+            "Parallel_evaluation": {
+                "model_concurrency_evaluation" : 1, 
+                "sample_concurrency_evaluation" : 1
+            }
+        }
+    }
+}

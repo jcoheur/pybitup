@@ -1,0 +1,127 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+    "Sampling": {
+        "BayesianPosterior" : {
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "heat_conduction_data.csv",
+                    "xField": ["x"], 
+                    "yField": ["T"], 
+                    "sigmaField": ["std_T"]
+                }
+            ],
+            "Model": [
+                {
+                    "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
+                    "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior": { 
+                "Distribution": "Mixture", 
+                "Param": {
+                    "phi": {"initial_val" : -18.41,  "prior_name" : "Uniform", "prior_param" : [-100, 0.0]}, 
+                    "h":   {"initial_val" : 0.00191, "prior_name" : "Uniform", "prior_param" : [0.00001, 1.0]}
+                }
+            },
+	        "Likelihood": {
+		        "function": "Gaussian",
+		        "distance": "L2"
+            }
+        },
+	    "Algorithm": {
+		    "name": "DRAM", 
+			"DRAM": {
+                "starting_it": 1e2, 
+				"updating_it": 1e1, 
+				"eps_v": 0.0, 
+				"gamma": 0.2
+			},
+		    "n_iterations": 5e3, 
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+				    "type": "full", 
+				    "value": [[2.1034e-2, -2.0286e-6], [-2.0286e-6, 2.0972e-10]]
+				}
+			}
+		},
+        "ComputeAnalyticalDistribution": {
+            "DistributionSupport" : [[-20, -18], [0.0019, 0.00204]]
+        }
+	}, 
+	
+    "PostProcess": { 
+	    "Data": { 
+		    "display": "yes", 
+		    "num_plot": [1]
+		},
+	    "InitialGuess": {
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+		},
+        "Posterior": {
+            "display": "yes", 
+            "distribution": "marginal", // marginal, bivariate
+            "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 10
+        },
+        "Propagation": {
+		    "display": "yes",
+		    "shaded_area": "yes",
+		    "burnin": 0,
+		    "num_plot": 1
+		}
+    },
+    
+    "Propagation": {
+        "Model": [
+            {
+            "model_id": "heat_pce_test",
+            "design_points": {
+                "filename": "test_design_points.dat", 
+                "field": 0
+            },  
+            "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
+            "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
+            "parametrization" : "no",
+            "emulator": "pce",
+                "pce": {
+                    
+                    "polynomials":{
+                        "method": "gram_schmidt",
+                        "point_coordinates": "output/mcmc_chain.csv",
+                        "hyperbolic_truncation": 1,
+                        "point_weights": "None",
+                        "order": 8
+                    },
+                
+                    "quadrature":{
+
+                        "method": "positive_newton",
+                        "order_truncation": 4
+                    },
+                    "coefficients":{
+                        "method": "spectral",
+                        "iterations": 20
+                    }
+                }
+            }
+        ],
+        "Uncertain_param": {
+            "phi":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            "h":  {"filename": "output/mcmc_chain.csv", "field": 1}
+        },
+        "Model_evaluation": {
+            "Parallel_evaluation": {
+                "model_concurrency_evaluation" : 1, 
+                "sample_concurrency_evaluation" : 1
+            }
+        }
+    }
+}

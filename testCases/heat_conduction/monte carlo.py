@@ -29,7 +29,8 @@ def sampler(nbrPts):
 def response(point):
 
     nbrPts = point.shape[0]
-    x = np.linspace(0,70,101)
+    #x = np.linspace(0,70,101)
+    x = np.arange(10.0, 70.0, 4.0)
     resp = np.array([fun(x,*point[i]) for i in range(nbrPts)])
 
     return x,resp

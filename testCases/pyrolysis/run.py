@@ -33,6 +33,7 @@ post_dist.__del__()
 
 post_dist = pybitup.solve_problem.Propagation(input_file_name)
 post_dist.propagate(pyro_model)
+
 post_dist.__del__()
 
 pybitup.post_process.post_process_data(input_file_name)

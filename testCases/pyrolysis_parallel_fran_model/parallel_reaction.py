@@ -87,30 +87,30 @@ class SetParallelReaction(bi.Model):
 
 
 
-    # def parametrization_forward(self, X):
+    def parametrization_forward(self, X):
 
-    #     Y = np.zeros(len(X[:]))
+        Y = np.zeros(len(X[:]))
 
-    #     Y[0] = np.log(X[0])
+        Y[0] = np.log(X[0])
 
-    #     Y[1] = np.log(X[1])
+        Y[1] = X[1]
 
-    #     return Y
+        return Y
 		
 		
-    # def parametrization_backward(self, Y):
+    def parametrization_backward(self, Y):
 
-    #     X = np.zeros(len(Y[:]))
+        X = np.zeros(len(Y[:]))
 
-    #     X[0] = np.exp(Y[0])
+        X[0] = np.exp(Y[0])
 
-    #     X[1] = np.exp(Y[1])
+        X[1] = Y[1]
 
-    #     return X 
+        return X 
 
-    # def parametrization_det_jac(self, X):
+    def parametrization_det_jac(self, X):
 
-    #     return np.exp(X[0])*np.exp(X[1])
+        return 1/X[0]
 
 
 
@@ -146,3 +146,37 @@ class SetParallelReaction(bi.Model):
 	
 	
 	
+    # def parametrization_forward(self, X):
+	
+    #     Y = np.zeros(len(X[:]))
+
+    #     Y[0] = np.log(X[0])
+
+    #     Y[1] = X[1]
+
+    #     Y[2] = X[2]
+
+    #     Y[3] = X[3]
+
+    #     return Y
+		
+		
+    # def parametrization_backward(self, Y):
+	
+    #     X = np.zeros(len(Y[:]))
+
+    #     X[0] = np.exp(Y[0])
+
+    #     X[1] = Y[1]
+
+    #     X[2] = Y[2]
+
+    #     X[3] = Y[3]
+	
+
+    #     return X 
+
+
+    # def parametrization_det_jac(self, X):
+
+    #     return 1/X[0]

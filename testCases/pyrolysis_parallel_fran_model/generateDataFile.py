@@ -32,21 +32,24 @@ drho_solid = test.get_drho_solid()
 temperature = test.get_temperature()
 
 std_y=0.00001
+exp_std_y = std_y * 0.1 
+n_runs = 3 
 
-num_data = len(drho_solid)
-rn_data=np.zeros((1, num_data))
-for i in range(0, num_data):
-    rn_data[0,i]=random.gauss(0, std_y)
-    drho_solid_pert = drho_solid + rn_data[0,:]
-		
-		
-plt.plot(temperature, drho_solid_pert, 'o')
+for j in range(n_runs):
+    num_data = len(drho_solid)
+    rn_data=np.zeros((1, num_data))
+    for i in range(0, num_data):
+        rn_data[0,i]=random.gauss(0, std_y)
+        drho_solid_pert = drho_solid + rn_data[0,:]
+            
+            
+    plt.plot(temperature, drho_solid_pert, '-o')
 
-myfile = {'time': time0, 'temperature': T, 'rho': rho_solid, 'dRho': drho_solid_pert, 'std_dRho': std_y} 
-df = pd.DataFrame(myfile, columns=['time', 'temperature', 'rho', 'dRho', 'std_dRho'])
+    myfile = {'time': time0, 'temperature': T, 'rho': rho_solid, 'dRho': drho_solid_pert, 'std_dRho': exp_std_y} 
+    df = pd.DataFrame(myfile, columns=['time', 'temperature', 'rho', 'dRho', 'std_dRho'])
 
 
-#df.to_csv("fakePyroData.csv")
+    #df.to_csv("fakePyroData_"+str(j)+".csv")
 
 plt.show()
 	

@@ -5,10 +5,11 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "fakePyroData.csv",
+                    "FileName": "fakePyroData",
                     "xField": ["temperature"], 
                     "yField": ["dRho"], 
-                    "sigmaField": ["std_dRho"]
+                    "sigmaField": ["std_dRho"], 
+                    "n_runs": 3
                 }
             ],
             "Model": [
@@ -62,7 +63,7 @@
 		    "num_plot": 1
 		},
 	    "MarkovChain": {
-		    "display": "no",
+		    "display": "yes",
 		    "thinning": 1
 		},
         "Posterior": {

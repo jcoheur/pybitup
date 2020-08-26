@@ -26,9 +26,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         self.bayes_post = 0
         self.log_bayes_post = 0
 
-
-
-       
+    
     def get_dim(self): 
         return len(self.param_init)
 
@@ -54,7 +52,7 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         log_like_val = self.likelihood.compute_log_value(X)
 
         if prior_log_value == -np.inf or log_like_val == np.nan:
-            # Avoid computation of likelihood if prior is zero 
+            # Avoid computation of likelihood if prior is zero
             log_bayes_post = -np.inf
         else: 
             log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val
@@ -146,12 +144,39 @@ class Data:
     def __init__(self, name="", x=np.array([1]), y=np.array([1]), std_y=np.array([1])):
         self.name=list([name])
         self.x=x
+        self.dx = np.append(np.diff(self.x), 0.0) 
         self.num_points=np.array([len(self.x)])
         self.y=y
+        self.n_runs = len(y.keys()) # Number of runs of the experiment
         self.n_data_set=1
         self.std_y=std_y
         self.index_data_set=np.array([[0,len(self.x)-1]])
 
+
+        self.mean_y = np.array(self.y[0])
+        self.var_s = np.zeros(self.num_points)
+        self.std_s = np.array(self.std_y)
+        # Estimate sample Statitics if there is more than one experimental run  
+        if self.n_runs > 1: 
+            # Estimate sample mean 
+            for c_run in range(1, self.n_runs): 
+                self.mean_y += self.y[c_run]
+            self.mean_y = self.mean_y/self.n_runs
+
+            # Estimate sample standard deviation and variance  
+            for c_run in range(self.n_runs): 
+                self.var_s += (self.y[c_run] - self.mean_y)**2
+            self.var_s = self.var_s/(self.n_runs-1)   
+
+            
+            self.std_s = np.array(self.var_s**(1/2))
+            
+            # Use the standard deviation estimated from the provided data set 
+            # self.std_y =  self.std_s*np.sqrt(self.n_runs * self.num_points) + 1e-10 # To avoid very small values 
+            # Use the standard deviation provided in input file 
+            self.std_y =  self.std_y*np.sqrt(self.n_runs * self.num_points) + 1e-10 # To avoid very small values 
+
+            print(self.std_y)
 
     def size_x(self, i):
         """Return the length of the i-th data x"""
@@ -380,12 +405,13 @@ class Likelihood:
         return like_val
 
     def compute_log_value(self, X): 
-        
+        """ Compute the log of the likelihood function (up to a constant). """
+
         # self.model_eval_X = self.model_fun(X)
         # log_like_val = self.sum_of_square(self.data, self.model_eval_X)
         
         self.arg_gauss_likelihood(X)
-        log_like_val = - (1/2) * self.arg_LL
+        log_like_val = - (1/2) * self.arg_LL 
 
         return log_like_val
 
@@ -439,8 +465,9 @@ class Likelihood:
             #     plt.plot(self.data[model_id].x, self.models[model_id].model_eval[i*n_x:(i+1)*n_x])
 
             # Compute the sum of square 
-            arg_exp = (self.data[model_id].y - self.models[model_id].model_eval)
-            J = J  + np.sum(arg_exp**2, axis=0)
+            for c_run in range(self.data[model_id].n_runs): 
+                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)
+                J = J  + arg_exp**2
 
         #plt.show()
         self.SS_X = J
@@ -449,15 +476,49 @@ class Likelihood:
         """ Compute the weighted sum of square which is the argument of the gaussian likelihood. """ 
 
         J = 0 
+        J2 = 0
         for model_id in self.models.keys(): 
 
             # Compute value for the model at X 
             self.models[model_id].run_model(X)
 
+            
             # Compute the weighted sum of square 
-            arg_exp = (self.data[model_id].y - self.models[model_id].model_eval)/(self.data[model_id].std_y)
-            J = J  + np.sum(arg_exp**2, axis=0)
+            for c_run in range(self.data[model_id].n_runs): 
+                dy = self.data[model_id].y[c_run] - self.models[model_id].model_eval
 
+
+                int1 = np.sum(self.models[model_id].model_eval * self.data[model_id].dx/self.data[model_id].std_y)
+                int2 = np.sum(self.data[model_id].y[c_run] * self.data[model_id].dx/self.data[model_id].std_y)
+                frac_y = np.array(int1 / int2)
+                new_std_y = np.array(dy) / 100
+                new_std_y2 = np.array(self.data[model_id].y[0])*1e-3 + 1e-18
+
+
+                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y)
+                arg_exp2 = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y2)
+
+                #arg_exp = (int1 - int2)
+                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y)
+                #arg_exp = arg_exp[9]
+                J = J  + np.sum(arg_exp**2, axis=0)
+
+                # plt.figure(1)
+                # plt.plot(self.data[model_id].x, new_std_y**2)
+                # plt.plot(self.data[model_id].x, new_std_y2**2)
+                # plt.figure(2)
+                # plt.plot(self.data[model_id].x, arg_exp**2)
+                # plt.plot(self.data[model_id].x, arg_exp2**2)
+            #print(J)
+            # For stochastic processes : compute the difference between the two using integral 
+            # for c_run in range(self.data[model_id].n_runs):  
+            #     arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y)*self.data[model_id].dx
+            #     J2 = J2  + np.sum(arg_exp**2, axis=0)
+
+        # plt.figure(2)
+
+        #plt.show()
+        #print(J, J2)
         self.arg_LL = J
 
 

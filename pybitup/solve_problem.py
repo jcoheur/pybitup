@@ -400,7 +400,7 @@ class Propagation(SolveProblem):
                     # Print current time and start clock count
                     print("Start time {}" .format(time.asctime(time.localtime())))
                     sys.stdout.flush()
-                    self.t1 = time.clock()
+                    self.t1 = time.perf_counter()
 
 
                 if (self.user_inputs["Propagation"]["Model_evaluation"].get("Parallel_evaluation") is not None):
@@ -456,7 +456,7 @@ class Propagation(SolveProblem):
                         # We estimate time after a hundred iterations
                         if i == 100:
                             print("Estimated time: {}".format(time.strftime("%H:%M:%S",
-                                                            time.gmtime((time.clock()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
+                                                            time.gmtime((time.perf_counter()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
                             sys.stdout.flush()
 
                     # Get the parameter values 
@@ -532,7 +532,7 @@ class Propagation(SolveProblem):
 
                     print("End time {}" .format(time.asctime(time.localtime())))
                     print("Elapsed time: {} sec".format(time.strftime(
-                        "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
+                        "%H:%M:%S", time.gmtime(time.perf_counter()-self.t1))))
                     
                     # Save results in output files 
                     for model_id in models.keys(): 

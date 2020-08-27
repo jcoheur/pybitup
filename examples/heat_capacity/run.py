@@ -1,5 +1,9 @@
 import heat_capacity 
 import pybitup
+import random 
+
+# Control the seed 
+random.seed(a=0)
 
 case_name = "heat_capacity"
 input_file_name = "{}.json".format(case_name) 

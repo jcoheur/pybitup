@@ -653,37 +653,32 @@ class Likelihood:
         return X_n
 
 
-
-
-
-
-def generate_synthetic_data(my_model, std_y, type_pert):
+def generate_synthetic_data(my_model, std_param, std_y):
     """ Generate synthetic data based on the model provided in my_model
     with a given standard deviation std_y """
 
-    if type_pert == 'param':
-        print("Generate synthetic data based on perturbed parameters")
-        num_param = len(my_model.param[:])
-        rn_param = np.zeros((1, num_param))
-        for i in range(0, num_param):
-            rn_param[0, i] = random.gauss(0, std_y)
 
-        my_model.param = my_model.param+rn_param[0, :]
-        y = my_model.fun_x()
-    else:
-        y = my_model.fun_x()
+    # Perturbe nominal parameter values 
 
-    if type_pert == 'data':
-        print("Generate synthetic data based on perturbed nominal solution")
-        num_data = len(my_model.x[:])
-        rn_data = np.zeros(num_data)
+    num_param = len(my_model.param[:])
+    rn_param = np.zeros((1, num_param))
+    for i in range(0, num_param):
+        rn_param[0, i] = random.gauss(0, std_param[i])
+    my_model.param = my_model.param+rn_param[0, :]
 
-        for i in range(0, num_data):
-            rn_data[i] = random.gauss(0, std_y)
+    # Generate solution using pertubrbed parameter values
+    y_pert = my_model.fun_x()
 
-        y = y + rn_data[:]
 
-    return y
+    # Add experimental noise to the solution 
+    num_data = len(my_model.x[:])
+    rn_data = np.zeros(num_data)
+
+    for i in range(0, num_data):
+        rn_data[i] = random.gauss(0, std_y[i])
+    y_noisy = y_pert + rn_data[:]
+
+    return y_noisy
 
 def write_tmp_input_file(input_file_name, name_param, value_param): 
 

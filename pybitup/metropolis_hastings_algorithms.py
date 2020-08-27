@@ -245,7 +245,7 @@ class MetropolisHastings:
             print("\nRejection rate is {} %".format(rejection_rate))
         for model_id in self.prob_distr.likelihood.data.keys():
             est_sigma = self.prob_distr.likelihood.data[model_id].std_y
-            print("\n Experimental error std is {} %".format(est_sigma))
+            #print("\n Experimental error std is {} %".format(est_sigma))
 
             myfile = {'model_id': est_sigma} 
             df = pd.DataFrame(myfile, columns=['model_id'])

@@ -2,18 +2,14 @@
 {
     "Sampling": {
         "BayesianPosterior" : { 
-            "Data": [   
-                {   
-                    "Type": "GenerateSynthetic", 
-                    "x":{
-                        "Type": "range", 
-                        "Value": [300.0, 1401.0, 10.0]
-                    },
-                    "y":{
-                        "Name": "Temperature",
-                        "Error": "data",
-                        "Sigma": 50
-                    }
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "data_heat_capacity",
+                    "xField": ["T"], 
+                    "yField": ["cp"], 
+                    "sigmaField": ["std_cp"], 
+                    "n_runs": 1
                 }
             ],
             "Model": [
@@ -47,7 +43,7 @@
 			    "name": "Gaussian",
 			    "covariance": { 
 				    "type": "diag", 
-				    "value": [1e2, 1e2, 1e2, 1e2]
+				    "value": [1e2, 1e3, 1e3, 1e2]
 			    }  
 		    }
 	    }

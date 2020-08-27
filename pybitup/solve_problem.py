@@ -361,7 +361,7 @@ class Propagation(SolveProblem):
 
                 if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="pce":
 
-                    print("Computing pce of ",model_id)
+                    print("Computing pce of", model_id)
 
                     # Set pce parameters
                     pce_param = self.user_inputs["Propagation"]["Model"][0]["pce"]

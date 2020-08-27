@@ -3,7 +3,7 @@ sys.path.append('../../')
 import numpy as np
 from matplotlib import pyplot as plt
 import pickle
-
+import pandas as pd 
 # %% Initialisation
 
 f = open("output/pce_model.pickle","rb")
@@ -20,7 +20,7 @@ resp = []
 
 for i in range(len(point)):
     try:
-        resp.append(np.load("output/heat_conduction_1_fun_eval."+str(i)+".npy"))
+        resp.append(np.load("output/heat_conduction_fun_eval."+str(i)+".npy"))
         index.append(i)
     except: pass
 
@@ -34,15 +34,17 @@ mean = np.mean(resp,axis=0)
 meanMod = np.mean(respMod,axis=0)
 varMod = np.var(respMod,axis=0)
 
-x = [10,14,18,22,26,30,34,38,42,46,50,54,58,62,66]
-xMod = np.linspace(0,70,71)
+xMC = np.arange(10.0,70.0,4)
+reader = pd.read_csv('test_design_points.dat',header=None)
+xMod = reader.values[:]
+
 
 # %% Figures
 
 plt.figure(1)
 plt.rcParams.update({"font.size":16})
 plt.plot(xMod,meanMod,'C0',label="PCE")
-plt.plot(x,mean,'C1--',label="MC")
+plt.plot(xMC,mean,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Mean")
 plt.xlabel("x")
@@ -51,7 +53,7 @@ plt.grid()
 plt.figure(2)
 plt.rcParams.update({"font.size":16})
 plt.plot(xMod,varMod,'C0',label="PCE")
-plt.plot(x,var,'C1--',label="MC")
+plt.plot(xMC,var,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Variance")
 plt.xlabel("x")

@@ -2,7 +2,7 @@
 # Fake data are saved in a csv (comma-separated values) file
 # This script needs to be run when no data_heat_capacity_0.csv file is present in the case folder. 
 
-# Import module 
+# Import modules 
 import numpy as np 
 import matplotlib.pyplot as plt
 import random

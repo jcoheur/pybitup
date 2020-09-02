@@ -65,27 +65,27 @@ class TestPCE(unittest.TestCase):
         shutil.rmtree('output')
 
 
-    # def test_check_3(self):
-    #     """ Check quadrature: simplex with coefficients: lasso
-    #     DOESNT WORK: method='revised_simplex' is not in linprog, and 'method'=simplex doesn't produce correct results. """
+    def test_check_3(self):
+        """ Check quadrature: simplex with coefficients: lasso
+        DOESNT WORK: method='revised_simplex' is not in linprog, and 'method'=simplex doesn't produce correct results. """
 
-    #     case_name = "heat_conduction_3"
+        case_name = "heat_conduction_3"
 
-    #     # Compute solution 
-    #     self.compute_pce(case_name)
+        # Compute solution 
+        self.compute_pce(case_name)
 
-    #     # Load default solution and solution from pce 
-    #     self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')
+        # Load default solution and solution from pce 
+        self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')
 
-    #     # Compute the two areas and compare them for the unit test 
-    #     self.compute_areas() 
+        # Compute the two areas and compare them for the unit test 
+        self.compute_areas() 
 
-    #     # Assert 
-    #     self.assertAlmostEqual(self.area_mean_MC/100, self.area_mean_PCE/100, 0) 
-    #     self.assertAlmostEqual(self.area_var_MC/10, self.area_var_PCE/10, 0) # Equal +/- 10.0
+        # Assert 
+        self.assertAlmostEqual(self.area_mean_MC/100, self.area_mean_PCE/100, 0) 
+        self.assertAlmostEqual(self.area_var_MC/10, self.area_var_PCE/10, 0) # Equal +/- 10.0
 
-    #     # Clean output 
-    #     shutil.rmtree('output')
+        # Clean output 
+        shutil.rmtree('output')
 
     def test_check_4(self):
         """ Check quadrature: positive newton with coefficients: sepctral """

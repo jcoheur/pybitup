@@ -1,0 +1,135 @@
+/* This is a json file. Comments are allowed as jsmin is used to removed comments */
+{
+    "Sampling": {
+        "BayesianPosterior" : { 
+            "Data": [
+                {
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "data_pyrolysis",
+                    "xField": ["T"], 
+                    "yField": ["gas_prod"], 
+                    "sigmaField": ["std_gas_prod"], 
+                    "n_runs": 1
+                }
+            ],
+            "Model": [ 
+                {
+                    "model_id": "one_reaction_pyrolysis", 
+                    "param_names": ["A", "E", "n", "m", "F", "tau"],
+                    "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
+                    "parametrization" : "no"
+                }
+            ],
+            "Prior" : {
+                "Distribution": "Mixture", 
+                "Param" : {
+                    "A": {"initial_val" : 1.6635e4,    "prior_name" : "Uniform", "prior_param" : [0, 1e15]}, 
+                    "E": {"initial_val" : 113000,    "prior_name" : "Uniform", "prior_param" : [1000, 1e10]}, 
+                    "n": {"initial_val" : 2.0,    "prior_name" : "Uniform", "prior_param" : [1.0, 1e2]}, 
+                    "F": {"initial_val" : 0.04,    "prior_name" : "Uniform", "prior_param" : [0.0, 1.0]}
+                }
+            },
+	        "Likelihood": {
+		        "function": "Gaussian",
+		        "distance": "L2"
+            }
+        },
+	    "Algorithm": {
+		    "name": "RWMH", 
+		    "n_iterations": 1e4,
+		    "proposal": { 
+			    "name": "Gaussian",
+			    "covariance": { 
+                    "type": "diag", 
+				    "value": [1e4, 1e4, 1e-3, 1e-5]
+				}
+			}
+        }
+    },
+    
+    "Propagation": {
+        "Model": [ 
+            {
+                "model_id": "6.1_K_per_Min",
+                "design_points": {
+                    "filename": "test_design_points.dat", 
+                    "field": 0
+                },  
+                "param_names": ["A", "E", "n", "m", "F", "tau"],
+                "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
+                "parametrization" : "no",
+                "emulator": "pce",
+                "pce": {
+                    
+                    "polynomials":{
+                        "method": "gram_schmidt",
+                        "point_coordinates": "output/mcmc_chain.csv",
+                        "hyperbolic_truncation": 1,
+                        "point_weights": "None",
+                        "order": 4
+                    },
+                
+                    "quadrature":{
+                        "method": "fekete",
+                        "order_truncation": 2
+
+                    },
+                
+                    "coefficients":{
+                        "method": "lars",
+                        "iterations": 20
+                    }
+                }
+            }, 
+            {
+                "model_id": "366_K_per_Min",
+                "design_points": {
+                    "filename": "test_design_points.dat", 
+                    "field": 0
+                },  
+                "param_names": ["A", "E", "n", "m", "F", "tau"],
+                "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 366],
+                "parametrization" : "no"
+            }
+        ],
+        "Uncertain_param": {
+            "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
+            "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
+            "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
+        },
+        "Model_evaluation": {
+            "Parallel_evaluation": {
+                "model_concurrency_evaluation" : 1, 
+                "sample_concurrency_evaluation" : 1
+            }
+        }
+    },
+
+    "PostProcess": { 
+	    "Data": { 
+		    "display": "yes",
+		    "num_plot": [1]
+		},
+	    "InitialGuess": {
+		    "display": "yes",
+		    "num_plot": 1
+		},
+	    "MarkovChain": {
+		    "display": "yes",
+		    "thinning": 1
+		},
+        "Posterior": {
+            "display": "no", 
+            "distribution": "bivariate", // marginal, bivariate
+            "estimation": "contour", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
+            "burnin": 1
+        },
+        "Propagation": {
+		    "display": "yes",
+		    "shaded_area": "yes",
+		    "burnin": 1,
+		    "num_plot": 1
+		}
+    }
+}

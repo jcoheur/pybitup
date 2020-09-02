@@ -204,7 +204,7 @@ def simquad(point,poly):
 
     # Performs the revised simplex
 
-    x = optimize.linprog(c,A_eq=V.T,b_eq=m,method='revised simplex')
+    x = optimize.linprog(c,A_eq=V.T,b_eq=m,method='revised simplex') # method='revise_simplex' doesn't exist in linprog
     index = np.argwhere(x['x']>tol).flatten()
     weight = x['x'][index]
 

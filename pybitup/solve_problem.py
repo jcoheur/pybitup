@@ -288,6 +288,19 @@ class Sampling(SolveProblem):
 
 class Propagation(SolveProblem): 
 
+    def __init__(self, input_file_name): 
+        SolveProblem.__init__(self, input_file_name)
+        self.IO_path['out_folder_prop'] = self.IO_path['out_folder']+'/propagation' 
+
+        # Create the output folder for propagation results
+        try:
+            os.mkdir(self.IO_path['out_folder_prop'])
+        except OSError:
+            print(self.IO_path['out_folder_prop']+" already exists.")
+        else:
+            print("Creating output directory "+self.IO_path['out_folder_prop'])
+
+
     def propagate(self, models=[]): 
 
             if (self.user_inputs.get("Propagation") is not None):
@@ -359,9 +372,9 @@ class Propagation(SolveProblem):
 
             for model_id in models.keys():
 
-                if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="pce":
+                if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="pce":  # [0] need to be change if we have several models ? 
 
-                    print("Computing pce of ",model_id)
+                    print("Computing pce of", model_id)
 
                     # Set pce parameters
                     pce_param = self.user_inputs["Propagation"]["Model"][0]["pce"]
@@ -371,8 +384,8 @@ class Propagation(SolveProblem):
                     poly,coef,model = pce.compute_pce(models[model_id])
 
                     # Save the pce model in output
-                    pce.save_pickle(model,self.IO_path['out_folder']+"/pce_model")
-                    pce.save_pickle(poly,self.IO_path['out_folder']+"/pce_poly")
+                    pce.save_pickle(model, self.IO_path['out_folder_prop']+"/pce_model"+"_"+model_id)
+                    pce.save_pickle(poly, self.IO_path['out_folder_prop']+"/pce_poly"+"_"+model_id)
 
 
             if (self.user_inputs["Propagation"].get("Propagate") is not None):
@@ -383,6 +396,7 @@ class Propagation(SolveProblem):
                 else:
                     # Default number of sample to propagate
                     n_sample_param = len(unpar[name])
+                    print(n_sample_param)
 
                 # Run propagation
                 # ---------------
@@ -400,7 +414,7 @@ class Propagation(SolveProblem):
                     # Print current time and start clock count
                     print("Start time {}" .format(time.asctime(time.localtime())))
                     sys.stdout.flush()
-                    self.t1 = time.clock()
+                    self.t1 = time.perf_counter()
 
 
                 if (self.user_inputs["Propagation"]["Model_evaluation"].get("Parallel_evaluation") is not None):
@@ -456,7 +470,7 @@ class Propagation(SolveProblem):
                         # We estimate time after a hundred iterations
                         if i == 100:
                             print("Estimated time: {}".format(time.strftime("%H:%M:%S",
-                                                            time.gmtime((time.clock()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
+                                                            time.gmtime((time.perf_counter()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
                             sys.stdout.flush()
 
                     # Get the parameter values 
@@ -469,6 +483,7 @@ class Propagation(SolveProblem):
                     for model_id in model_rank_list[rank]:                 
                         model_num = model_id_to_num[model_id]
 
+                        # HERE SHOULD BE UPDATED IF EMULATOR WAS ASKED
                         # Update model evaluation 
                         models[model_id].run_model(c_param)
                         
@@ -532,7 +547,7 @@ class Propagation(SolveProblem):
 
                     print("End time {}" .format(time.asctime(time.localtime())))
                     print("Elapsed time: {} sec".format(time.strftime(
-                        "%H:%M:%S", time.gmtime(time.clock()-self.t1))))
+                        "%H:%M:%S", time.gmtime(time.perf_counter()-self.t1))))
                     
                     # Save results in output files 
                     for model_id in models.keys(): 

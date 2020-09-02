@@ -377,7 +377,7 @@ def post_process_data(input_file_name):
                
                 for i in range(n_unpar): 
                     plt.figure(num_fig+i)
-                    saveToTikz('marginal_pdf_'+inputFields["Posterior"]["estimation"]+'_'+unpar_name[i]+'.tex')
+                    #saveToTikz('marginal_pdf_'+inputFields["Posterior"]["estimation"]+'_'+unpar_name[i]+'.tex')
 
             if inputFields["Posterior"]["distribution"] == "bivariate":
                 # Compute bivariate marginal pdf 

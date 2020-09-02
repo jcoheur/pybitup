@@ -12,13 +12,13 @@ def time_it(func):
     @wraps(func)
     def _time_it(*args, **kwargs):
         print("Start time {}" .format(time.asctime(time.localtime())))
-        t1 = time.clock()
+        t1 = time.perf_counter()
         try:
             return func(*args, **kwargs)
         finally:
             print("End time {}" .format(time.asctime(time.localtime())))
             print("Elapsed time: {} sec".format(time.strftime(
-            "%H:%M:%S", time.gmtime(time.clock()-t1))))
+            "%H:%M:%S", time.gmtime(time.perf_counter()-t1))))
 
     return _time_it
 
@@ -94,7 +94,7 @@ class MetropolisHastings:
         self.n_rejected = 0
 
         # Start the clock count for estimating the time for the total numer of iterations
-        self.t1 = time.clock()
+        self.t1 = time.perf_counter()
 
         self.it = 0 
 
@@ -245,7 +245,7 @@ class MetropolisHastings:
             print("\nRejection rate is {} %".format(rejection_rate))
         for model_id in self.prob_distr.likelihood.data.keys():
             est_sigma = self.prob_distr.likelihood.data[model_id].std_y
-            print("\n Experimental error std is {} %".format(est_sigma))
+            #print("\n Experimental error std is {} %".format(est_sigma))
 
             myfile = {'model_id': est_sigma} 
             df = pd.DataFrame(myfile, columns=['model_id'])
@@ -268,7 +268,7 @@ class MetropolisHastings:
         """ Return the time in H:M:S from time t1 to current clock time """
 
         print("\rEstimated time: {}; mean acceptance probability: {}\t".format(time.strftime("%H:%M:%S",
-                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='', flush=True)
+                                                time.gmtime((time.perf_counter()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='', flush=True)
 
 
     def write_fun_distr_val(self, current_it):

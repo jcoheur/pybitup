@@ -72,7 +72,7 @@ class TestPCE(unittest.TestCase):
     #     case_name = "heat_conduction_3"
 
     #     # Compute solution 
-    #     self.compute_solution(case_name)
+    #     self.compute_pce(case_name)
 
     #     # Load default solution and solution from pce 
     #     self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')

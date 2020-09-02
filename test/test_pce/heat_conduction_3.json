@@ -16,7 +16,7 @@
                     
                     "polynomials":{
                         "method": "gram_schmidt",
-                        "point_coordinates": "output/mcmc_chain.csv",
+                        "point_coordinates": "mcmc_chain.csv",
                         "hyperbolic_truncation": 1,
                         "point_weights": "None",
                         "order": 8
@@ -35,8 +35,8 @@
             }
         ],
         "Uncertain_param": {
-            "phi":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
-            "h":  {"filename": "output/mcmc_chain.csv", "field": 1}
+            "phi":  {"filename": "mcmc_chain.csv", "field": 0}, 
+            "h":  {"filename": "mcmc_chain.csv", "field": 1}
         },
         "Model_evaluation": {
             "Parallel_evaluation": {

@@ -1,7 +1,7 @@
 # The heat conduction test case is from Smith, "Uncertainty quantification: theory, implementation and applications", 2013. 
 # In this test case, experimental data are provided. 
 # We implement the experimental data here and save them in a csv file. 
-# This script needs to be run when no data_heat_conduction_0.csv file is present in the case folder. 
+# This script needs to be run when no data_heat_conduction_0.csv file is not present in the case folder. 
 
 # Import modules 
 import numpy as np 
@@ -20,7 +20,7 @@ model_def.param = param
 model_def.x = x
 
 # Standard deviation 
-std_param = [0, 0, 0, 0, 0.1450, 1.4482e-5]
+std_param = [0, 0, 0, 0, 0.1450, 1.4482e-5] # Not used here 
 std_y=0.2504 # 0.2604
 array_std_y = np.ones(len(x))
 array_std_y *= std_y

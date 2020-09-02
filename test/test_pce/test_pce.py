@@ -25,7 +25,7 @@ class TestPCE(unittest.TestCase):
         self.compute_pce(case_name)
 
         # Load default solution and solution from pce 
-        self.load_solution('mean.npy', 'var.npy')
+        self.load_solution(case_name, 'mean.npy', 'var.npy')
 
         # Compute the two areas and compare them for the unit test 
         self.compute_areas() 
@@ -49,7 +49,7 @@ class TestPCE(unittest.TestCase):
         self.compute_pce(case_name)
 
         # Load default solution and solution from pce 
-        self.load_solution('mean_from_mcmc.npy', 'var_from_mcmc.npy')
+        self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')
 
         # Compute the two areas and compare them for the unit test 
         self.compute_areas() 
@@ -75,7 +75,7 @@ class TestPCE(unittest.TestCase):
     #     self.compute_solution(case_name)
 
     #     # Load default solution and solution from pce 
-    #     self.load_solution('mean_from_mcmc.npy', 'var_from_mcmc.npy')
+    #     self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')
 
     #     # Compute the two areas and compare them for the unit test 
     #     self.compute_areas() 
@@ -96,7 +96,7 @@ class TestPCE(unittest.TestCase):
         self.compute_pce(case_name)
        
         # Load default solution and solution from pce 
-        self.load_solution('mean_from_mcmc.npy', 'var_from_mcmc.npy')
+        self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')
 
         # Compute the two areas and compare them for the unit test 
         self.compute_areas() 
@@ -130,7 +130,7 @@ class TestPCE(unittest.TestCase):
         self.compute_pce(case_name)
 
         # Load solution from pce (self.meanMC and self.varMC computed later)
-        self.load_solution('mean_from_mcmc.npy', 'var_from_mcmc.npy')
+        self.load_solution(case_name, 'mean_from_mcmc.npy', 'var_from_mcmc.npy')
 
         # Compute MC solution from Bayesian inference
         point = np.loadtxt("output/mcmc_chain.csv",delimiter=",")
@@ -170,14 +170,14 @@ class TestPCE(unittest.TestCase):
             post_dist.__del__()
 
 
-    def load_solution(self, mean_file_name, var_file_name): 
+    def load_solution(self, case_name, mean_file_name, var_file_name): 
         # File related to pce is located in output by default with pce_model and pce_poly 
 
-        f = open("output/pce_model.pickle","rb")
+        f = open("output/propagation/pce_model_"+case_name+".pickle","rb")
         model = pickle.load(f)
         f.close()
 
-        f = open("output/pce_poly.pickle","rb")
+        f = open("output/propagation/pce_poly_"+case_name+".pickle","rb")
         poly = pickle.load(f)
         f.close()
 

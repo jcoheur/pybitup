@@ -377,6 +377,13 @@ class Model:
 
         self.model_grad = self.d_fx_dparam()
 
+class Emulator(Model):
+    """ Class defining the emulator of a model."""
+
+    def __init__(self, x=[], param=[], scaling_factors_parametrization=1, name=""):
+        Model.__init__(self, x=[], param=[], scaling_factors_parametrization=1, name="")
+
+
 
 class Likelihood: 
     """"Class defining the function and the properties of the likelihood function."""

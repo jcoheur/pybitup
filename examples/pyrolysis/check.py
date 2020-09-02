@@ -3,6 +3,7 @@ sys.path.append('../../')
 import numpy as np
 from matplotlib import pyplot as plt
 import pickle
+import pandas as pd 
 
 # %% Initialisation
 
@@ -34,15 +35,19 @@ mean = np.mean(resp,axis=0)
 meanMod = np.mean(respMod,axis=0)
 varMod = np.var(respMod,axis=0)
 
-error = abs(np.divide(resp-respMod,resp))
-error = 100*np.mean(error,axis=0)
+reader = pd.read_csv('test_design_points.dat',header=None)
+xMod = reader.values[:]
+x_data = np.linspace(300.0, 1400.0, 51)
+
+# error = abs(np.divide(resp-respMod,resp))
+# error = 100*np.mean(error,axis=0)
 
 # %% Figures
 
 plt.figure(1)
 plt.rcParams.update({"font.size":16})
-plt.plot(meanMod,'C0',label="PCE")
-plt.plot(mean,'C1--',label="MC")
+plt.plot(xMod, meanMod,'C0',label="PCE")
+plt.plot(x_data, mean,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Mean")
 plt.xlabel("Step")
@@ -50,8 +55,8 @@ plt.grid()
 
 plt.figure(2)
 plt.rcParams.update({"font.size":16})
-plt.plot(varMod,'C0',label="PCE")
-plt.plot(var,'C1--',label="MC")
+plt.plot(xMod, varMod,'C0',label="PCE")
+plt.plot(x_data, var,'C1--',label="MC")
 plt.legend(prop={'size':16})
 plt.ylabel("Variance")
 plt.xlabel("Step")

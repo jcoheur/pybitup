@@ -16,7 +16,7 @@ import one_reaction_pyrolysis
 
 # Nominal parameter  
 param_nom = np.array([1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1])
-x = np.linspace(300.0, 1400.0, 51)
+x = np.linspace(300.0, 1400.0, 201)
 
 # Model definition. Attributes of model are found in pybitup.bayesian_inference
 model_def = {}

@@ -4,16 +4,12 @@
         "BayesianPosterior" : { 
             "Data": [
                 {
-                    "Type": "GenerateSynthetic", 
-                    "x": {
-                        "Type": "linspace", 
-                        "Value": [300.0, 1400.0, 101]
-                    },
-                    "y": {
-                        "Name": "Temperature",
-                        "Error": "data",
-                        "Sigma": 0.00001
-                    }
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "data_pyrolysis",
+                    "xField": ["T"], 
+                    "yField": ["gas_prod"], 
+                    "sigmaField": ["std_gas_prod"], 
+                    "n_runs": 1
                 }
             ],
             "Model": [
@@ -40,7 +36,7 @@
         },
 	    "Algorithm": {
 		    "name": "RWMH", 
-		    "n_iterations": 1e6, 
+		    "n_iterations": 1e4, 
 		    "proposal": { 
 			    "name": "Gaussian",
 			    "covariance": { 
@@ -110,6 +106,16 @@
             }
         }
     },
+
+    "SensitivityAnalysis": {
+        "Uncertain_param": {
+            "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
+            "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
+            "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
+        }
+    },
+
 
     "PostProcess": { 
 	    "Data": { 

@@ -113,34 +113,41 @@
             "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
             "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
             "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
-        }
+        },
+        "Method": "Kernel", 
+        "Names": [["A", "E"], ["A", "n"]] // [["A", "E"], ["A", "n"], ["E", "n"], ["A", "F"], ["E", "F"], ["n", "F"], ["A", "E", "n"], ["A", "E", "n", "F"]]
     },
 
 
     "PostProcess": { 
 	    "Data": { 
-		    "display": "yes",
+		    "display": "no",
 		    "num_plot": [1]
 		},
 	    "InitialGuess": {
-		    "display": "yes",
+		    "display": "no",
 		    "num_plot": 1
 		},
 	    "MarkovChain": {
-		    "display": "yes",
+		    "display": "no",
 		    "thinning": 1
 		},
         "Posterior": {
-            "display": "yes", 
+            "display": "no", 
             "distribution": "marginal", // marginal, bivariate
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 1
         },
         "Propagation": {
-		    "display": "yes",
+		    "display": "no",
 		    "shaded_area": "yes",
 		    "burnin": 1,
 		    "num_plot": 1
-		}
+        },
+        "SensitivityAnalysis": {
+		    "display": "yes",
+		    "num_plot": 2
+        }
+        
     }
 }

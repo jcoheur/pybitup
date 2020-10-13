@@ -622,6 +622,69 @@ def post_process_data(input_file_name):
 
                     del data_ij_max, data_ij_min, data_set_n
 
+
+    # -------------------------------------------
+    # ------ Sensitivity analysis ---------
+    # -------------------------------------------
+
+    if (inputFields.get("SensitivityAnalysis") is not None):
+        if inputFields["SensitivityAnalysis"]["display"] == "yes":
+            num_plot = inputFields["SensitivityAnalysis"]["num_plot"]
+
+            # There should be data corresponding to "function evaluations" for the abscissa
+            with open('output/data', 'rb') as file_data_exp:
+                pickler_data_exp = pickle.Unpickler(file_data_exp)
+                data_exp = pickler_data_exp.load()
+
+            for num_data_set, data_id in enumerate(data_exp.keys()):
+
+                # Read sensitivity values 
+                V_i = pd.read_csv('output/sensitivity_values.csv')
+
+
+                if user_inputs["SensitivityAnalysis"]["Method"] == "MC":
+                    # With MC method, we have also computed expecations
+
+
+                    plt.figure(num_plot)
+                    plt.plot(data_exp[data_id].x, V_i['V_tot'], color="black", label="V_tot") 
+                    plt.ylabel("Expectation")
+                    plt.xlabel("x")
+
+                    plt.figure(num_plot+1)
+                    plt.plot(data_exp[data_id].x, V_i['E_tot'], 'C0')
+                    plt.ylabel("Variance")
+                    plt.xlabel("x")
+
+                    for i, name in enumerate(V_i.columns): 
+
+                        if name == "E_tot" or name == "V_tot": 
+                            continue
+
+                        plt.figure(num_plot+1)
+                        plt.plot(data_exp[data_id].x, V_i['E_tot'] + np.sqrt(V_i[name]), color=lineColor[i][0], label=name)
+                        plt.plot(data_exp[data_id].x, V_i['E_tot'] - np.sqrt(V_i[name]), color=lineColor[i][0])
+
+                        plt.figure(num_plot)
+                        plt.plot(data_exp[data_id].x, V_i[name], color=lineColor[i][0], label=name)
+
+
+
+
+                elif user_inputs["SensitivityAnalysis"]["Method"] == "Kernel":  
+                    plt.figure(num_plot)
+                    plt.ylabel("Variance")
+                    plt.xlabel("x")
+
+                    for i, name in enumerate(V_i.columns): 
+                        plt.plot(data_exp[data_id].x, V_i[name], color=lineColor[i][0], label=name)
+
+                plt.legend()
+
+
+
+
+
     # Show plot   
     #saveToTikz('propagation.tex')
     plt.show()

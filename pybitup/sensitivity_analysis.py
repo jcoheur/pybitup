@@ -68,13 +68,21 @@ class SensitivityAnalysis(sp.SolveProblem):
             fun_eval[j] = np.load("output/{}_fun_eval.{}.npy".format(self.model_id, j)) 
 
 
+        # Initialise data variable for saving in a .csv later 
+        data = {}
+        data
 
-  
+        # Get method and param names for SA 
+        method = SA_input["Method"] # "MC", "Kernel", "KernelDD"
+        names = SA_input["Names"]
 
-        method="MC" # "2DMC", "MC", "Kernel"
-        if method=="MC":
+        # Run sensitivity analysis 
+        if method == "MC": 
             # Compute conditional variables using Monte Carlo estimation from the MCMC samples 
-            for i, name in enumerate(unpar_inputs.keys()):
+            # By default, we compute first order sensitivities for all variables 
+            print("Computing 1D sensitivities using Monte Carlo method.")
+
+            for i, name in enumerate(unpar_inputs.keys()): # Only 1 D ! 
 
                 BinObject=BinMethod1D(self.unpar, name, fun_eval) 
                 #BinObject.get_bins(bins='auto') 
@@ -85,110 +93,33 @@ class SensitivityAnalysis(sp.SolveProblem):
                 Expect_tot = BinObject.Expect_tot
                 Var_tot = BinObject.Var_tot
 
-                
                 S_i  = Var_param 
-                #print('S_i', S_i)
 
-                plt.figure(1)
-                plt.plot(Expect_tot, 'C0')
-                plt.plot(Expect_tot + np.sqrt(Var_param), color='C'+str(i+1), label="S_"+name)
-                plt.plot(Expect_tot - np.sqrt(Var_param), color='C'+str(i+1))
+                data["S_"+name] = S_i
+                data["E_tot"] = Expect_tot
+                data["V_tot"] = Var_tot
 
-                plt.figure(2)
-                plt.plot(S_i,  color='C'+str(i+1),  label="S_"+name) 
-                plt.plot(Var_tot, color="black", label="V_tot") 
-            
-            plt.figure(1)
-            plt.legend()
-            plt.figure(2)
-            plt.legend()
- 
-
-
-        data = {}
-        method="0Kernel2d" # "MC", "Kernel"
-        names=[["A", "E"], ["A", "n"], ["E", "n"], ["A", "F"], ["E", "F"], ["n", "F"]]
-        if method=="Kernel2d":
-        # Compute conditional expectation and variance using Kernel Method 
+        elif method == "Kernel": 
+            # Compute conditional expectation and variance using Kernel Method 
             for i, name in enumerate(names):
-                #KernelObject=KernelMethod2D(self.unpar, name, fun_eval) 
+                print("Computing sensitivities using Kernel method.")
+                print("Computing sensitivity index for {} ...".format(name))
                 KernelObject=KernelMethodDD(self.unpar, name, fun_eval) 
-                KernelObject.compute_variance_cond()
-                V_i = KernelObject.V_i
-
-                S_i = V_i
-                data_name = "S_"+name[0]+name[1]
-                data[data_name] = V_i
                 
-                plt.figure(3)
-                plt.plot(S_i, '--', color='C'+str(i+1),  label=data_name) 
-
-        method="0Kernel3d" # "MC", "Kernel"
-        names=[["E", "n", "F"]]
-        if method=="Kernel3d":
-        # Compute conditional expectation and variance using Kernel Method 
-            for i, name in enumerate(names):
-                #KernelObject=KernelMethod3D(self.unpar, name, fun_eval) 
-                KernelObject=KernelMethodDD(self.unpar, name, fun_eval) 
                 KernelObject.compute_variance_cond()
-                V_i = KernelObject.V_i
-
-                S_i = V_i
-                data_name = "S_"+name[0]+name[1]+name[2]
-                data[data_name] = V_i
-                
-                plt.figure(3)
-                plt.plot(S_i, '--', color='C'+str(i+1),  label=data_name)    
-
-
-        method="0KernelDD" # "MC", "Kernel"
-        names=[["A", "E", "n", "F"]]
-        if method=="KernelDD":
-        # Compute conditional expectation and variance using Kernel Method 
-            for i, name in enumerate(names):
-                KernelObject=KernelMethodDD(self.unpar, name, fun_eval) 
-                KernelObject.compute_variance_cond()
-                V_i = KernelObject.V_i
-
-                S_i = V_i
-                data_name = "S_"+name[0]+name[1]+name[2]+name[3]
-                data[data_name] = V_i
-                
-                plt.figure(3)
-                plt.plot(S_i, '--', color='C'+str(i+1),  label=data_name)   
-
-        method="Kernel" # "MC", "Kernel"
-        if method=="Kernel":
-        # Compute conditional expectation and variance using Kernel Method 
-            for i, name in enumerate(unpar_inputs.keys()):
-
-                print("Computing sensitivity index for {}.".format(name))
-                KernelObject=KernelMethodDD(self.unpar, name, fun_eval) 
-                #KernelObject=KernelMethodDD(self.unpar, name, fun_eval) 
-
-                KernelObject.compute_variance_cond_1D()
+                #KernelObject.compute_variance_cond_1D()
                 #KernelObject.compute_variance_cond_without_hist()
 
                 V_i = KernelObject.V_i
 
-                S_i = V_i
-
-                data_name = "S_"+name
+                # Get the name of the param that will be used in the csv file 
+                data_name = "S_"
+                for c_name in name: 
+                    data_name += c_name
                 data[data_name] = V_i
-                plt.figure(3)
-                plt.plot(S_i, 'C'+str(i+1),  label=data_name) 
-                
-
-
-                #KernelObject.compute_cond_expectation()
-        # data["V_tot"] = Var_tot
-        # df = pd.DataFrame(data)
-        # df.to_csv("sensitivity_values.csv", header=True)
-        plt.figure(3)
-        #plt.plot(Var_tot, color="black", label="V_tot") 
-        plt.legend()
-        plt.show()
-
+                 
+        df = pd.DataFrame(data)
+        df.to_csv(self.IO_path['out_folder']+"/sensitivity_values.csv", header=True, index=False)
   
 
 class BinMethod():

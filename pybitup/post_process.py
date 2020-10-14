@@ -95,16 +95,22 @@ def post_process_data(input_file_name):
                     
                     #plt.figure(num_plot[num_data_set])
                     plt.figure(i)
-                    plt.plot(data_exp[data_id].x, data_exp[data_id].mean_y[i*n_x:(i+1)*n_x],
-                            'o', color=lineColor[num_data_set][0], mfc='none')
+
+                    if data_exp[data_id].n_runs > 1:
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].mean_y[i*n_x:(i+1)*n_x],
+                                'o', color=lineColor[num_data_set][0], mfc='none')
 
                     for j in range(data_exp[data_id].n_runs):
-                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none')
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none', label="Exp. data")
+
+                        plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["xField"][0])
+                        plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["yField"][0])
 
                     #error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
                             #data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
+            plt.legend()
 
 
     # -------------------------------------------
@@ -127,7 +133,9 @@ def post_process_data(input_file_name):
                     plt.figure(i)
 
                     plt.plot(data_exp[data_id].x,
-                            data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
+                            data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0], label="Init. guess")
+
+                    plt.legend()
 
     if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None) or  (inputFields.get("Propagation") is not None):
 
@@ -588,13 +596,13 @@ def post_process_data(input_file_name):
 
                     # Plot mean 
                     # ---------
-                    plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5)
+                    plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5, label="Mean prop.")
 
                     # Plot 95% credible interval
                     # ---------------------------
                     low_cred_int = np.percentile(data_hist, 2.5, axis=0)
                     high_cred_int = np.percentile(data_hist, 97.5, axis=0)
-                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3)
+                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3,  label="95\% cred. int.")
                     
                     # Plot 95% prediction interval
                     # -----------------------------
@@ -603,10 +611,12 @@ def post_process_data(input_file_name):
                     estimated_sigma = reader['model_id'].values
 
                     plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
-                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1)
+                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
 
                     #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
                     #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+
+                    plt.legend() 
 
                     # Values are saved in csv format using Panda dataframe  
                     df = pd.DataFrame({"x": data_exp[data_id].x,

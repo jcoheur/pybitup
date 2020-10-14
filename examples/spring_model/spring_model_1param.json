@@ -4,16 +4,12 @@
         "BayesianPosterior" : {
             "Data": [ 
                 {
-                    "Type": "GenerateSynthetic", 
-                    "x": {
-                        "Type": "linspace", 
-                        "Value": [0.0, 5.0, 101]
-                    },
-                    "y": {
-                        "Name": "Elongation",
-                        "Error": "data",
-                        "Sigma": 0.1
-                    }
+                    "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+                    "FileName": "spring_model_data",
+                    "xField": ["time"], 
+                    "yField": ["d"], 
+                    "sigmaField": ["std_d"], 
+                    "n_runs": 1
                 }
             ],
             "Model": [ 

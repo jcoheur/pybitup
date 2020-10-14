@@ -106,6 +106,19 @@
         }
     },
 
+
+    "SensitivityAnalysis": {
+        "Uncertain_param": {
+            "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            "E":  {"filename": "output/mcmc_chain.csv", "field": 1}, 
+            "n":  {"filename": "output/mcmc_chain.csv", "field": 2}, 
+            "F":  {"filename": "output/mcmc_chain.csv", "field": 3}
+        },
+        "Method": "Kernel", 
+        "Names": [["A", "E"], ["A", "n"], ["E", "n"]]
+    },
+
+
     "PostProcess": { 
 	    "Data": { 
 		    "display": "yes",

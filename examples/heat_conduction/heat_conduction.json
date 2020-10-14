@@ -91,6 +91,14 @@
             }
         }
     },
+    "SensitivityAnalysis": {
+        "Uncertain_param": {
+            "phi":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
+            "h":  {"filename": "output/mcmc_chain.csv", "field": 1}
+        },
+        "Method": "Kernel", 
+        "Names": [["phi"], ["h"]]
+    },
 
     "PostProcess": { 
 	    "Data": { 
@@ -116,6 +124,10 @@
 		    "shaded_area": "yes",
 		    "burnin": 0,
 		    "num_plot": 1
-		}
+        },
+        "SensitivityAnalysis": {
+		    "display": "yes",
+		    "num_plot": 2
+        }
     }
 }

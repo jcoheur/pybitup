@@ -95,16 +95,22 @@ def post_process_data(input_file_name):
                     
                     #plt.figure(num_plot[num_data_set])
                     plt.figure(i)
-                    plt.plot(data_exp[data_id].x, data_exp[data_id].mean_y[i*n_x:(i+1)*n_x],
-                            'o', color=lineColor[num_data_set][0], mfc='none')
+
+                    if data_exp[data_id].n_runs > 1:
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].mean_y[i*n_x:(i+1)*n_x],
+                                'o', color=lineColor[num_data_set][0], mfc='none')
 
                     for j in range(data_exp[data_id].n_runs):
-                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none')
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none', label="Exp. data")
+
+                        plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["xField"][0])
+                        plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["yField"][0])
 
                     #error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
                             #data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
+            plt.legend()
 
 
     # -------------------------------------------
@@ -127,7 +133,9 @@ def post_process_data(input_file_name):
                     plt.figure(i)
 
                     plt.plot(data_exp[data_id].x,
-                            data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0])
+                            data_init[i*n_x:(i+1)*n_x], '--', color=lineColor[num_data_set][0], label="Init. guess")
+
+                    plt.legend()
 
     if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None) or  (inputFields.get("Propagation") is not None):
 
@@ -588,13 +596,13 @@ def post_process_data(input_file_name):
 
                     # Plot mean 
                     # ---------
-                    plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5)
+                    plt.plot(data_exp[data_id].x, data_ij_mean, color=lineColor[num_data_set][0], alpha=0.5, label="Mean prop.")
 
                     # Plot 95% credible interval
                     # ---------------------------
                     low_cred_int = np.percentile(data_hist, 2.5, axis=0)
                     high_cred_int = np.percentile(data_hist, 97.5, axis=0)
-                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3)
+                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3,  label="95\% cred. int.")
                     
                     # Plot 95% prediction interval
                     # -----------------------------
@@ -603,10 +611,12 @@ def post_process_data(input_file_name):
                     estimated_sigma = reader['model_id'].values
 
                     plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
-                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1)
+                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
 
                     #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
                     #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+
+                    plt.legend() 
 
                     # Values are saved in csv format using Panda dataframe  
                     df = pd.DataFrame({"x": data_exp[data_id].x,
@@ -621,6 +631,69 @@ def post_process_data(input_file_name):
                     df_CI.to_csv('output/'+data_id+"_posterior_pred_check_CI.csv", index=None) 
 
                     del data_ij_max, data_ij_min, data_set_n
+
+
+    # -------------------------------------------
+    # ------ Sensitivity analysis ---------
+    # -------------------------------------------
+
+    if (inputFields.get("SensitivityAnalysis") is not None):
+        if inputFields["SensitivityAnalysis"]["display"] == "yes":
+            num_plot = inputFields["SensitivityAnalysis"]["num_plot"]
+
+            # There should be data corresponding to "function evaluations" for the abscissa
+            with open('output/data', 'rb') as file_data_exp:
+                pickler_data_exp = pickle.Unpickler(file_data_exp)
+                data_exp = pickler_data_exp.load()
+
+            for num_data_set, data_id in enumerate(data_exp.keys()):
+
+                # Read sensitivity values 
+                V_i = pd.read_csv('output/sensitivity_values.csv')
+
+
+                if user_inputs["SensitivityAnalysis"]["Method"] == "MC":
+                    # With MC method, we have also computed expecations
+
+
+                    plt.figure(num_plot)
+                    plt.plot(data_exp[data_id].x, V_i['V_tot'], color="black", label="V_tot") 
+                    plt.ylabel("Expectation")
+                    plt.xlabel("x")
+
+                    plt.figure(num_plot+1)
+                    plt.plot(data_exp[data_id].x, V_i['E_tot'], 'C0')
+                    plt.ylabel("Variance")
+                    plt.xlabel("x")
+
+                    for i, name in enumerate(V_i.columns): 
+
+                        if name == "E_tot" or name == "V_tot": 
+                            continue
+
+                        plt.figure(num_plot+1)
+                        plt.plot(data_exp[data_id].x, V_i['E_tot'] + np.sqrt(V_i[name]), color=lineColor[i][0], label=name)
+                        plt.plot(data_exp[data_id].x, V_i['E_tot'] - np.sqrt(V_i[name]), color=lineColor[i][0])
+
+                        plt.figure(num_plot)
+                        plt.plot(data_exp[data_id].x, V_i[name], color=lineColor[i][0], label=name)
+
+
+
+
+                elif user_inputs["SensitivityAnalysis"]["Method"] == "Kernel":  
+                    plt.figure(num_plot)
+                    plt.ylabel("Variance")
+                    plt.xlabel("x")
+
+                    for i, name in enumerate(V_i.columns): 
+                        plt.plot(data_exp[data_id].x, V_i[name], color=lineColor[i][0], label=name)
+
+                plt.legend()
+
+
+
+
 
     # Show plot   
     #saveToTikz('propagation.tex')

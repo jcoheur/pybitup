@@ -13,13 +13,17 @@
 
 \usepackage{lmodern}
 
+% Inserting code in the text 
+\usepackage{listings}
+\usepackage{xcolor}
+
 
 \title{\huge \textbf{pybitup: \\ PYthon Bayesian Inference Toolbox and Uncertainty Propagation}}
 
-\author{\textbf{Joffrey Coheur, Maarten Arnst}}
+\author{\textbf{Joffrey Coheur} \\ \vspace{5pt} Developpers: Joffrey Coheur, Martin Lacroix}
 
 
-\date{\today \\ 
+\date{Last update: \today \\ 
 \vspace{50pt}
 Universit\'e de Li\`ege, Aerospace and Mechanical Engineering, All\'ee de la D\'ecouverte 9, 4000 Li\`ege, Belgium}
 
@@ -32,7 +36,24 @@ Universit\'e de Li\`ege, Aerospace and Mechanical Engineering, All\'ee de la D\'
 \maketitle
 \end{titlepage}
 
+
 \section{Introduction} 
+
+There exists many computational software for Bayesian inference and uncertainty propagation. For Bayesian inference, the BUGS (Bayesian inference Using Gibbs Sampling) program was first developed in the early 1980s  (see \cite{Lunn_2009} for a review and history of the program) with the aime of providing a statistical toolbox for sampling from the posterior distribution using a convenient programming language. A related package of BUGS is JAGS (Just Another Gibbs Sampling) which is more UNIX-oriented. More recently was released the sofwate Stan (\cite{Carpenter_2017}) written in \texttt{C++} which takes the advantage of the development of more efficient sampling algorithms for high dimensions and computational efficiency. The main simulation algorithms feature the Hamiltonian Monte Carlo with the most advanced improvements. The python toolbox PyMC (\cite{Patil_2010}) features random-walk metropolis and adaptive improvements and several versions of slice samplers, and more advanced methods in PyMC3~\cite{Salvatier_2016}. Worth mentionning is the work of \cite{VillaPetraGhattas19} for the development of  hIPPYlib. 
+
+The first objective of \texttt{pybitup} is to implement a toolbox that is readily usable and that is suitable to many engineering problems. Problems that are sought are the calibration of time observations to a computational model representing the complex physics of the process and the propagation of the calibrated parameters. Several classical algorithms to solve those problem are implemented in the code (adaptive random-walk Metropolis-Hastings, polynomial chaos methods). The second objective is to allow the users to have the flexibility to implement easily state-of-the-art algorithms for research purposes, both for Bayesian inference and uncertainty propagation. Examples are Hamiltonian Monte Carlo, Ito-SDE (see later) for sampling, or quadrature rules for correlated parameters. The use of \texttt{python} as programming language is therefore very suitable. Moreover, more and more programmers are developing their routine tailored to their problem in \texttt{python}, making the use of a python software convenient and allowing to use this routine as a black-box without much effort. 
+
+Finally, software for calibration are usually developed apart from software for propagation. Results from the model fitting procedure using  Bayesian inference are not reused for uncertainty propagation. Uncertainty propagation in the engineering community is usually build based on standard parameter distributions (uniform, Gaussian, gamma) and for which it is easy to build a surrogate, but most often that does not represents the real parameters distribution. One of the challenge is the difficulty to build surrogate models from unknown and correlated distributions (\cite{Jakeman_2019}). Pybitup allows to use the samples from the Markov chain resulting from the calibration to be propagated through a computational model and performing sensitivity analysis. Thus performing uncertainty quantification from the inference of parameter distribution to their uncertainty propagation and sensitivity analysis. There are a few examples allowing to do that. Dakota~\cite{dakota_6_10} is an open-source software written in C++ developed by Sandia National Laboratories and is developed in a more general framework than uncertainty quantification. It was initially designed for optimization but was then extended to uncertainty propagation and Bayesian inference. In \texttt{Matlab}), there is \texttt{UQLab}, but to the authors' knowledge, none in \texttt{python}. Propagation can be performed directly from a priori generated samples.  
+
+The development of a simulation code for model fitting, Bayesian inference and uncertainty propagation is further motivated by the following arguments: 
+\begin{itemize}
+\item Research: allow advanced users to have an easy and modulable way of implementing new algorithms in an oriented-object framework using popular and accessible computational language (python). Python language is not a language dedicated for statistical purposes, and model implemented within python can be made more complicated and more general. Full deterministic software can be developed. 
+\item Applications: flexibility to implemented new model just by the knowledge of python. During my thesis, deterministic numerical solver was developed for pyrolysis and later coupled to pybitup for performing Bayesian inference and propagation. Applications in inference for heat capacity simulations was also performed.   
+\end{itemize}
+
+
+ 
+\subsection{Content of the document} 
 
 We described here the general structure and some practical implementations of pybitup, the solver for Bayesian inference that is developed within this work. The python Bayesian inference toolbox, or pybitup, is mainly constructed for Bayesian inference but can also be used for sampling from known probability distribution functions. It is therefore developed in a general framework. Future applications should combine sampling from posterior distributions in pybitup and propagation of these samples using methods such as polynomial chaos expansion (PCE), or other propagation methods. 
 
@@ -40,8 +61,202 @@ pybitup to not intend to compete with current ``industrial level'' toolbox for u
 
 
 
+\section{Installation}
 
- 
+\texttt{Pybitup} requires a few packages to be installed on the system to be able to run. It was developed on \texttt{Python} version 3.7.0. Packages can be installed using \text{pip},  the package installer for \texttt{Python} and is already installed for \texttt{Python} version $>=$ 3.4.0. Packages can be installed using the command \texttt{pip install PackageName}. Here is the list of packages used by the software. 
+\begin{itemize}
+\item \texttt{numpy}: fundamental scientific programming package that provides the tool for manipulating data arrays and several useful functions for data analysis. 
+\item \texttt{matplotlib}: library for producing graphs. 
+\item \texttt{SciPy}: library containing algorithms for mathematics (integration methods, linear algebra), statistics (distributions). 
+\item \texttt{pandas}: provides the data manipulation tool, such as reading and writing csv files for input and output communication. 
+\item \texttt{pickle}: package for manipulating large data sets efficiently.  
+\item \texttt{json}: is used for the input file management (reading the inputs) and having a structured input file. 
+\item \texttt{jsmin}: gives the possibility to add comment to .json input files. 
+\item \texttt{seaborn}: (optional) used for heatmap (that was used for graphical representation of correlation matrix) 
+\item \texttt{mpi4py}: (optional) provides bindings of the Message Passing Interface (MPI) standard for the Python programming language, allowing any \texttt{Python} program to exploit multiple processors. Requires a working \texttt{MPI} implementation to be install on the system (e.g. microsoft \texttt{MPI}) 
+\end{itemize} 
+
+
+\section{Tutorial: spring model} 
+
+We consider the example of the spring model described in~\cite{smith:14book}. The displacement $z$ (adimensional) as a function of time of the spring without any external excitation is provided by the equations 
+\begin{align}
+\begin{cases}
+ \ddot{z} + C \dot{z} + K z = 0 \\ 
+z(0) = 2, \dot{z} = - C 
+\end{cases}
+\end{align}
+with $C = c/m$, $K = k/m$, $m \ge 0$ (kg) is the mass, $c \ge 0$ (N$\cdot$s m$^{-1}$) is the damping coefficient and $k \ge 0$ (N m$^{-1}$) is the stiffness coefficient. For $C^2 - 4K < 0$, the solution is 
+\begin{align}
+z(t) = 2 \exp\left(- \frac{C t}{2}\right) \cos \left( t \sqrt{K - \frac{C^2}{4}} \right) 
+\label{eq:sprinModelSol}
+\end{align} 
+
+For this problem, synthetic data $z_i$ are generated for $0 \le i \le n$ with $n=51$ the number of points in the time interval $[0, 5]$ s from a random Gaussian distribution $\epsilon_i \sim N(0, \sigma_0^2)$ with $z_i = z(t_i, p_0) + \epsilon_i$ where $p_0 = [K_0, C_0]$ the nominal parameter values with $K_0 = 20.5$, $C_0 = 1.5$ and $\sigma_0 = 0.1$ (as will be seen later, data will be generated also with uncertainty on the parameters $\sigma_p = [0.1, 1]$). 
+
+\subsection{Model file} 
+
+The model, the parameters and its solution are specified in the \texttt{spring\_model.py} file that we describe below. 
+
+\definecolor{codegray}{rgb}{0.94,0.97,0.98}
+
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+import numpy as np
+from pybitup import bayesian_inference as bi
+
+class SpringModel(bi.Model): 
+	""" Class for the spring model """	
+	
+	def __init__(self, x=[], param=[], name=""): 
+		# Initialize parent object ModelInference
+		bi.Model.__init__(self, name=name)	
+	
+	def set_param_values(self):
+		# Parameters 
+		self.C = self.param[0] 
+		self.K = self.param[1]
+		
+		# Variable 
+		self.time = self.x 
+	
+	def fun_x(self):
+		# Get the parameters
+		self.set_param_values() 
+
+        # Return the function evaluation 		
+		return 2 * np.exp(-self.C * self.time / 2) * np.cos(np.sqrt(self.K - self.C**2 / 4) * self.time)
+\end{lstlisting}
+
+Exponential, cosine and square root functions are imported from the \texttt{numpy} package. The \texttt{bayesian\_inference.py} file, where the \texttt{Model} class is defined, needs to be imported from \texttt{pybitup}. Our model for the spring that we call here \texttt{SpringModel} is based on the general \texttt{Model} class and inherit from two (aside from \texttt{\_\_init\_\_}) essential methods, namely \texttt{set\_param\_values()} and \texttt{fun\_x()}. On the last line is the solution from Eq.~\ref{eq:sprinModelSol} of the spring model. The parameters $C$ and $K$ are assigned in the method \texttt{set\_param\_values()}. Because the values of $C$ and $K$ will change during the calibration as we will see later, this method is run every time the model is evaluated. 
+
+\subsection{Input files} 
+
+Now let's have a look at the general input file, that can be identified by the \texttt{.json} extension. We first have a look at the first keyword \texttt{Sampling} which contains the inputs for the sampling part. The minimal syntax is the following: 
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+"Sampling": {
+    "BayesianPosterior" : {
+        "Data": [],
+        "Model": [],
+        "Prior": {},
+        "Likelihood": {}
+    },
+    "Algorithm": {}
+}, 
+\end{lstlisting}
+The \texttt{BayesianPosterior} keywords means that we will sample from a posterior distribution computed from Bayes' formula. The \texttt{Algorithm} section will define how we will sample from it.
+
+Let's first have a look at the \texttt{BayesianPosterior} keyword. Mandatory keywords for \texttt{BayesianPosterior} are \texttt{Data}, \texttt{Model}, \texttt{Prior} and \texttt{Likelihood}. The experimental data are first defined under the \texttt{Data} keyword. 
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+"Data": [ 
+    {
+        "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
+        "FileName": "spring_model_data",
+        "xField": ["time"], 
+        "yField": ["d"], 
+        "sigmaField": ["std_d"], 
+        "n_runs": 1
+    }
+],
+\end{lstlisting}
+The data are read from files with general name \texttt{spring\_model\_data}. The \texttt{n\_runs} keyword denotes the number of experimental data files that we have, which is only one here. Thus, the input file is named \texttt{spring\_model\_data\_0.csv} and must appear in the case directory. Below is the structure of the dataset of the \texttt{spring\_model\_data\_0.csv} file and for compactness, we only show here only the 10 first lines. 
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+,time,d,std_d
+0,0.0,1.9320285551921579,0.1
+1,0.1,1.7158980306494984,0.1
+2,0.2,1.0116134181643508,0.1
+3,0.30000000000000004,0.43030863754766857,0.1
+4,0.4,-0.1967505502959701,0.1
+5,0.5,-0.8165563476714192,0.1
+6,0.6000000000000001,-1.179212035121202,0.1
+7,0.7000000000000001,-1.1151949721017202,0.1
+8,0.8,-0.9116380936755248,0.1
+\end{lstlisting}
+The first column are the indices of the data. Following columns are the fields whose names appear in the input file, namely the time, the displacement of the spring \texttt{d} and the experimental standard deviation on \texttt{d}, \texttt{std\_d}. The entries inside the input file and the data file must corresponds. In \texttt{pybitup}, we provide a function that allows to generate synthetic data. We just keep in mind here that the data for the spring model encoded in the \texttt{.csv} file were generated synthetically using the \texttt{generateDataFile.py} file and we will see later how to generate them. 
+
+Going back to the input file, the \texttt{Model} keyword specifies all the parameters of the model, their nominal values and if the model will be parameterized during the calibration, which is not the case here. 
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+"Model": [ 
+    {
+        "param_names": ["C", "K"],
+        "param_values": [1.5, 20.5],
+        "parametrization" : "no"
+    }
+],
+\end{lstlisting}
+There are only two parameters here that are $C$ and $K$. The nominal values of the model parameters will be replaced if those parameters are considered to be unknown in the calibration process. 
+
+Next, \texttt{Prior} defines the prior distribution. 
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+"Prior": { 
+    "Distribution": "Mixture", 
+    "Param": {
+        "C": {"initial_val" : 1.5,    "prior_name" : "Uniform", "prior_param" : [0.0, 100]},  
+        "K": {"initial_val" : 20.5,   "prior_name" : "Uniform", "prior_param" : [0.0, 100]}
+    }
+},
+\end{lstlisting}
+The parameters that are unknown in the calibration process appear under the \texttt{Param} keyword. We consider the two unknown parameters to be $p = [C, K]$. An initial value must be specified to start the calibration process. The \texttt{Mixture} distribution means that we consider the product distribution of the two marginal distributions assumed to be independent. The marginal distributions are supposed to be uniform pdf with support [0, 100] each.
+
+The \texttt{Likelihood} keywords defines the likelihood function. 
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+"Likelihood": {
+    "function": "Gaussian",
+    "distance": "L2"
+}
+\end{lstlisting}
+It is assumed to be a \texttt{Gaussian} function with the weighted \texttt{L2} distance between the model and the data in the argument of the exponential term. So far, there is no other option for the likelihood (will be modified soon).  
+
+The Bayesian posterior distribution will be sampled using a Metropolis-Hastings algorithm that is specified under the \texttt{Algorithm} keyword.
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+"Algorithm": {
+    "name": "AMH", 
+    "AMH": {
+        "starting_it": 1e2, 
+        "updating_it": 1e1, 
+        "eps_v": 0.0
+    },
+    "n_iterations": 1e4, 
+    "proposal": { 
+        "name": "Gaussian",
+        "covariance": { 
+            "type": "diag", 
+            "value": [0.0345, 0.7071]
+        }
+    }
+}
+\end{lstlisting}
+The algorithm selected here is the adaptive random-walk Metropolis-Hastings (AMH) that will adapt the covariance matrix of the proposal during the iterations. In particular, the AMH algorithm requires additional parameters that are specified under the \texttt{AMH} keyword, namely the number of iterations at which the adaptation starts (\texttt{starting\_it}), the frequency at which we update the covariance (\texttt{updating\_it}) and a last parameter that controls the covariance adaptation (\texttt{eps\_v}) which is set here to zero. The algorithm will perform during $10^4$ iterations. Finally, we need to defined the proposal covariance matrix. Here, it is a Gaussian function with a diagonal covariance matrix with values $[0.0345, 0.7071]$ on the main diagonal. The covariance matrix is a tuning parameter that is not known a priori and may require several trial-and-error tests before finding the adequate covariance. Having an initial covariance matrix that is diagonal is is easier to set and can be guessed based on the typical scales of the problem that can be known by performing a local sensitivity analysis. Note that because here we selected the AMH algorithm, this covariance matrix will be modified with the iterations in the present case and will most probably not remain diagonal.
+
+
+\subsection{Run file} 
+
+The file that needs to be run by python to perform the calibration is named \texttt{run.py}. It gathers the information from the input file, the model and it is where we select what function from \texttt{pybitup} we want to perform. In this case, in this the \texttt{Sampling} of the posterior distribution. We need first to import the \texttt{spring\_model} file as well as \texttt{pybitup}.
+
+\begin{lstlisting}[language=Python, breaklines=true, tabsize=4, backgroundcolor=\color{codegray}]
+import spring_model 
+import pybitup
+
+case_name = "spring_model"
+input_file_name = "{}.json".format(case_name) 
+
+# Define the model 
+my_spring_model = {} 
+my_spring_model[case_name] = spring_model.SpringModel(name=case_name)
+
+# Sample 
+post_dist = pybitup.solve_problem.Sampling(input_file_name)
+post_dist.sample(my_spring_model)
+post_dist.__del__()
+
+# Post process 
+pybitup.post_process.post_process_data(input_file_name)
+
+\end{lstlisting}
+
+The model in \texttt{pybitup} is specified in a list where the models we want to run are provided. The only model here in the \texttt{SpringModel} from the \texttt{spring\_model.py} file. 
+
+All the main functions of \texttt{pybitup} (sampling, propagation, sensitivity analysis) are provided in the \texttt{solve\_problem} file. We thus create an object \texttt{post\_dist} for the sampling and provide as input the \texttt{.json} file. Next, we use the method \texttt{.sample} and provide the model list \texttt{my\_spring\_model} as input. At the end of the sampling, the output file are written in an \texttt{/output} folder and we delete the object \texttt{post\_dist}. The last line is for the post process that will be described later. 
+
 
 \section{Input/Output} 
 
@@ -82,6 +297,17 @@ Thus, for Gaussian likelihood, the log-likelihood function is the $\text{L}_2$ d
 \subsection{Ito-SDE algorithm}
 
 For the Ito-SDE algorithm, we do not perform any more a random walk loop and the \texttt{run\_algorithm} method is different than for the MetropolisHastings classes. 
+
+
+
+\section{Uncertainty propagation} 
+
+
+\section{Sensitivity analysis} 
+
+
+\bibliographystyle{elsarticle-num} 
+\bibliography{biblio}
 
 
 \end{document}

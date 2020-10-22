@@ -267,8 +267,8 @@ class MetropolisHastings:
     def compute_time(self, t1):
         """ Return the time in H:M:S from time t1 to current clock time """
 
-        print("\rEstimated time: {}; mean acceptance probability: {}\t".format(time.strftime("%H:%M:%S",
-                                                time.gmtime((time.perf_counter()-t1) / float(self.it) * self.nIterations)), self.mean_r/self.it), end='', flush=True)
+        print("\rIteration {}/{} ({:.2f}%); Remaining time: {}; mean acceptance probability: {}\t".format(self.it, self.nIterations, self.it/self.nIterations*100, time.strftime("%H:%M:%S",
+                                                time.gmtime((time.clock()-t1) / float(self.it) * self.nIterations - (time.clock()-t1) )), self.mean_r/self.it), end='', flush=True)
 
 
     def write_fun_distr_val(self, current_it):

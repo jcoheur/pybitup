@@ -17,24 +17,34 @@
 \usepackage{listings}
 \usepackage{xcolor}
 
+% For the bastract on the title pafe 
+\usepackage{titling}
+
 
 \title{\huge \textbf{pybitup: \\ PYthon Bayesian Inference Toolbox and Uncertainty Propagation}}
 
-\author{\textbf{Joffrey Coheur} \\ \vspace{5pt} Developpers: Joffrey Coheur, Martin Lacroix}
+\author{\textbf{Joffrey Coheur$^{1, 2, 3}$} \\ \vspace{5pt} Developpers: Joffrey Coheur, Martin Lacroix$^{1}$}
 
 
 \date{Last update: \today \\ 
-\vspace{50pt}
-Universit\'e de Li\`ege, Aerospace and Mechanical Engineering, All\'ee de la D\'ecouverte 9, 4000 Li\`ege, Belgium}
+\vspace{40pt}
+$^1$Universit\'e de Li\`ege, Aerospace and Mechanical Engineering, All\'ee de la D\'ecouverte 9, 4000 Li\`ege, Belgium \\ 
+\vspace{5pt}  
+$^2$Universit\'e Catholique de Louvain-la-Neuve, Institute of Mechanics, Materials and Civil Engineering, Place du Levant, 2, 1348-Louvain-la-Neuve, Belgium \\
+\vspace{5pt}  
+$^3$von Karman Institute vor Fluid Dynamics, Aeronautics and Aerospace Department, Chaussée de Waterloo, 72, B-1640 Rhode-Saint-Genèse, Belgium}
 
 
 \begin{document}
 
+\begin{titlingpage}
+    \maketitle
+    \begin{abstract}
+This python Bayesian inference toolbox for uncertainty propagation (pybitup) proposes a integrated tool for performing uncertainty quantification, from Bayesian calibration to uncertainty propagation, intended to a wide range of engineering problems. The code was initially tailored to continuous-time processes and their calibration using Markov chain Monte Carlo methods (MCMC) to a mathematical model representing the physics with unknown parameters. Uncertainty propagation can then be performed using the calibrated parameters through the same model (posterior predictive check) or through other, more complex, models. It features polynomial chaos methods that can be built using the MCMC samples or using the classical Monte Carlo method for cheap computer models. Recently, a brief implementation of sensitivity analysis methods were added using kernel method or Monte carlo method. The code is written in python such that is allows easily to implement new methods and to test them directly on user applications or built-in applications.
+    \end{abstract}
+\end{titlingpage}
 
 
-\begin{titlepage}
-\maketitle
-\end{titlepage}
 
 
 \section{Introduction} 
@@ -302,9 +312,15 @@ For the Ito-SDE algorithm, we do not perform any more a random walk loop and the
 
 \section{Uncertainty propagation} 
 
+Documentation under development. 
 
 \section{Sensitivity analysis} 
 
+Documentation under development. 
+
+
+\section{Ackowledgments} 
+The work of J. Coheur is supported by the Fund for Research Training in Industry and Agriculture (FRIA) 1E05418F provided by the Belgian Fund for Scientific Research (F.R.S.-FNRS).
 
 \bibliographystyle{elsarticle-num} 
 \bibliography{biblio}

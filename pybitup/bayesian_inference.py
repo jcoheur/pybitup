@@ -492,18 +492,18 @@ class Likelihood:
             
             # Compute the weighted sum of square 
             for c_run in range(self.data[model_id].n_runs): 
-                dy = self.data[model_id].y[c_run] - self.models[model_id].model_eval
+                # dy = self.data[model_id].y[c_run] - self.models[model_id].model_eval
 
 
-                int1 = np.sum(self.models[model_id].model_eval * self.data[model_id].dx/self.data[model_id].std_y)
-                int2 = np.sum(self.data[model_id].y[c_run] * self.data[model_id].dx/self.data[model_id].std_y)
-                frac_y = np.array(int1 / int2)
-                new_std_y = np.array(dy) / 100
-                new_std_y2 = np.array(self.data[model_id].y[0])*1e-3 + 1e-18
+                # int1 = np.sum(self.models[model_id].model_eval * self.data[model_id].dx/self.data[model_id].std_y)
+                # int2 = np.sum(self.data[model_id].y[c_run] * self.data[model_id].dx/self.data[model_id].std_y)
+                # frac_y = np.array(int1 / int2)
+                # new_std_y = np.array(dy) / 100
+                # new_std_y2 = np.array(self.data[model_id].y[0])*1e-3 + 1e-18
 
 
-                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y)
-                arg_exp2 = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y2)
+                # arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y)
+                # arg_exp2 = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y2)
 
                 #arg_exp = (int1 - int2)
                 arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y)

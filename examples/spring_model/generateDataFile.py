@@ -25,7 +25,7 @@ model_def[0].x = x
 y_nom = model_def[0].fun_x()
 
 # Define standard deviation on parameters and data  
-std_param = [0.1, 1] # param / 100 
+std_param = [0.0, 0.0] # param / 100 
 std_y = .1
 array_std_y = np.ones(len(x)) * std_y 
 
@@ -34,6 +34,9 @@ random.seed(a=0)
 
 # Generate random y 
 y_noisy = bayesian_inference.generate_synthetic_data(model_def[0], std_param, array_std_y)
+
+std_y = 0.3
+array_std_y = np.ones(len(x)) * std_y 
 
 # Plot 
 plt.figure(1)

@@ -8,8 +8,8 @@
                     "FileName": "spring_model_data",
                     "xField": ["time"], 
                     "yField": ["d"], 
-                    "sigmaField": ["std_d"], 
-                    "n_runs": 1
+                    "sigmaField": ["std_d"]
+                    // "n_runs": 2 // use n_runs if there are several input data files 
                 }
             ],
             "Model": [ 
@@ -63,7 +63,7 @@
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 100
 		},
-	    "Propagation": {
+	    "PosteriorPredictiveCheck": {
 		    "display": "yes",
 		    "shaded_area": "yes",
 		    "burnin": 0,

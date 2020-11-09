@@ -8,8 +8,8 @@
                     "FileName": "data_heat_conduction",
                     "xField": ["x"], 
                     "yField": ["T"], 
-                    "sigmaField": ["std_T"], 
-                    "n_runs": 1
+                    "sigmaField": ["std_T"]
+                    // "n_runs": 1 // use n_runs if there are several input data files 
                 }
             ],
             "Model": [
@@ -58,8 +58,8 @@
             {
             "model_id": "heat_pce_test",
             "design_points": {
-                "filename": "test_design_points.dat", 
-                "field": 0
+                "filename": "test_design_points.csv", 
+                "field": "T"
             },  
             "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
             "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],
@@ -119,7 +119,7 @@
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 10
         },
-        "Propagation": {
+        "PosteriorPredictiveCheck": {
 		    "display": "yes",
 		    "shaded_area": "yes",
 		    "burnin": 0,

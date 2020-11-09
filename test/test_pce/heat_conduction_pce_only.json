@@ -6,8 +6,8 @@
             {
                 "model_id": "heat_pce_test",
                 "design_points": {
-                    "filename": "test_design_points.dat", 
-                    "field": 0
+                    "filename": "test_design_points.csv", 
+                    "field": "T"
                 },  
                 "param_names": ["a", "b", "k", "T_amb", "phi", "h"],
                 "param_values": [0.95, 0.95, 2.37, 21.29, -18.41, 0.00191],

@@ -29,7 +29,7 @@ array_std_y *= std_y
 y = [96.14, 80.12, 67.66, 57.96, 50.90, 44.84, 39.75, 36.16, 33.31, 31.15, 29.28, 27.88, 27.18, 26.40, 25.86]
 
 df = pd.DataFrame({'x': x, 'T': y, 'std_T': array_std_y})
-df.to_csv("heat_conduction_data_0.csv")
+df.to_csv("heat_conduction_data.csv")
 		
 
 plt.plot(x, model_def.fun_x())

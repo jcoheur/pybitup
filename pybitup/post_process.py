@@ -513,14 +513,14 @@ def post_process_data(input_file_name):
     # ------ Posterior predictive check ---------
     # -------------------------------------------
 
-    if (inputFields.get("Propagation") is not None):
-        if inputFields["Propagation"]["display"] == "yes":
+    if (inputFields.get("PosteriorPredictiveCheck") is not None):
+        if inputFields["PosteriorPredictiveCheck"]["display"] == "yes":
 
             # By default, we have saved 100 function evaluations
             n_fun_eval = 100
             delta_it = int(n_samples/n_fun_eval)
 
-            start_val = int(inputFields["Propagation"]["burnin"]*delta_it)
+            start_val = int(inputFields["PosteriorPredictiveCheck"]["burnin"]*delta_it)
 
             # By default, the last function evaluation to be plotted is equal to the number of iterations
             end_val = int(n_samples)
@@ -633,8 +633,34 @@ def post_process_data(input_file_name):
                     del data_ij_max, data_ij_min, data_set_n
 
 
+
     # -------------------------------------------
-    # ------ Sensitivity analysis ---------
+    # ------------ Propagation ------------------
+    # -------------------------------------------
+
+
+    if (inputFields.get("Propagation") is not None):
+        if inputFields["Propagation"]["display"] == "yes":
+
+            num_plot = inputFields["Propagation"]["num_plot"]
+
+            for num_model_id, model_id in enumerate(inputFields["Propagation"]["model_id"]):
+
+                results_prop_CI = pd.read_csv('output/'+model_id+'_CI.csv') 
+                results_prop_intervals = pd.read_csv('output/'+model_id+'_interval.csv') 
+
+                # Plot graphs
+                plt.figure(num_plot)
+
+                plt.plot(results_prop_intervals["x"], results_prop_intervals['mean'], color=lineColor[i][0], alpha=0.5)
+                plt.fill_between(results_prop_intervals["x"], results_prop_CI["CI_lb"], results_prop_CI["CI_ub"], facecolor=lineColor[i][0], alpha=0.1)
+
+                # Prediction interval 
+                #plt.fill_between(data_exp[data_id].x, (results_prop_CI["CI_lb"]-data_exp['std_rho']), (results_prop_CI["CI_ub"]+data_exp['std_rho']), facecolor=lineColor[i][0], alpha=0.1)
+
+
+    # -------------------------------------------
+    # --------- Sensitivity analysis ------------
     # -------------------------------------------
 
     if (inputFields.get("SensitivityAnalysis") is not None):

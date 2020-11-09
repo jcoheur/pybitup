@@ -46,7 +46,7 @@ plt.show()
 
 # Save data to the .csv file 
 df = pd.DataFrame({'T': x, 'cp': y_noisy, 'std_cp': array_std_y})
-df.to_csv("data_heat_capacity_0.csv")
+df.to_csv("data_heat_capacity.csv")
 		
 
 

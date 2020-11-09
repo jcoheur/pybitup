@@ -3,9 +3,9 @@ from scipy import stats
 import random
 import matplotlib.pyplot as plt 
 
-# from mpi4py import MPI
-# comm = MPI.COMM_WORLD
-# rank = comm.Get_rank()
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
 
 
 

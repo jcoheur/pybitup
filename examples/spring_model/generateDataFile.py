@@ -45,6 +45,6 @@ plt.plot(x, y_noisy, 'o', color='C0')
 plt.legend(["Displacement (nominal)", "Displacement (noisy)"])
 
 df = pd.DataFrame({'time': x, 'd': y_noisy, 'std_d': array_std_y})
-df.to_csv("spring_model_data_0.csv")
+df.to_csv("spring_model_data.csv")
 		
 plt.show()

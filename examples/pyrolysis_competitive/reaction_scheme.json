@@ -1,5 +1,6 @@
 {
   "solids": ["S1","ActSol1","ActSol2", "Char1", "Char2"],
+  "species": ["gas1", "gas2"],
   "rhoIni": [100, 0, 0, 0, 0],
   "reactions": [
                 {"S1" : "ActSol1 + gas1"},

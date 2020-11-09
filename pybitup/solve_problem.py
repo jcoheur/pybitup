@@ -174,30 +174,51 @@ class Sampling(SolveProblem):
                 # Data 
                 # -----
                 if c_data['Type'] == "ReadFromFile": 
-                    reader = pd.read_csv(c_data['FileName']+'_0.csv')
 
-                    # From the same model (same xField), there can be several yFields for the
+                    # Get the number of experimental runs 
+                    if (c_data.get("n_runs") is not None): 
+                        # If we specify the number of runs, data files must be named accordigly 
+                        # e.g. my_filename_0.csv, my_filename_1.csv, ..., my_filename_nruns.csv.  
+                        n_runs = c_data['n_runs']
+                        app_name = "_0.csv"
+                    else: 
+                        # If not specified, default is one and no suffix at the end of the filename
+                        n_runs = 1
+                        app_name = ".csv"
+
+                    # Read input csv file 
+                    data_name = c_data['FileName']
+                    data_filename = data_name+app_name
+                    reader = pd.read_csv(data_filename)
+
+                    # Initialise arrays 
+                    # From the same model (same xField), there can be several yFields 
                     x = np.array([])
                     y = np.array([])
                     std_y = np.array([])
 
                     # There is only one xField
                     x = reader[c_data['xField'][0]].values
-                    models[model_id].x = x
+                    models[model_id].x = x 
 
-                    n_runs = c_data['n_runs']
                     y_tot = {}
                     for c_run in range(n_runs): 
                         # For a given model_id, there can be several outputs (several yField) for the inference (e.g. output and its derivative(s))
                         # for the same design points x. We put those outputs in a large array of dimension 1 x (n*x) 
                         y = [] 
                         std_y = []
-                        reader = pd.read_csv(c_data['FileName']+'_'+str(c_run)+'.csv')
+
+                        data_filename = data_name+app_name
+                        reader = pd.read_csv(data_filename)
+
                         for nfield, yfield in enumerate(c_data['yField']):     
                             y = np.concatenate((y, reader[yfield].values))
                             std_y = np.concatenate((std_y, reader[c_data['sigmaField'][nfield]].values))
-                            dataName = c_data['yField'][0]+"_"+c_data['FileName']
+                            dataName = c_data['yField'][0]+"_"+data_name
                         y_tot[c_run] = y
+
+                        # If there are several input experimental runs, then we iterate on app_name to read them 
+                        app_name = "_"+str(c_run)+'.csv'
 
 
                 elif c_data['Type'] == "GenerateSynthetic": 	
@@ -346,9 +367,9 @@ class Propagation(SolveProblem):
                 c_model = propagation_inputs["Model"][model_num]
 
                 design_point_input = c_model["design_points"]
-                reader = pd.read_csv(design_point_input["filename"],header=None)
+                reader = pd.read_csv(design_point_input["filename"])
             
-                c_design_points = reader.values[:,design_point_input["field"]]
+                c_design_points = reader[design_point_input["field"]].values # reader.values[:,design_point_input["field"]]
 
                 model_id_to_num[model_id] = model_num
 
@@ -388,7 +409,7 @@ class Propagation(SolveProblem):
                     pce.save_pickle(poly, self.IO_path['out_folder_prop']+"/pce_poly"+"_"+model_id)
 
 
-            if (self.user_inputs["Propagation"].get("Propagate") is not None):
+            if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="None": 
 
                 if (self.user_inputs["Propagation"]["Model_evaluation"].get("Sample_number") is not None):
                     # Number of sample is provided in the input file 
@@ -486,7 +507,6 @@ class Propagation(SolveProblem):
                         # HERE SHOULD BE UPDATED IF EMULATOR WAS ASKED
                         # Update model evaluation 
                         models[model_id].run_model(c_param)
-                        
                         # response = model.eval(point)
                         
                         
@@ -556,12 +576,14 @@ class Propagation(SolveProblem):
                         data_ij_mean[model_id][:] = data_ij_mean[model_id][:]/n_sample_param
 
                         # Values are saved in csv format using Panda dataframe  
-                        df = pd.DataFrame({"mean" : data_ij_mean[model_id][:], 
+                        df = pd.DataFrame({"x" : models[model_id].x,
+                                        "mean" : data_ij_mean[model_id][:], 
                                         "lower_bound": data_ij_min[model_id][:], 
                                         "upper_bound": data_ij_max[model_id][:]})
                         df.to_csv('output/'+model_id+"_interval.csv", index=None)
 
-                        df_CI = pd.DataFrame({"CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
+                        df_CI = pd.DataFrame({"x" : models[model_id].x,
+                                            "CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
                                             "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
                         df_CI.to_csv('output/'+model_id+"_CI.csv", index=None) 
 

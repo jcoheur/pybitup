@@ -5,14 +5,14 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "data/Bessire_366Kmin_withFakeStd.csv",
+                    "FileName": "data/Bessire_366Kmin_withFakeStd",
                     "xField": ["temperature"], 
                     "yField": ["dRho"], 
                     "sigmaField": ["std_dRho"]
                 },
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "data/Wong_10Kmin_withFakeStd.csv",
+                    "FileName": "data/Wong_10Kmin_withFakeStd",
                     "xField": ["temperature"], 
                     "yField": ["dRho"], 
                     "sigmaField": ["std_dRho"]
@@ -87,7 +87,7 @@
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 1
         },
-        "Propagation": {
+        "PosteriorPredictiveCheck": {
             "display": "yes",
             "shaded_area": "yes",
             "burnin": 0,

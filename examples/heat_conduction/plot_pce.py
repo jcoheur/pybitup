@@ -6,11 +6,13 @@ import pickle
 import pandas as pd 
 # %% Initialisation
 
-f = open("output/pce_model.pickle","rb")
+model_name = "heat_conduction" 
+
+f = open("output/propagation/pce_model_"+model_name+".pickle","rb")
 model = pickle.load(f)
 f.close()
 
-f = open("output/pce_poly.pickle","rb")
+f = open("output/propagation/pce_poly_"+model_name+".pickle","rb")
 poly = pickle.load(f)
 f.close()
 
@@ -35,8 +37,8 @@ meanMod = np.mean(respMod,axis=0)
 varMod = np.var(respMod,axis=0)
 
 xMC = np.arange(10.0,70.0,4)
-reader = pd.read_csv('test_design_points.dat',header=None)
-xMod = reader.values[:]
+reader = pd.read_csv('test_design_points.csv')
+xMod = reader["T"].values
 
 
 # %% Figures

@@ -80,6 +80,9 @@ class TestPCE(unittest.TestCase):
         # Compute the two areas and compare them for the unit test 
         self.compute_areas() 
 
+        # Uncomment if needed: check the PCE and MC solutions visually 
+        # self.plot_figure() 
+
         # Assert 
         self.assertAlmostEqual(self.area_mean_MC/100, self.area_mean_PCE/100, 0) 
         self.assertAlmostEqual(self.area_var_MC/10, self.area_var_PCE/10, 0) # Equal +/- 10.0
@@ -181,29 +184,28 @@ class TestPCE(unittest.TestCase):
         poly = pickle.load(f)
         f.close()
 
-        reader = pd.read_csv('test_design_points.dat',header=None)
-        xMod = reader.values[:]
+        reader = pd.read_csv('test_design_points.csv')
+        self.xMod = reader["T"].values[:]
 
         self.xMC = np.arange(10.0, 70.0, 4.0)
         self.meanMC = np.load(mean_file_name)
         self.varMC = np.load(var_file_name)
-        self.xmod_t = np.transpose(xMod)
         self.meanMod = model.mean
         self.varMod = model.var
     
     def compute_areas(self): 
 
         self.area_mean_MC = np.trapz(self.meanMC, self.xMC)
-        self.area_mean_PCE = np.trapz(self.meanMod, self.xmod_t[0])
+        self.area_mean_PCE = np.trapz(self.meanMod, self.xMod)
         self.area_var_MC = np.trapz(self.varMC, self.xMC)
-        self.area_var_PCE = np.trapz(self.varMod, self.xmod_t[0])
+        self.area_var_PCE = np.trapz(self.varMod, self.xMod)
 
     def plot_figure(self): 
         """ Use to check visually the solution from pce and MC."""
 
         plt.figure(1)
         plt.rcParams.update({"font.size":16})
-        plt.plot(self.xmod_t[0], self.meanMod,'C0',label="PCE")
+        plt.plot(self.xMod, self.meanMod,'C0',label="PCE")
         plt.plot(self.xMC,self.meanMC,'C1--',label="MC")
         plt.legend(prop={'size':16})
         plt.ylabel("Mean")
@@ -212,7 +214,7 @@ class TestPCE(unittest.TestCase):
 
         plt.figure(2)
         plt.rcParams.update({"font.size":16})
-        plt.plot(self.xmod_t[0],self.varMod,'C0',label="PCE")
+        plt.plot(self.xMod,self.varMod,'C0',label="PCE")
         plt.plot(self.xMC,self.varMC,'C1--',label="MC")
         plt.legend(prop={'size':16})
         plt.ylabel("Variance")

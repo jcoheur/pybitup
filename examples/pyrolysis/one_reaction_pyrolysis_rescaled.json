@@ -5,11 +5,11 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "data_pyrolysis",
+                    "FileName": "data_pyrolysis",  // must be a .csv file 
                     "xField": ["T"], 
                     "yField": ["gas_prod"], 
-                    "sigmaField": ["std_gas_prod"], 
-                    "n_runs": 1
+                    "sigmaField": ["std_gas_prod"]
+                    // "n_runs": 2 // use n_runs if there are several input data files 
                 }
             ],
             "Model": [
@@ -50,15 +50,15 @@
     "Propagation": {
         "Model": [ 
             {
-                "model_id": "6.1_K_per_Min", // Optional
+                "model_id": "6.1_K_per_Min_rescaled", // Optional
                 "design_points": {
-                    "filename": "test_design_points.dat", 
-                    "field": 0
+                    "filename": "data_pyrolysis.csv", 
+                    "field": "T"
                 },  
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
                 "parametrization" : "yes",
-                "emulator": "pce",
+                "emulator": "pce", // pce, None
                 "pce": {
                     
                     "polynomials":{
@@ -68,30 +68,17 @@
                         "point_weights": "None",
                         "order": 4
                     },
-                
                     "quadrature":{
                         "method": "monte_carlo",
                         "order_truncation": 2
 
                     },
-                
                     "coefficients":{
                         "method": "colloc",
                         "iterations": 10
                     }
                 }
-            }, 
-            {
-                // Emulator ? 
-                "model_id": "366_K_per_Min", // Optional
-                "design_points": {
-                    "filename": "test_design_points.dat", 
-                    "field": 0
-                },  
-                "param_names": ["A", "E", "n", "m", "F", "tau"],
-                "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 366],
-                "parametrization" : "no"
-            }
+            } 
         ],
         "Uncertain_param": {
             "A":  {"filename": "output/mcmc_chain.csv", "field": 0}, 
@@ -121,15 +108,15 @@
 
     "PostProcess": { 
 	    "Data": { 
-		    "display": "no",
+		    "display": "yes",
 		    "num_plot": [1]
 		},
 	    "InitialGuess": {
-		    "display": "no",
+		    "display": "yes",
 		    "num_plot": 1
 		},
 	    "MarkovChain": {
-		    "display": "no",
+		    "display": "yes",
 		    "thinning": 1
 		},
         "Posterior": {
@@ -138,8 +125,8 @@
             "estimation": "ksdensity+hist", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 1
         },
-        "Propagation": {
-		    "display": "no",
+        "PosteriorPredictiveCheck": {
+		    "display": "yes",
 		    "shaded_area": "yes",
 		    "burnin": 1,
 		    "num_plot": 1

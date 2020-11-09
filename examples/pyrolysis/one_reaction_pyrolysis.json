@@ -5,11 +5,12 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "data_pyrolysis",
+                    "FileName": "data_pyrolysis", // must be a .csv file 
                     "xField": ["T"], 
                     "yField": ["gas_prod"], 
-                    "sigmaField": ["std_gas_prod"], 
-                    "n_runs": 1
+                    "sigmaField": ["std_gas_prod"]
+                    // "n_runs": 2 // use n_runs if there are several input data files 
+
                 }
             ],
             "Model": [ 
@@ -52,8 +53,8 @@
             {
                 "model_id": "6.1_K_per_Min",
                 "design_points": {
-                    "filename": "test_design_points.dat", 
-                    "field": 0
+                    "filename": "data_pyrolysis.csv", 
+                    "field":  "T"
                 },  
                 "param_names": ["A", "E", "n", "m", "F", "tau"],
                 "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 6.1],
@@ -80,16 +81,6 @@
                         "iterations": 20
                     }
                 }
-            }, 
-            {
-                "model_id": "366_K_per_Min",
-                "design_points": {
-                    "filename": "test_design_points.dat", 
-                    "field": 0
-                },  
-                "param_names": ["A", "E", "n", "m", "F", "tau"],
-                "param_values": [1.6635e4, 113000, 2.0, 0.0,  0.04, 366],
-                "parametrization" : "no"
             }
         ],
         "Uncertain_param": {
@@ -138,7 +129,7 @@
             "estimation": "contour", // ksdensity, hist, ksdensity+hist, contour (only for bivariate)
             "burnin": 1
         },
-        "Propagation": {
+        "PosteriorPredictiveCheck": {
 		    "display": "yes",
 		    "shaded_area": "yes",
 		    "burnin": 1,

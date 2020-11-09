@@ -6,11 +6,13 @@ import pickle
 
 # %% Initialisation
 
-f = open("output/pce_model.pickle","rb")
+model_name = "one_reaction_pyrolysis_rescaled" 
+
+f = open("output/propagation/pce_model_"+model_name+".pickle","rb")
 model = pickle.load(f)
 f.close()
 
-f = open("output/pce_poly.pickle","rb")
+f = open("output/propagation/pce_poly_"+model_name+".pickle","rb")
 poly = pickle.load(f)
 f.close()
 
@@ -56,3 +58,5 @@ plt.legend(prop={'size':16})
 plt.ylabel("Variance")
 plt.xlabel("Step")
 plt.grid()
+
+plt.show()

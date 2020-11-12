@@ -8,7 +8,7 @@ from functools import wraps
 import pandas as pd 
 
 def time_it(func):
-    # decorator to time execution time of a function. simply use @time_it before the function
+    # decorator to time the execution time of a function. simply use @time_it before the function
     @wraps(func)
     def _time_it(*args, **kwargs):
         print("Start time {}" .format(time.asctime(time.localtime())))
@@ -23,6 +23,52 @@ def time_it(func):
     return _time_it
 
 class MetropolisHastings:
+    """
+    A generic class used to sample using Metroplis-Hastings algorithms. 
+    The idea is to have the basic method that is the random-walk Markov Chain method on which is built the others. 
+    
+
+    Attributes
+    ----------
+    IO_fileID : dict 
+        Contains the file objects to write output data. The keys are defined in solved problems. 
+    caseName : char 
+        Name of the case study. 
+    nIterations : int
+        Number of iterations in the MCMC loop.
+    param_init : numpy array
+        Initial values of the parameters.
+    V: numpy array
+        Covariance matrix used in the proposal function.
+    prob_distr: BayesianPosterior 
+        Contains the Bayesian posterior. It is a ProbabilityDistribution object. 
+
+
+    Methods
+    -------------
+    run_algorithm(self)
+        Contains the Metropolis-Hastings loop.
+    compute_new_val(self)
+        Computes the new value of the sample.
+    compute_acceptance_ratio(self)
+        Computes the acceptance ratio.
+    accept_reject(self)
+        Samples from a uniform distribution and decides whether the new sample is accepted or rejected. 
+    update_sigma(self)
+        Estimates the standard deviation and update it for the next step. In development. 
+    update_sigma_Gelman(self)
+        See "update_sigma". Uses the formula from Gelman. 
+    compute_covariance(self, n_iterations)
+        Computes the finale covariance. 
+    compute_multivariate_normal(self)
+        Samples from a multivariate normal distribution. Is used in compute_new_val 
+    terminate_loop(self)
+        Terminates the MCMC loop. It prints info about the result of the sampling and writes the outputs. 
+    compute_time(self, t1)
+        Computes the time elapsed since t1. Is used to estimate the computation time of the MCMC loop. 
+    write_fun_distr_val(self, current_it)
+        Write the value of the function evaluation at current_it. 
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
@@ -277,6 +323,31 @@ class MetropolisHastings:
             self.prob_distr.save_value(current_it)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
+    """
+    A class used to sample using the adaptive random-walk Metroplis-Hastings algorithm (AMH). 
+    It is based on the MetropolisHastings class. 
+    
+
+    Attributes
+    ----------
+    starting_it : int 
+        Iteration at which the covariance adaptation starts 
+    updating_it : int
+        The frequency at which to update the covariance estimate 
+    eps_v : double
+        Correcting factor to ensure ergodic properties of the algorithm 
+
+
+    Methods
+    -------------
+    run_algorithm(self)
+        Contains the Metropolis-Hastings loop with the adaptation step.
+    adapt_covariance(self, i)
+        Computes a new estimation of the covariance matrix at the i-th iteration.  
+    update_covariance(self)
+        Updates the covariance value to be used at the the next iteration.   
+
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, 
             starting_it, updating_it, eps_v):
@@ -372,6 +443,26 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
 
 class DelayedRejectionMetropolisHastings(MetropolisHastings):
+    """
+    A class used to sample using the delayed-rejection Metroplis-Hastings algorithm (DR). 
+    It is based on the MetropolisHastings class. 
+    In this version of the DR algorithm, only one delayed-rejection is implemented. 
+    TODO: generalized to multiple delayed rejections. 
+    
+
+    Attributes
+    ----------
+    gamma : int 
+        Controls the size of the new jumps when the rejection of a sample has been delayed. 
+    
+    Methods
+    -------------
+    accept_reject(self):
+        Samples from a uniform distribution and decides whether the new sample is accepted or rejected.
+        If it is rejected, then the rejection is delayed and we go to the new delayed_rejection step. 
+    delayed_rejection(self): 
+        Computes the new acceptance probability and decides if the new proposed sample is accepted or rejected. 
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, gamma):
         MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
@@ -428,6 +519,20 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
 
 
 class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, DelayedRejectionMetropolisHastings):
+    """
+    A class used to sample using the delayed-rejection Metroplis-Hastings algorithm (DRAM). 
+    It is based on the AdaptiveMetropolisHastings and DelayedRejectionMetropolisHastings classes.  
+
+    Attributes
+    ----------    
+    No new attributes. 
+
+    Methods
+    -------------
+    update_covariance(self):
+        Update the value of the covariance and its inverse that is used in the delayed-rejection step. 
+  
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr,
             starting_it, updating_it, eps_v, gamma):
@@ -445,6 +550,27 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
 
 
 class GradientBasedMCMC(MetropolisHastings): 
+    """
+    A generic class for the gradient-based sampling methods. 
+    It is based on the MetropolisHastings. 
+
+    Attributes
+    ----------    
+    C_matrix: dict 
+        Contains the input for the covariance adaptation. 
+    gradient: str
+        Defines whether the gradient is computed numerically or if an analytical expression is provided. 
+
+    Methods
+    -------------
+    _set_algo_param(self, *args): 
+        Sets the algorithm free parameters.
+    adapt_covariance(self, i, *args):
+        Adapts the covariance matrix. 
+
+
+
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, C_matrix, gradient):
 
@@ -566,10 +692,31 @@ class GradientBasedMCMC(MetropolisHastings):
             self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
 
 class HamiltonianMonteCarlo(GradientBasedMCMC):
-    """ Hamiltonian Monte Carlo alrogithm. 
-    From Neal, R. M. (2010) MCMC using Hamiltonian dynamics. In Handbook of Markov Chain Monte Carlo (eds
+    """
+    A class used to sample using the Hamiltonian Monte Carlo (HMC) algorithm.  
+    It is based on the GradientBasedMCMC. 
+
+    Algorithm: From Neal, R. M. (2010) MCMC using Hamiltonian dynamics. In Handbook of Markov Chain Monte Carlo (eds
     S. Brooks, A. Gelman, G. Jones and X.-L Meng). Boca Raton: Chapman and Hall–CRC Press. 
-    Implementation: Joffrey Coheur 14-01-20.""" 
+    Implementation: Joffrey Coheur 14-01-20.
+    TODO: improvements such as the no U-turn sampler. 
+
+    Attributes
+    ----------    
+    step_size : double 
+        Time step in the Stormer-Verlet numerical scheme
+    num_steps : in 
+        Controls the damping parameter
+
+    Methods
+    -------------
+    _set_algo_param(self, *args): 
+        Sets the free parameters of the HMC algorithm. 
+    compute_new_val(self):
+        Computes the new value of the sample obtained after solving Hamiltonian dynamics. 
+    compute_acceptance_ratio(self):
+        Computes the acceptance ratio.
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, 
                  step_size, num_steps):
@@ -649,9 +796,29 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         self.alpha = min(1, self.r)
 
 class ito_SDE(GradientBasedMCMC):
-    """Ito-SDE Markov Chain Monte Carlo algorithm.  
-    From Soize, Arnst et al.).
-    Implementation: Joffrey Coheur 17-04-19."""
+    """
+    A class used to sample using the Ito stochastic differential equation (ISDE) Markov Chain Monte Carlo algorithm. 
+    It is based on the GradientBasedMCMC. Note that ISDE is not a Metropolis-Hastings type algorithm, but the 
+    implementation of the class GradientBasedMCMC is based itself on the class MetropolisHastings.  
+
+    Attributes
+    ----------    
+    h : double 
+        Time step in the Stormer-Verlet numerical scheme
+    f0 : double 
+        Controls the damping parameter
+
+    Methods
+    -------------
+    _set_algo_param(self, *args): 
+        Sets the free parameters of the ISDE algorithm. 
+    run_algorithm(self):
+        This function is totally re-written because there is not accept-reject step in ISDE. 
+  
+   
+    Algorithm: From Soize, Arnst et al.
+    Implementation: Joffrey Coheur 17-04-19.
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, h, f0):
 
@@ -772,15 +939,27 @@ class ito_SDE(GradientBasedMCMC):
 
 
 def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
-    """ ComputeGradientFD
-    Compute the gradient of the model f_X with respect to its variables
-    around the values provided in var_model.
+    """ 
+    A function that computes the gradient of a model with respect to its variables around a given value.
 
-    f_X is a function with variables var_model
-    schemeType is optional. Default value is 'Forward' FD scheme
-    eps is optional. Default value is 1/100 of the variable. 
+    Parameters
+    ----------
+    f_X: 
+        Function handle 
+    var_model: numpy array 
+        Variables of the function f_X 
+    schemeType: (optional)
+        Default is 'Forward' FD scheme
+    eps: double (optional)
+        Default value is 1/100 of the variable. 
 
-    Joffrey Coheur 19-04-19"""
+    Returns
+    ---------
+    grad_FD: numpy array
+        Gradient of the function f_X with respect to the different variables at var_model
+
+    Joffrey Coheur 19-04-19
+    """
 
     nVar = var_model.size
     grad_FD = np.zeros(nVar)
@@ -832,12 +1011,27 @@ def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
 
 
 def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
-    """Compute the hessian matrix of the model f_X with respect to its variables around the values provided in var_model
+    """ 
+    A function that computes the hessian of a model with respect to its variables around a given value.
 
-    f_x is a function handle of variables var_model
-    delta_p is optional. Default value of sqrt(eps) is used
+    Parameters
+    ----------
+    f_X: 
+        Function handle 
+    var_model: numpy array 
+        Variables of the function f_X 
+    eps: double (optional)
+        Default value is 1/100 of the variable. 
+    compute_all_element: bool 
+        If False, only diagonals elements are computed. Default is True. 
 
-    Joffrey Coheur 19-04-19"""
+    Returns
+    ---------
+    hess_FD: numpy 2d array
+        Gradient of the function f_X with respect to the different variables at var_model
+
+    Joffrey Coheur 19-04-19
+    """
 
     nVar = var_model.size
     hess_FD = np.zeros([nVar, nVar])
@@ -952,6 +1146,7 @@ def computeCovMat(corrMat, sigma):
 
 
 def nearPD(A, nit=10):
+    """ A function to get the nearest positive definite matrix."""
 
     sigma = np.sqrt(np.abs(np.diag(A)))
     n = A.shape[0]
@@ -985,6 +1180,7 @@ def nearPD(A, nit=10):
 
 
 # def nearPD(A,epsilon=0):
+#   """ A function to get the nearest positive definite matrix."""
 
 #     sigma = np.sqrt(np.abs(np.diag(A)))
 #     A = computeCorrMat(A, sigma)
@@ -1005,6 +1201,7 @@ def nearPD(A, nit=10):
 
 
 # def nearPD(A):
+# """ A function to get the nearest positive definite matrix."""
 
 #     B = (np.transpose(A) + A)/ 2
 #     u, H = polar(B)

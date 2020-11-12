@@ -28,7 +28,8 @@
             },
             "Likelihood": {
                 "function": "Gaussian",
-                "distance": "L2"
+                "distance": "L2", 
+                "parametric_uncertainty": "no" // yes
             }
         },
 	    "Algorithm": {

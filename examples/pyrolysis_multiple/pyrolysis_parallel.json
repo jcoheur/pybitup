@@ -5,7 +5,7 @@
             "Data": [
                 {
                     "Type": "ReadFromFile", // ReadFromFile, GenerateSynthetic
-                    "FileName": "fakePyroData.csv",
+                    "FileName": "data/fakePyroData",
                     "xField": ["temperature"], 
                     "yField": ["dRho"], 
                     "sigmaField": ["std_dRho"]
@@ -59,8 +59,8 @@
                 "model_id": "6.1_K_per_Min",
                 "input_file": "reaction_scheme.json", 
                 "design_points": {
-                    "filename": "test_design_points.dat", 
-                    "field": 0
+                    "filename": "data/fakePyroData.csv", 
+                    "field":  "temperature"
                 },  
                 "param_names": ["tau"],
                 "param_values": [6.1],
@@ -125,7 +125,7 @@
             "distribution": "marginal",
             "estimation": "ksdensity+hist"
 		},
-	    "Propagation": {
+	    "PosteriorPredictiveCheck": {
 		    "display": "yes",
 		    "shaded_area": "yes",
 		    "burnin": 0,

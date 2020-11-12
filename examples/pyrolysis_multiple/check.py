@@ -6,11 +6,13 @@ import pickle
 
 # %% Initialisation
 
-f = open("output/pce_model.pickle","rb")
+model_name = "pyrolysis_parallel" 
+
+f = open("output/propagation/pce_model_"+model_name+".pickle","rb")
 model = pickle.load(f)
 f.close()
 
-f = open("output/pce_poly.pickle","rb")
+f = open("output/propagation/pce_poly_"+model_name+".pickle","rb")
 poly = pickle.load(f)
 f.close()
 

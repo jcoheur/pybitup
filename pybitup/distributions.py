@@ -1,7 +1,5 @@
 import numpy as np
-from scipy import linalg
-from scipy import stats
-#from scipy import special
+from scipy import linalg, stats, special
 from scipy.integrate import simps
 
 import matplotlib.pyplot as plt
@@ -40,6 +38,34 @@ def set_probability_dist(name_list, hyperparam, n_rand_var):
 
 
 class ProbabilityDistribution: 
+    """
+    A generic class for probability density functions. 
+    
+    Attributes
+    ----------
+    hyperparam : list
+        List that contains the different distribution hyperparameters. 
+    n_rand_var : char 
+        Number of random variable of the distribution. 
+   
+
+
+    Methods
+    -------------
+    compute_value(self, X)
+        Computes the value of the probability density at X. 
+    compute_log_value(self, X):
+        Computes the log-value of the probability density at X. 
+    compute_density(self, distr_support=[])
+        Computes the probability density along the support. 
+    save_sample(self, IO_fileID, value): 
+        Saves the sample value in a file. 
+    update_eval(self):
+        Updates function evaluation in Bayesian posterior dsitribution. 
+    save_value(self, name_file): 
+        Saves the value of the function evaluation in Bayesian posterior dsitribution. 
+   
+    """
 
     def __init__(self, hyperparam, n_rand_var):
         self.hyperparam = hyperparam 
@@ -58,7 +84,7 @@ class ProbabilityDistribution:
         return 0
 
     def compute_density(self, distr_support=[]):
-        """ Compute the probability density function of the associated distribution. 
+        """ Compute the probability density function of the associated distribution along the . 
         Only for one dimension and two dimensions. """
 
         if distr_support: 
@@ -112,24 +138,38 @@ class ProbabilityDistribution:
 
 
     def save_sample(self, IO_fileID, value): 
-        """ Save the sample vaue in a text file""" 
+        """ Save the sample vaue in a text file. """ 
 
         # Write the Markov chain file 
         IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
         np.savetxt(IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
         
     def update_eval(self): 
-        """ For Bayesian posterior only """
+        """ For Bayesian posterior only. 
+        We need to define it in the master class for generality of the sampling methods."""
         pass
 
     def save_value(self, name_file): 
-        """ For Bayesian posterior only """ 
+        """ For Bayesian posterior only.
+        We need to define it in the master class for generality of the sampling methods."""
         pass
 
 
 
 
 class Gaussian(ProbabilityDistribution): 
+    """
+    A class for computing the density of a Gaussian distribution function. 
+    
+    Attributes
+    ----------
+    No new attributes.    
+
+
+    Methods
+    -------------
+
+    """
 
     def __init__(self, hyperparam, n_rand_var): 
         ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
@@ -283,7 +323,7 @@ class Gamma(ProbabilityDistribution):
         coef[1] = (n+a-1)*n*b**2
         return coef
 
-    def invcdf(x):
+    def invcdf(self, x):
 
         [a,b] = [self.k,self.theta]
         return b*special.gammaincinv(a,np.array(x))

@@ -729,9 +729,10 @@ def post_process_data(input_file_name):
 def saveToTikz(nameTikzFile):
 
     plt.grid(True)
-    tikz_save(nameTikzFile, figureheight='\\figureheight', figurewidth='\\figurewidth',
+	#tikzplotlib.clean_figure()
+    tikz_save(nameTikzFile, axis_height='\\figureheight', axis_width='\\figurewidth',
               extra_axis_parameters=['/pgf/number format/.cd, 1000 sep={}', 'title=\\figuretitle', 'xlabel=\\figurexlabel', 'ylabel=\\figureylabel'])
-			  
+
 			  
 def error_bar (x_data, y_data, error, col, line_width=1): 
 

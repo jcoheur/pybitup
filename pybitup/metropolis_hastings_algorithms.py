@@ -70,15 +70,18 @@ class MetropolisHastings:
         Write the value of the function evaluation at current_it. 
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr):
+    def __init__(self, IO_util, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        if self.nIterations < 100:
-            self.save_freq = 1
-        else:
-            self.save_freq = nIterations/100
 
-        self.save_freq = 1
+        # TODO: give the possibility to the user to provide the frequency 
+        # at which model evaluations are saved 
+        if self.nIterations < 100:
+            self.save_model_freq = 1
+        else:
+            self.save_model_freq = nIterations/100
+        # Here, it is set to one 
+        self.save_model_freq = 1
 
         self.V = V
         self.prob_distr = prob_distr 
@@ -119,13 +122,13 @@ class MetropolisHastings:
 
 
         # Outputs 
-        self.IO_fileID = IO_fileID
+        self.IO_util = IO_util
+        self.IO_fileID = IO_util["fileID"]
         # Ensure that we start the files at 0 (due to the double initialisation of DRAM)
         self.IO_fileID['MChains'].seek(0) 
         self.IO_fileID['MChains_reparam'].seek(0)
         self.IO_fileID['MChains_csv'].seek(0)
         self.IO_fileID['Distribution_values'].seek(0)
-        self.distr_output_file_name = "output/fun_eval."
 
         # Write initial values 
         self.prob_distr.save_sample(self.IO_fileID, self.current_val)
@@ -318,9 +321,8 @@ class MetropolisHastings:
 
 
     def write_fun_distr_val(self, current_it):
-        if current_it % (self.save_freq) == 0:
-            #self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
-            self.prob_distr.save_value(current_it)
+        if current_it % (self.save_model_freq) == 0:
+            self.prob_distr.save_value(self.IO_util, current_it)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
     """
@@ -583,8 +585,8 @@ class GradientBasedMCMC(MetropolisHastings):
         self.X_av_i = np.array(self.param_init)
         self.S_d = 1.0 # 2.38**2/self.n_param
         self.eps_Id = 1e-10*np.eye(self.n_param)
-        self.starting_it = C_matrix['update_it']
-        self.update_it = C_matrix['starting_it']
+        self.starting_it = int(C_matrix['starting_it'])
+        self.update_it = int(C_matrix['update_it'])
         #---------------
         # Hessian matrix
         # --------------
@@ -671,7 +673,7 @@ class GradientBasedMCMC(MetropolisHastings):
             self.V_i = self.S_d*(self.cov_c + self.eps_Id)
 
         # Update covariance using recursion formula 
-        if self.it > self.starting_it and self.it < 1e5: 
+        if self.it >= self.starting_it and self.it < 1e5: 
             X_i = self.current_val[:]
             X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
             V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
@@ -679,17 +681,17 @@ class GradientBasedMCMC(MetropolisHastings):
             self.V_i = V_ip
             self.X_av_i = X_av_ip
 
-        # Effectively update the covariance in the MCMC algorithm 
-        if  self.it % self.update_it == 0 and self.it < 1e5: 
-            # Adapt time step 
-            if self.it == self.update_it: 
-                self._set_algo_param(*args)
-            
-            print("\n{}\n".format(self.V_i))
+            # Effectively update the covariance in the MCMC algorithm 
+            if  self.it % self.update_it == 0 and self.it < 1e5: 
+                # Adapt time step 
+                # if self.it == self.update_it: 
+                #     self._set_algo_param(*args)
+                
+                print("\n{}\n".format(self.V_i))
 
-            self.C_approx = self.V_i
-            self.L_c = linalg.cholesky(self.C_approx)
-            self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+                self.C_approx = self.V_i
+                self.L_c = linalg.cholesky(self.C_approx)
+                self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
 
 class HamiltonianMonteCarlo(GradientBasedMCMC):
     """
@@ -868,7 +870,7 @@ class ito_SDE(GradientBasedMCMC):
 
             # Adapt covariance 
             self.current_val = self.xi_nm
-            self.adapt_covariance(self.it, 0.01, self.f0)
+            self.adapt_covariance(self.it, self.h, self.f0)
 
             # # Update covariance with recursion 
             # if  self.it == self.update_it:  

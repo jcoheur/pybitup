@@ -121,7 +121,7 @@ def post_process_data(input_file_name):
         if inputFields["InitialGuess"]["display"] == "yes":
 
             for num_data_set, data_id in enumerate(data_exp.keys()):
-                data_init = np.load("output/{}_fun_eval.{}.npy".format(data_id, 0))
+                data_init = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, 0))
 
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
@@ -517,14 +517,16 @@ def post_process_data(input_file_name):
         if inputFields["PosteriorPredictiveCheck"]["display"] == "yes":
 
             # By default, we have saved 100 function evaluations
-            n_fun_eval = 100
+            n_fun_eval = n_samples # 100
             delta_it = int(n_samples/n_fun_eval)
-
+            
             start_val = int(inputFields["PosteriorPredictiveCheck"]["burnin"]*delta_it)
 
             # By default, the last function evaluation to be plotted is equal to the number of iterations
             end_val = int(n_samples)
 
+            # Num of fun eval after discarding burn in samples
+            n_fun_eval_est = int(n_samples - start_val)
             #for i in range(data_exp.n_data_set):
             for num_data_set, data_id in enumerate(data_exp.keys()):
                 n_x = len(data_exp[data_id].x)
@@ -544,14 +546,13 @@ def post_process_data(input_file_name):
                     ind_2 =(i+1)*n_x
 
                     # Histogram 
-                    data_hist = np.zeros([n_fun_eval, n_x])
+                    data_hist = np.zeros([n_fun_eval_est, n_x])
 
                     for c_eval, j in enumerate(range(start_val+delta_it, end_val, delta_it)):
-
                         # Load current data
-                        data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
+                        data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, j))
                         data_set_n = data_ij[ind_1:ind_2]
-
+                        
                         # Update bounds
                         for k in range(n_x):
                             if data_ij_max[k] < data_set_n[k]:
@@ -568,19 +569,19 @@ def post_process_data(input_file_name):
                         # plt.plot(data_exp[data_id].x, data_set_n[:], alpha=0.5)
 
                     # Compute mean 
-                    data_ij_mean = data_ij_mean[:]/n_fun_eval
+                    data_ij_mean = data_ij_mean[:]/n_fun_eval_est
 
                     # Identical loop to compute the variance 
                     for j in range(start_val+delta_it, end_val, delta_it):
 
                         # Load current data
-                        data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
+                        data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, j))
                         data_set_n = data_ij[ind_1:ind_2]
 
                         # Compute variance
                         data_ij_var = data_ij_var[:] + (data_set_n[:] - data_ij_mean[:])**2
 
-                    data_ij_var = data_ij_var[:]/(n_fun_eval - 1) 
+                    data_ij_var = data_ij_var[:]/(n_fun_eval_est - 1) 
                 
                     # # Plot median and all results from propagation
                     # plt.plot(data_exp.x[ind_1:ind_2+1], (data_ij_min +

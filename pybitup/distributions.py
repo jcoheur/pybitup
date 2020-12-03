@@ -98,7 +98,7 @@ class ProbabilityDistribution:
             f_post = np.zeros(vec_param_i.size)
             for i, param_i in np.ndenumerate(vec_param_i): 
                     c_param = np.array([param_i])
-                    f_post[i] = self.compute_value(c_param)  
+                    f_post[i] = self.compute_value_no_reparam(c_param)  
 
             #int_post = np.sum(f_post)*delta_param_i
             int_post = simps(f_post, vec_param_i)
@@ -111,15 +111,16 @@ class ProbabilityDistribution:
             plt.plot(x, stats.norm.pdf(x, loc=113000, scale=1000), 'r-', lw=2, alpha=1.0, label='norm pdf')
 
         elif self.dim == 2:
-            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 200)
+            n_points_1d = 50 # 200
+            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d)
             delta_param_i = vec_param_i[1] - vec_param_i[0]
-            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], 200)
+            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], n_points_1d)
             delta_param_j = vec_param_j[1] - vec_param_j[0]
             f_post = np.zeros([vec_param_i.size, vec_param_j.size])
             for i, param_i in np.ndenumerate(vec_param_i): 
                 for j, param_j in np.ndenumerate(vec_param_j): 
                     c_param = np.array([param_i, param_j])
-                    f_post[i,j] = self.compute_value(c_param) 
+                    f_post[i,j] = self.compute_value_no_reparam(c_param) 
 
             marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
             int_f_post  = np.sum(marginal_post_1*delta_param_i, axis=0)
@@ -132,7 +133,7 @@ class ProbabilityDistribution:
             plt.figure(201)
             plt.plot(vec_param_j, marginal_post_norm_2)
 
-        np.save("output/posterior_numerical_evaluation.npy", norm_f_post)
+        np.savez("output/posterior_numerical_evaluation", x=vec_param_i, y=vec_param_j, z=norm_f_post)
 
         return f_post 
 
@@ -144,12 +145,23 @@ class ProbabilityDistribution:
         IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
         np.savetxt(IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
         
+    def compute_value_no_reparam(self, X):
+        """ For Bayesian posterior, this function returns the
+        density evaluation with the initial parameterization.
+        This is used for the direct evaluation of the density (see 
+        compute_density in the same class). 
+
+        For other densities, this is the same as self.compute_value(X).
+        """
+
+        return self.compute_value(X) 
+
     def update_eval(self): 
         """ For Bayesian posterior only. 
         We need to define it in the master class for generality of the sampling methods."""
         pass
 
-    def save_value(self, name_file): 
+    def save_value(self, IO_util, current_it): 
         """ For Bayesian posterior only.
         We need to define it in the master class for generality of the sampling methods."""
         pass

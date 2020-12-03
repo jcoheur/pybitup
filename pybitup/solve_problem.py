@@ -41,43 +41,46 @@ class SolveProblem():
         #----------------------------------
 
         # Initialise
-        self.IO_path = {}
-        self.IO_fileID = {}
-
+        self.IO_util = {}
+        self.IO_util['path'] = {}
+        self.IO_util['fileID'] = {} 
+        
         # Define the file names 
         path = os.getcwd()
         print("The current working directory is "+path)
-        self.IO_path['out_folder'] = path+"/output"
-        self.IO_path['out_data'] = self.IO_path['out_folder']+"/output.dat"
+        self.IO_util['path']['out_folder'] = path+"/output"
+        self.IO_util['path']['out_data'] = self.IO_util['path']['out_folder']+"/output.dat"
         
         # Create the output folder
         try:
-            os.mkdir(self.IO_path['out_folder'])
+            os.mkdir(self.IO_util['path']['out_folder'])
         except OSError:
-            print(self.IO_path['out_folder']+" already exists.")
+            print(self.IO_util['path']['out_folder']+" already exists.")
         else:
-            print("Creating output directory "+self.IO_path['out_folder'])
+            print("Creating output directory "+self.IO_util['path']
+            ['out_folder'])
 
         # Output file 
         # 'a+': append mode with creation if does not exists  
-        self.IO_fileID['out_data'] = open(self.IO_path['out_data'], 'a+')
+        self.IO_util['fileID']['out_data'] = open(self.IO_util['path']['out_data'], 'a+')
 
          # Copy input file in the output folder to keep track of it 
         print("Copying input file in output folder ... ")
-        shutil.copy(input_file_name, self.IO_path['out_folder'])
+        shutil.copy(input_file_name, self.IO_util['path']['out_folder'])
 
     def create_output_file(self, IO_path_keys):
        
         # Create and open output files  
         for file_keys in IO_path_keys:
-            self.IO_fileID[file_keys] = open(self.IO_path[file_keys], "w+")
+            self.IO_util['fileID'][file_keys] = open(self.IO_util['fileID'].IO_path[file_keys], "w+")
 
 
     def __del__(self):
         """ The destructeur defined here is used to ensure that all outputs files are properly closed """ 
 
-        for fileID in self.IO_fileID.values():
+        for fileID in self.IO_util['fileID'].values(): 
             fileID.close()
+
 
 class Sampling(SolveProblem):
 
@@ -87,18 +90,17 @@ class Sampling(SolveProblem):
         SolveProblem.__init__(self, input_file_name)
         new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'aux_variables', 'estimated_sigma']
         # Define output file for sampling 
-        self.IO_path[new_file_keys[0]] = self.IO_path['out_folder']+"/mcmc_chain.dat"
-        self.IO_path[new_file_keys[1]] = self.IO_path['out_folder']+"/mcmc_chain_reparam.dat"
-        self.IO_path[new_file_keys[2]] = self.IO_path['out_folder']+"/mcmc_chain.csv"
-        self.IO_path[new_file_keys[3]] = self.IO_path['out_folder']+"/distribution_values.csv"
-        self.IO_path[new_file_keys[4]] = self.IO_path['out_folder']+"/gp.dat" # Gaussian proposal 
-        self.IO_path[new_file_keys[5]] = self.IO_path['out_folder']+"/aux_variables.dat" # momentum variables in HMC and Ito 
-        self.IO_path[new_file_keys[6]] = self.IO_path['out_folder']+"/estimated_sigma.csv"
+        self.IO_util['path'][new_file_keys[0]] = self.IO_util['path']['out_folder']+"/mcmc_chain.dat"
+        self.IO_util['path'][new_file_keys[1]] = self.IO_util['path']['out_folder']+"/mcmc_chain_reparam.dat"
+        self.IO_util['path'][new_file_keys[2]] = self.IO_util['path']['out_folder']+"/mcmc_chain.csv"
+        self.IO_util['path'][new_file_keys[3]] = self.IO_util['path']['out_folder']+"/distribution_values.csv"
+        self.IO_util['path'][new_file_keys[4]] = self.IO_util['path']['out_folder']+"/gp.dat" # Gaussian proposal 
+        self.IO_util['path'][new_file_keys[5]] = self.IO_util['path']['out_folder']+"/aux_variables.dat" # momentum variables in HMC and Ito 
+        self.IO_util['path'][new_file_keys[6]] = self.IO_util['path']['out_folder']+"/estimated_sigma.csv"
 
         # Create and open files in read-write ('+') mode (w mode erase previous existing files) 
         for file_keys in new_file_keys:
-            self.IO_fileID[file_keys] = open(self.IO_path[file_keys], "w+")
-
+            self.IO_util['fileID'][file_keys] = open(self.IO_util['path'][file_keys], "w+")
 
     def sample(self, models={}): 
 
@@ -147,6 +149,16 @@ class Sampling(SolveProblem):
             # Sample a Bayesian Posterior distribution
             # ----------------------------------------------------------
             # We need to define data and models used for sampling the posterior 
+
+            # For Bayesian posterior, model evaluations will be saved in a 
+            # folder. We create the folder here. 
+            self.IO_util['path']['fun_eval_folder'] = self.IO_util['path']['out_folder']+"/model_eval"
+            try:
+                os.mkdir(self.IO_util['path']['fun_eval_folder'])
+            except OSError:
+                print(self.IO_util['path']['fun_eval_folder']+" already exists.")
+            else:
+                print("Creating output directory "+self.IO_util['path']['fun_eval_folder'])
 
             
             # Get the data sets from file or generate it from the model 
@@ -252,11 +264,14 @@ class Sampling(SolveProblem):
             # Get uncertain parameters 
             # -------------------------
             unpar_name = []
-            for name in BP_inputs['Prior']['Param'].keys():
+            unpar_name_dict = {}
+            for i, name in enumerate(BP_inputs['Prior']['Param'].keys()):
                 unpar_name.append(name)
+                unpar_name_dict[name] = i
 
             for model_id in models.keys(): 
                 models[model_id].unpar_name = unpar_name
+                models[model_id].unpar_name_dict = unpar_name_dict
 
             # Get a priori information on the uncertain parameters
             # ----------------------------------------------------
@@ -293,7 +308,7 @@ class Sampling(SolveProblem):
         # Run sampling of the distribution
         if (self.user_inputs["Sampling"].get('Algorithm') is not None): 
             algo = self.user_inputs["Sampling"]["Algorithm"]
-            sampling_dist = pybitup.inference_problem.Sampler(self.IO_fileID, sample_dist, algo) 
+            sampling_dist = pybitup.inference_problem.Sampler(self.IO_util, sample_dist, algo) 
             sampling_dist.sample(unpar_init_val) 
 
         # Compute the posterior directly from analytical formula (bayes formula in case of Bayesian inference)
@@ -311,15 +326,15 @@ class Propagation(SolveProblem):
 
     def __init__(self, input_file_name): 
         SolveProblem.__init__(self, input_file_name)
-        self.IO_path['out_folder_prop'] = self.IO_path['out_folder']+'/propagation' 
+        self.IO_util['path']['out_folder_prop'] = self.IO_util['path']['out_folder']+'/propagation' 
 
         # Create the output folder for propagation results
         try:
-            os.mkdir(self.IO_path['out_folder_prop'])
+            os.mkdir(self.IO_util['path']['out_folder_prop'])
         except OSError:
-            print(self.IO_path['out_folder_prop']+" already exists.")
+            print(self.IO_util['path']['out_folder_prop']+" already exists.")
         else:
-            print("Creating output directory "+self.IO_path['out_folder_prop'])
+            print("Creating output directory "+self.IO_util['path']['out_folder_prop'])
 
 
     def propagate(self, models=[]): 
@@ -405,8 +420,10 @@ class Propagation(SolveProblem):
                     poly,coef,model = pce.compute_pce(models[model_id])
 
                     # Save the pce model in output
-                    pce.save_pickle(model, self.IO_path['out_folder_prop']+"/pce_model"+"_"+model_id)
-                    pce.save_pickle(poly, self.IO_path['out_folder_prop']+"/pce_poly"+"_"+model_id)
+                    pce.save_pickle(model, self.IO_util['path']
+                    ['out_folder_prop']+"/pce_model"+"_"+model_id)
+                    pce.save_pickle(poly, self.IO_util['path']
+                    ['out_folder_prop']+"/pce_poly"+"_"+model_id)
 
 
             if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="None": 

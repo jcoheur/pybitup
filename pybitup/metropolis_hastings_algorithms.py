@@ -307,10 +307,16 @@ class MetropolisHastings:
         self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
-        self.IO_fileID['out_data'].write("Maximum Likelihood Estimator (MLE) \n")
+
+        self.IO_fileID['out_data'].write("\nElapsed time: {} \n".format(time.strftime("%H:%M:%S",time.gmtime(time.perf_counter()-self.t1))))
+        
+        # TODO: Estimate MLE during MCMC iterations and save it in 
+        # the output.dat file 
+        self.IO_fileID['out_data'].write("\nMaximum Likelihood Estimator (MLE) \n")
         #self.IO_fileID['out_data'].write("{} \n".format(self.arg_max_LL))
         self.IO_fileID['out_data'].write("Log-likelihood value \n")
         #self.IO_fileID['out_data'].write("{}".format(self.max_LL))
+        
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
     def compute_time(self, t1):
@@ -587,6 +593,7 @@ class GradientBasedMCMC(MetropolisHastings):
         self.eps_Id = 1e-10*np.eye(self.n_param)
         self.starting_it = int(C_matrix['starting_it'])
         self.update_it = int(C_matrix['update_it'])
+
         #---------------
         # Hessian matrix
         # --------------
@@ -622,6 +629,11 @@ class GradientBasedMCMC(MetropolisHastings):
             C_approx_nonPD = linalg.inv(self.hess_mat)
             print(C_approx_nonPD)
             self.C_approx  = nearPD(C_approx_nonPD)
+        elif C_matrix_estimation == "Matrix": # THIS IS NOT WORKING YET
+            # TODO : all this should probably go in the inference_problem.py, 
+            # probably the same way as I did with covariance for RWMH, AMH, etc.   
+            print('Initial covariance matrix provided.')
+            self.C_approx = np.array(C_matrix['matrix_value']) 
 
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix_estimation))
@@ -673,7 +685,7 @@ class GradientBasedMCMC(MetropolisHastings):
             self.V_i = self.S_d*(self.cov_c + self.eps_Id)
 
         # Update covariance using recursion formula 
-        if self.it >= self.starting_it and self.it < 1e5: 
+        if self.it >= self.starting_it: 
             X_i = self.current_val[:]
             X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
             V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
@@ -682,12 +694,12 @@ class GradientBasedMCMC(MetropolisHastings):
             self.X_av_i = X_av_ip
 
             # Effectively update the covariance in the MCMC algorithm 
-            if  self.it % self.update_it == 0 and self.it < 1e5: 
+            if  self.it % self.update_it == 0: 
                 # Adapt time step 
                 # if self.it == self.update_it: 
                 #     self._set_algo_param(*args)
                 
-                print("\n{}\n".format(self.V_i))
+                # print("\nNew cov:{}\n".format(self.V_i))
 
                 self.C_approx = self.V_i
                 self.L_c = linalg.cholesky(self.C_approx)

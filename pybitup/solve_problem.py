@@ -293,7 +293,11 @@ class Sampling(SolveProblem):
            
             # Likelihood 
             # -----------
-            likelihood_fun = pybitup.bayesian_inference.Likelihood(data, models)
+            if (BP_inputs['Likelihood'].get('gamma') is not None): 
+                gamma = BP_inputs['Likelihood']['gamma']
+            else: 
+                gamma = 1.0    
+            likelihood_fun = pybitup.bayesian_inference.Likelihood(data, models, gamma)
 
             # ----------------------
             # Posterior computation 

@@ -111,10 +111,17 @@ class ProbabilityDistribution:
             plt.plot(x, stats.norm.pdf(x, loc=113000, scale=1000), 'r-', lw=2, alpha=1.0, label='norm pdf')
 
         elif self.dim == 2:
-            n_points_1d = 50 # 200
-            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d)
+            n_points_1d = 200 # 200
+
+            # # The support is uniform in the reparameterized space 
+            vec_param_i = np.exp(np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d))
+            vec_param_j = np.exp(np.linspace(self.distr_support[1,0], self.distr_support[1,1], n_points_1d))
+
+            # The support is uniform in the original parameter space 
+            # vec_param_i = np.linspace(np.exp(self.distr_support[0,0]), np.exp(self.distr_support[0,1]), n_points_1d)
+            # vec_param_j = np.linspace(np.exp(self.distr_support[1,0]), np.exp(self.distr_support[1,1]), n_points_1d)
+
             delta_param_i = vec_param_i[1] - vec_param_i[0]
-            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], n_points_1d)
             delta_param_j = vec_param_j[1] - vec_param_j[0]
             f_post = np.zeros([vec_param_i.size, vec_param_j.size])
             for i, param_i in np.ndenumerate(vec_param_i): 
@@ -122,18 +129,18 @@ class ProbabilityDistribution:
                     c_param = np.array([param_i, param_j])
                     f_post[i,j] = self.compute_value_no_reparam(c_param) 
 
-            marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
-            int_f_post  = np.sum(marginal_post_1*delta_param_i, axis=0)
-            norm_f_post = f_post / int_f_post
+            # marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
+            # int_f_post  = np.sum(marginal_post_1*delta_param_i, axis=0)
+            # norm_f_post = f_post / int_f_post
 
-            marginal_post_norm_1 = np.sum(norm_f_post*delta_param_j, axis=1)
-            marginal_post_norm_2 = np.sum(norm_f_post*delta_param_i, axis=0)
-            plt.figure(200)
-            plt.plot(vec_param_i, marginal_post_norm_1)
-            plt.figure(201)
-            plt.plot(vec_param_j, marginal_post_norm_2)
+            # marginal_post_norm_1 = np.sum(norm_f_post*delta_param_j, axis=1)
+            # marginal_post_norm_2 = np.sum(norm_f_post*delta_param_i, axis=0)
+            # plt.figure(200)
+            # plt.plot(vec_param_i, marginal_post_norm_1)
+            # plt.figure(201)
+            # plt.plot(vec_param_j, marginal_post_norm_2)
 
-        np.savez("output/posterior_numerical_evaluation", x=vec_param_i, y=vec_param_j, z=norm_f_post)
+        np.savez("output/posterior_numerical_evaluation", x=vec_param_i, y=vec_param_j, z=f_post)
 
         return f_post 
 
@@ -429,14 +436,11 @@ class Mixture(ProbabilityDistribution):
             self.distr_support[i,0] = c_mixt.distr_support[0]
             self.distr_support[i,1] = c_mixt.distr_support[1]
 
-
-   
     def compute_value(self, X): 
         """ compute_value compute the value of the joint pdf at X, where 
         X is a (1 x n_param) numpy array. We sample from known distribution"""
 
         Y = 1
-
         for i in range(self.n_components): 
             c_mixt = self.mixture_components[i]
             Y *= c_mixt.compute_value(X[i])
@@ -444,10 +448,29 @@ class Mixture(ProbabilityDistribution):
         return Y 
 
     def compute_log_value(self, X): 
+        """ Take the log of the density distribution of a mixture of other 
+        distribution. 
 
-        Y = self.compute_value(X)
+        !!!! BE CAREFUL WITH THIS !!!! 
+        We are tempted to implement :
 
-        return np.log(Y)
+            Y = self.compute_value(X)
+            return np.log(Y)
+        
+        Don't! With uniform distribution with large support,
+        the probability density is very low. The product can be then
+        assimilated to zero by python. That's why actually we use the log instead. But do not take simply the log of the function 
+        "compute_value"! In which case, you will take log(0.0). Thus, we need to reimplement the same function. The resulting log will be finite. 
+
+        """
+
+        Y = 0
+        for i in range(self.n_components): 
+            c_mixt = self.mixture_components[i]
+            # Log (ab) = log(a) + log(b) 
+            Y += np.log(c_mixt.compute_value(X[i]))
+
+        return Y
 
 
 

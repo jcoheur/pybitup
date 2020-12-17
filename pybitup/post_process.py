@@ -106,8 +106,11 @@ def post_process_data(input_file_name):
                         plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["xField"][0])
                         plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["yField"][0])
 
-                    #error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
-                            #data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
+
+                        # error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
+                        #         data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
+                        error_bar (data_exp[data_id].x, data_exp[data_id].y[j],
+                                data_exp[data_id].std_y, lineColor[num_data_set][0])
 
                 #, edgecolors='r'
             plt.legend()
@@ -601,23 +604,25 @@ def post_process_data(input_file_name):
 
                     # Plot 95% credible interval
                     # ---------------------------
-                    low_cred_int = np.percentile(data_hist, 2.5, axis=0)
-                    high_cred_int = np.percentile(data_hist, 97.5, axis=0)
-                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3,  label="95\% cred. int.")
+                    if inputFields["PosteriorPredictiveCheck"]["cred_int"] == "yes":
+                        low_cred_int = np.percentile(data_hist, 2.5, axis=0)
+                        high_cred_int = np.percentile(data_hist, 97.5, axis=0)
+                        plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3,  label="95\% cred. int.")
                     
                     # Plot 95% prediction interval
                     # -----------------------------
                     # For the prediction interval, we add the std to the result
-                    reader = pd.read_csv('output/estimated_sigma.csv')
-                    estimated_sigma = reader['model_id'].values
+                    if inputFields["PosteriorPredictiveCheck"]["pred_int"] == "yes":
+                        reader = pd.read_csv('output/estimated_sigma.csv')
+                        estimated_sigma = reader['model_id'].values
 
-                    plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
-                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
+                        plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
+                                        high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
 
-                    #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
-                    #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+                        #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
+                        #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
 
-                    plt.legend() 
+                    plt.legend()
 
                     # Values are saved in csv format using Panda dataframe  
                     df = pd.DataFrame({"x": data_exp[data_id].x,

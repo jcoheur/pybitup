@@ -401,11 +401,12 @@ class Emulator(Model):
 class Likelihood: 
     """"Class defining the function and the properties of the likelihood function."""
 
-    def __init__(self, exp_data, model_list): 
+    def __init__(self, exp_data, model_list, gamma=1.0): 
         self.data = exp_data
         self.models = model_list 
         self.SS_X = 0 # sum of square 
         self.arg_LL = 0 # Arg of the likelihood function 
+        self.gamma = gamma
 
         # self.model_eval[model_id] is the value that is updated and saved
         # We initialise it here as a list  
@@ -519,7 +520,7 @@ class Likelihood:
                 # arg_exp2 = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(new_std_y2)
 
                 #arg_exp = (int1 - int2)
-                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y)
+                arg_exp = (self.data[model_id].y[c_run] - self.models[model_id].model_eval)/(self.data[model_id].std_y * self.gamma)
                 #arg_exp = arg_exp[9]
                 J = J  + np.sum(arg_exp**2, axis=0)
 
@@ -605,7 +606,7 @@ class Likelihood:
 
             # TODO : this is not yet updated with c_run !! 
             # Compute grad log LL 
-            ss_x = (self.data[model_id].y[0] - self.models[model_id].model_eval)/(self.data[model_id].std_y**2) 
+            ss_x = (self.data[model_id].y[0] - self.models[model_id].model_eval)/(self.data[model_id].std_y**2 * self.gamma**2) 
 
             for i, pn in enumerate(self.models[model_id].unpar_name):
 

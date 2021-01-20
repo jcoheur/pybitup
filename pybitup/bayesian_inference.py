@@ -49,17 +49,16 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
         X = self.model.parametrization_backward(Y) 
 
         prior_log_value = self.prior.compute_log_value(X)
-        log_like_val = self.likelihood.compute_log_value(X)
-
-        if prior_log_value == -np.inf or log_like_val == np.nan:
+        if prior_log_value == -np.inf:
             # Avoid computation of likelihood if prior is zero
             log_bayes_post = -np.inf
         else: 
-            log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val
-            # log(1/det_jac) = - log(det_jac)
- 
-        # Update value
-        self.log_bayes_post = log_bayes_post
+            log_like_val = self.likelihood.compute_log_value(X)
+            if log_like_val == np.nan: 
+                log_bayes_post = -np.inf
+            else: 
+                log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val
+                # log(1/det_jac) = - log(det_jac)
 
         return log_bayes_post
 

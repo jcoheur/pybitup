@@ -111,7 +111,7 @@ class ProbabilityDistribution:
             plt.plot(x, stats.norm.pdf(x, loc=113000, scale=1000), 'r-', lw=2, alpha=1.0, label='norm pdf')
 
         elif self.dim == 2:
-            n_points_1d = 200 # 200
+            n_points_1d = 400 # 200
 
             # # The support is uniform in the reparameterized space 
             vec_param_i = np.exp(np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d))

@@ -87,13 +87,11 @@ def post_process_data(input_file_name):
         if inputFields["Data"]["display"] == "yes":
             num_plot = inputFields["Data"]["num_plot"]
             for num_data_set, data_id in enumerate(data_exp.keys()):
-
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
                 
                 for i in range(n_data_set): 
-                    
-                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(num_plot[num_data_set])
                     plt.figure(i)
 
                     if data_exp[data_id].n_runs > 1:
@@ -101,16 +99,16 @@ def post_process_data(input_file_name):
                                 'o', color=lineColor[num_data_set][0], mfc='none')
 
                     for j in range(data_exp[data_id].n_runs):
-                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none', label="Exp. data")
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j][i*n_x:i*n_x+n_x],'o', color=lineColor[num_data_set][0], mfc='none', label="Exp. data")
 
-                        plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["xField"][0])
-                        plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["yField"][0])
+                        plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][num_data_set]["xField"][0])
+                        plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][num_data_set]["yField"][0])
 
 
-                        # error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
+                        # error_bar (data_exp[data_id].x, data_exp[data_id].y[j][i*n_x:i*n_x+n_x]
                         #         data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
-                        error_bar (data_exp[data_id].x, data_exp[data_id].y[j],
-                                data_exp[data_id].std_y, lineColor[num_data_set][0])
+                        error_bar (data_exp[data_id].x, data_exp[data_id].y[j][i*n_x:i*n_x+n_x],
+                                data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
             plt.legend()
@@ -132,7 +130,7 @@ def post_process_data(input_file_name):
 
                 for i in range(n_data_set): 
 
-                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(num_plot[num_data_set])
                     plt.figure(i)
 
                     plt.plot(data_exp[data_id].x,
@@ -522,26 +520,28 @@ def post_process_data(input_file_name):
             # By default, we have saved 100 function evaluations
             n_fun_eval = n_samples # 100
             delta_it = int(n_samples/n_fun_eval)
-            
+            delta_it = 10
+
             start_val = int(inputFields["PosteriorPredictiveCheck"]["burnin"]*delta_it)
 
             # By default, the last function evaluation to be plotted is equal to the number of iterations
             end_val = int(n_samples)
 
             # Num of fun eval after discarding burn in samples
-            n_fun_eval_est = int(n_samples - start_val)
+            n_fun_eval_est = int((n_samples - start_val)/delta_it)
             #for i in range(data_exp.n_data_set):
             for num_data_set, data_id in enumerate(data_exp.keys()):
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
  
                 for i in range(n_data_set): 
-                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(num_plot[num_data_set])
                     plt.figure(i)
 
                     # Initialise bounds
-                    data_ij_max = -1e5*np.ones(n_x)
-                    data_ij_min = 1e5*np.ones(n_x)
+                    data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, 0))
+                    data_ij_max = data_ij
+                    data_ij_min = data_ij
                     data_ij_mean = np.zeros(n_x)
                     data_ij_var = np.zeros(n_x)
 

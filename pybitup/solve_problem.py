@@ -48,6 +48,7 @@ class SolveProblem():
         # Define the file names 
         path = os.getcwd()
         print("The current working directory is "+path)
+        self.IO_util['path']['cwd'] = path
         self.IO_util['path']['out_folder'] = path+"/output"
         self.IO_util['path']['out_data'] = self.IO_util['path']['out_folder']+"/output.dat"
         
@@ -282,8 +283,15 @@ class Sampling(SolveProblem):
                 unpar_init_val.append(param_val['initial_val'])
                 unpar_prior_name.append(param_val['prior_name']) 
                 unpar_prior_param.append(param_val['prior_param'])
+
             unpar_init_val = np.array(models[model_id].parametrization_forward(unpar_init_val))
             n_uncertain_param = len(unpar_init_val)
+
+            # Unpar init val from file 
+            reader = pd.read_csv(self.IO_util['path']['cwd']+"/mcmc_chain_init.csv", header=None)
+            param_value_raw = reader.values
+            unpar_init_val = np.array(models[model_id].parametrization_forward(np.float64(param_value_raw[0, :])))
+            print(np.float64(param_value_raw[0, :]))
 
             # Prior 
             # ------ 

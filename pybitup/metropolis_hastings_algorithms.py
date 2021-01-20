@@ -81,7 +81,7 @@ class MetropolisHastings:
         else:
             self.save_model_freq = nIterations/100
         # Here, it is set to one 
-        self.save_model_freq = 1
+        self.save_model_freq = 10
 
         self.V = V
         self.prob_distr = prob_distr 
@@ -134,6 +134,13 @@ class MetropolisHastings:
         self.prob_distr.save_sample(self.IO_fileID, self.current_val)
         self.prob_distr.update_eval()
         self.write_fun_distr_val(0)
+
+        # Write in output.dat parameters info and iteration number 
+        self.IO_fileID['out_data'].write("$RandomVarName$\n")
+        for i in range(self.n_param): 
+            #self.IO_fileID['out_data'].write("X{} ".format(i))
+            self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
+        self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
 
         # Cholesky decomposition of V. Constant if MCMC is not adaptive
         self.V_0 = V 
@@ -271,6 +278,7 @@ class MetropolisHastings:
 
         # Compute sample covariance (to be written in output.dat)
         self.cov_c = np.cov(param_values, rowvar=False)
+        np.savetxt("cov.csv", self.cov_c, delimiter=",")
   
 
     def compute_multivariate_normal(self):
@@ -299,12 +307,6 @@ class MetropolisHastings:
             myfile = {'model_id': est_sigma} 
             df = pd.DataFrame(myfile, columns=['model_id'])
             df.to_csv(self.IO_fileID['estimated_sigma'])
-
-        self.IO_fileID['out_data'].write("$RandomVarName$\n")
-        for i in range(self.n_param): 
-            #self.IO_fileID['out_data'].write("X{} ".format(i))
-            self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
-        self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
 
@@ -593,6 +595,12 @@ class GradientBasedMCMC(MetropolisHastings):
         self.eps_Id = 1e-10*np.eye(self.n_param)
         self.starting_it = int(C_matrix['starting_it'])
         self.update_it = int(C_matrix['update_it'])
+        # End of adaptation it not mandatory. Default is equal to the number of iterations
+        if (C_matrix.get("end_it") is not None): 
+            self.end_it = int(C_matrix['end_it'])
+        else: 
+            self.end_it = self.nIterations + 1
+
 
         #---------------
         # Hessian matrix
@@ -638,16 +646,20 @@ class GradientBasedMCMC(MetropolisHastings):
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix_estimation))
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
-        print(self.C_approx)
-        self.L_c = linalg.cholesky(self.C_approx)
+
+        # self.C_approx = np.loadtxt("cov.csv", delimiter=",")
+        # print(self.C_approx)
+
 
         try: 
             self.L_c = linalg.cholesky(self.C_approx)
+            self.inv_L_c = linalg.inv(self.L_c)
             self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
         except: 
             print('Non positive defintie Hessian matrix. Set to identity matrix.')
             self.C_approx = np.identity(self.n_param)
             self.L_c = np.identity(self.n_param)
+            self.inv_L_c = np.identity(self.n_param)
             self.inv_L_c_T = np.identity(self.n_param)
 
         # self.L_c = linalg.cholesky(self.C_approx)
@@ -677,21 +689,31 @@ class GradientBasedMCMC(MetropolisHastings):
         """ Adapt covariance and algorithm parameters if asked. 
         args contain algorithm parameters. """ 
 
-        # initialise covariance computation from all previous iteraties 
-        if  self.it == self.starting_it:  
-            # Initialise sample mean and covariance estimation 
-            self.compute_covariance(self.it) # update self.mean_c and self.cov_c
-            self.X_av_i = self.mean_c
-            self.V_i = self.S_d*(self.cov_c + self.eps_Id)
+        if self.it >= self.starting_it and self.it <= self.end_it+1:
+        
+            if  self.it == self.starting_it:  
+                # initialise covariance computation from all previous iterations
+                self.compute_covariance(self.it) # update self.mean_c and self.cov_c
+                self.X_av_i = self.mean_c
+                self.V_i = self.S_d*(self.cov_c + self.eps_Id)
 
-        # Update covariance using recursion formula 
-        if self.it >= self.starting_it: 
-            X_i = self.current_val[:]
-            X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
-            V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
-            # Update mean and covariance
-            self.V_i = V_ip
-            self.X_av_i = X_av_ip
+                print("Iteration {}: starting covariance adaptation (freq. {} iterations).".format(self.it, self.update_it))
+                self.IO_fileID['out_data'].write("\nIteration {}: starting covariance adaptation (freq. {} iterations).".format(self.it, self.update_it)) 
+
+            elif self.it <= self.end_it:
+                # Compute covariance using recursion formula 
+                X_i = self.current_val[:]
+                X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
+                V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
+                # Update mean and covariance
+                self.V_i = V_ip
+                self.X_av_i = X_av_ip
+
+            elif self.it == self.end_it+1:  
+                # End of adaptation
+                print("Stopping covariance adaptation (iteration {}).".format(self.it-1))
+                self.IO_fileID['out_data'].write("\nIteration {}: stopping covariance adaptation.".format(self.it)) 
+                self.IO_fileID['out_data'].write("\nThe covariance matrix estimation at the end of the adaptation procedure is: \n{}".format(self.C_approx))
 
             # Effectively update the covariance in the MCMC algorithm 
             if  self.it % self.update_it == 0: 
@@ -703,7 +725,8 @@ class GradientBasedMCMC(MetropolisHastings):
 
                 self.C_approx = self.V_i
                 self.L_c = linalg.cholesky(self.C_approx)
-                self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+                self.inv_L_c = linalg.inv(self.L_c)
+                self.inv_L_c_T = np.transpose(self.inv_L_c)
 
 class HamiltonianMonteCarlo(GradientBasedMCMC):
     """
@@ -757,14 +780,18 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
 
         #Initialise 
         self.new_val[:] = self.current_val[:]
-        self.p = self.compute_multivariate_normal() # independent standard normal variates
+        self.p = self.compute_multivariate_normal()
         self.p = np.matmul(self.p, self.inv_L_c_T)
         self.current_p = self.p
+
         np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
+
         # Make a half step for momentum at the beginning
         self.p = self.p - self.epsilon * (-self.distr_grad_log_like_current_val) / 2
+
         np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
         #self.IO_fileID['aux_variables'].write("{}\n".format(str([self.p, self.new_val[:]]).replace('\n', '')))
+
         # Alternate full steps for position and momentum 
         for i in range(self.L):
             # Make a full step for the position 
@@ -918,12 +945,12 @@ class ito_SDE(GradientBasedMCMC):
 
             # Gradient Log-Likelihood
             grad_LL = self.computeGrad(xi_n)
-            #print(computeGradientFD(self.log_like, xi_n, eps=0.00000001), grad_LL) # For comparing. "gradient" must be set to Analytical 
+            #print(computeGradientFD(self.log_like, xi_n, eps=0.00000001), grad_LL) # For comparing, "gradient" must be set to Analytical 
             grad_phi = -grad_LL
 
             P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp * \
                 (-grad_phi) + np.sqrt(self.f0)/self.hfp * \
-                            np.matmul(linalg.inv(self.L_c),WP_np) 
+                            np.matmul(self.inv_L_c,WP_np) 
             xi_np = xi_n + self.h/2*np.matmul(self.C_approx, P_np)
 
             self.P_nm = P_np

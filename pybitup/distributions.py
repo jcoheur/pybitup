@@ -121,6 +121,11 @@ class ProbabilityDistribution:
             # vec_param_i = np.linspace(np.exp(self.distr_support[0,0]), np.exp(self.distr_support[0,1]), n_points_1d)
             # vec_param_j = np.linspace(np.exp(self.distr_support[1,0]), np.exp(self.distr_support[1,1]), n_points_1d)
 
+            # Original support 
+            # vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d)
+            # vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], n_points_1d)
+
+
             delta_param_i = vec_param_i[1] - vec_param_i[0]
             delta_param_j = vec_param_j[1] - vec_param_j[0]
             f_post = np.zeros([vec_param_i.size, vec_param_j.size])

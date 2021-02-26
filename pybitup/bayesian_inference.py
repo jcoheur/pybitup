@@ -184,10 +184,10 @@ class Data:
             
             # Use the standard deviation estimated from the provided data set 
             # self.std_y =  self.std_s*np.sqrt(self.n_runs * self.num_points) + 1e-10 # To avoid very small values 
-            # Use the standard deviation provided in input file 
-            self.std_y =  self.std_y*np.sqrt(self.n_runs * self.num_points) + 1e-10 # To avoid very small values 
+            # Use the standard deviation provided in input file
+        #self.std_y *=  np.sqrt(self.n_runs * self.num_points) # To avoid very small values 
 
-            print(self.std_y)
+        # print(self.std_y)
 
     def size_x(self, i):
         """Return the length of the i-th data x"""

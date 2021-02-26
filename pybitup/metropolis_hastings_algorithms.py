@@ -3,6 +3,7 @@ import random
 import scipy
 from scipy import linalg
 from scipy.linalg import polar
+from scipy.linalg import eigh
 import time
 from functools import wraps
 import pandas as pd 
@@ -142,6 +143,10 @@ class MetropolisHastings:
             self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
         self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
 
+        # Variables for estimating the MAP
+        self.arg_MAP = np.array(self.current_val[:]) 
+        self.MAP_val = self.distr_fun_current_val
+
         # Cholesky decomposition of V. Constant if MCMC is not adaptive
         self.V_0 = V 
         self.R = linalg.cholesky(V)
@@ -167,6 +172,7 @@ class MetropolisHastings:
             self.compute_acceptance_ratio()
             self.accept_reject()
             #self.update_sigma() 
+            #self.update_sigma_constant()
             #self.update_sigma_Gelman()
 
             # We estimate time and monitor acceptance ratio 
@@ -216,6 +222,15 @@ class MetropolisHastings:
         u = random.random()  # Uniformly distributed number in the interval [0,1)
         if u < self.alpha:  # Accepted
             self.current_val[:] = self.new_val[:]
+
+            # Estimate the MAP here 
+            if self.distr_fun_new_val > self.MAP_val:
+                self.arg_MAP[:] = self.new_val[:]
+                self.MAP_val = self.distr_fun_new_val
+
+                print(self.arg_MAP[:])
+                print(self.MAP_val)
+
             self.distr_fun_current_val = self.distr_fun_new_val
             self.distr_grad_log_like_current_val = self.distr_grad_log_like_new_val
             self.prob_distr.update_eval()
@@ -240,6 +255,24 @@ class MetropolisHastings:
                 self.prob_distr.likelihood.data[model_id].std_y[n] = self.prob_distr.likelihood.data[model_id].n_runs * self.prob_distr.likelihood.data[model_id].std_y[n]
             #print(self.prob_distr.likelihood.data[model_id].std_y)
             self.prob_distr.likelihood.data[model_id].std_s += self.prob_distr.likelihood.data[model_id].std_y / self.prob_distr.likelihood.data[model_id].n_runs
+
+    def update_sigma_constant(self): 
+        """ Smith, (2013). Sigma is a constant with time """
+        ns = 0.01
+        self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
+
+        for model_id in self.prob_distr.likelihood.data.keys():
+
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+            a = 0.5 * (ns + self.prob_distr.likelihood.data[model_id].num_points) 
+            b = 0.5 * (ns * self.prob_distr.likelihood.data[model_id].std_y[0]**2  + np.sum(self.prob_distr.likelihood.SS_X))
+
+            rv_sigma = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b))
+            for n in range(int(self.prob_distr.likelihood.data[model_id].num_points)):
+                self.prob_distr.likelihood.data[model_id].std_y[n] = rv_sigma
+
+
+
 
     def update_sigma_Gelman(self): 
         """ Gelman Bayesian Data Analysis, 3rd Edition.
@@ -312,13 +345,17 @@ class MetropolisHastings:
 
         self.IO_fileID['out_data'].write("\nElapsed time: {} \n".format(time.strftime("%H:%M:%S",time.gmtime(time.perf_counter()-self.t1))))
         
-        # TODO: Estimate MLE during MCMC iterations and save it in 
-        # the output.dat file 
+        # TODO: Estimate MLE during MCMC iterations and save it
         self.IO_fileID['out_data'].write("\nMaximum Likelihood Estimator (MLE) \n")
         #self.IO_fileID['out_data'].write("{} \n".format(self.arg_max_LL))
         self.IO_fileID['out_data'].write("Log-likelihood value \n")
         #self.IO_fileID['out_data'].write("{}".format(self.max_LL))
         
+
+        # Write in a csv the estimation of the MAP and arg MAP 
+        np.savetxt("output/arg_MAP_estimation.csv", np.array([self.arg_MAP[:]]),fmt="%f", delimiter=",")
+        np.savetxt("output/MAP_estimation.csv", np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
+
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
     def compute_time(self, t1):
@@ -642,15 +679,27 @@ class GradientBasedMCMC(MetropolisHastings):
             # probably the same way as I did with covariance for RWMH, AMH, etc.   
             print('Initial covariance matrix provided.')
             self.C_approx = np.array(C_matrix['matrix_value']) 
+        elif C_matrix_estimation == "from_file": 
+            print('Reading cov.csv file.')
+            reader = pd.read_csv(self.IO_util['path']['cwd']+"/cov.csv", header=None)
+            self.C_approx = reader.values
+
+            # Generalized eigenval problem for Maarten
+            # print('Computing full Hessian for scaling and correlation.')
+            # self.hess_mat = computeHessianFD(self.log_like, self.param_init, eps=0.001, positive_diag=False)
+            print('Computing diagonal of Hessian for scaling and correlation.')
+            self.hess_mat = computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False, positive_diag=True)
+            M = linalg.inv(self.C_approx)
+            eigvals, eigvecs = eigh(M, -self.hess_mat, eigvals_only=False)
+            print("Engenvalues = {}".format(eigvals))
+            print("Eigenvectors = {}".format(eigvecs))
 
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix_estimation))
+        
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
 
-        # self.C_approx = np.loadtxt("cov.csv", delimiter=",")
-        # print(self.C_approx)
-
-
+      
         try: 
             self.L_c = linalg.cholesky(self.C_approx)
             self.inv_L_c = linalg.inv(self.L_c)
@@ -944,9 +993,9 @@ class ito_SDE(GradientBasedMCMC):
             xi_n = self.xi_nm + self.h/2*np.matmul(self.C_approx, self.P_nm)
 
             # Gradient Log-Likelihood
-            grad_LL = self.computeGrad(xi_n)
+            grad_phi = -self.computeGrad(xi_n)
             #print(computeGradientFD(self.log_like, xi_n, eps=0.00000001), grad_LL) # For comparing, "gradient" must be set to Analytical 
-            grad_phi = -grad_LL
+            # grad_phi = -grad_LL
 
             P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp * \
                 (-grad_phi) + np.sqrt(self.f0)/self.hfp * \
@@ -956,10 +1005,22 @@ class ito_SDE(GradientBasedMCMC):
             self.P_nm = P_np
             self.xi_nm = xi_np
 
-            # We estimate time and monitor acceptance ratio 
+            # We estimate time 
             self.mean_r = self.it
             if self.it % (self.nIterations/100) == 0:
                 self.compute_time(self.t1)
+
+            # Estimate the MAP  
+            # TODO : can improve computational cost of estimating 
+            # the MAP by only running one time the model (running 
+            # self.distr_fun(xi_np) call the model, while it was already computed at self.computeGrad(xi_n))
+            self.distr_fun_new_val = self.distr_fun(xi_np)
+            if self.distr_fun_new_val  > self.MAP_val:
+                self.arg_MAP[:] = xi_np[:]
+                self.MAP_val = self.distr_fun_new_val
+
+                print(self.arg_MAP[:])
+                print(self.MAP_val)
 
             # Update values 
             self.z_k=P_np 
@@ -1051,7 +1112,7 @@ def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
     return grad_FD
 
 
-def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
+def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True, positive_diag=True):
     """ 
     A function that computes the hessian of a model with respect to its variables around a given value.
 
@@ -1097,9 +1158,12 @@ def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
         # Finite difference scheme for the diagonal terms
         num = f_X_pert_p - 2*f_X_init + f_X_pert_m
         hess_FD[i, i] = num/(delta_pi**2)
-        # We force the diag to be positive 
-        hess_FD[i, i] = -np.abs(num/(delta_pi**2))
-        #print(hess_FD[i, i])
+
+        if positive_diag: 
+            # We force the diag to be positive 
+            hess_FD[i, i] = -np.abs(num/(delta_pi**2))
+            #print(hess_FD[i, i])
+
     # 2) Off diagonal terms
     if compute_all_element: 
         for i in range(nVar):

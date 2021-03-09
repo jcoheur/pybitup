@@ -87,13 +87,11 @@ def post_process_data(input_file_name):
         if inputFields["Data"]["display"] == "yes":
             num_plot = inputFields["Data"]["num_plot"]
             for num_data_set, data_id in enumerate(data_exp.keys()):
-
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
                 
                 for i in range(n_data_set): 
-                    
-                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(num_plot[num_data_set])
                     plt.figure(i)
 
                     if data_exp[data_id].n_runs > 1:
@@ -101,13 +99,16 @@ def post_process_data(input_file_name):
                                 'o', color=lineColor[num_data_set][0], mfc='none')
 
                     for j in range(data_exp[data_id].n_runs):
-                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j],'o', mfc='none', label="Exp. data")
+                        plt.plot(data_exp[data_id].x, data_exp[data_id].y[j][i*n_x:i*n_x+n_x],'o', color=lineColor[num_data_set][0], mfc='none', label="Exp. data")
 
-                        plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["xField"][0])
-                        plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][i]["yField"][0])
+                        plt.xlabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][num_data_set]["xField"][0])
+                        plt.ylabel(user_inputs["Sampling"]["BayesianPosterior"]["Data"][num_data_set]["yField"][0])
 
-                    #error_bar (data_exp[data_id].x, data_exp[data_id].y[i*n_x:i*n_x+n_x], 
-                            #data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
+
+                        # error_bar (data_exp[data_id].x, data_exp[data_id].y[j][i*n_x:i*n_x+n_x]
+                        #         data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
+                        error_bar (data_exp[data_id].x, data_exp[data_id].y[j][i*n_x:i*n_x+n_x],
+                                data_exp[data_id].std_y[i*n_x:i*n_x+n_x], lineColor[num_data_set][0])
 
                 #, edgecolors='r'
             plt.legend()
@@ -121,7 +122,7 @@ def post_process_data(input_file_name):
         if inputFields["InitialGuess"]["display"] == "yes":
 
             for num_data_set, data_id in enumerate(data_exp.keys()):
-                data_init = np.load("output/{}_fun_eval.{}.npy".format(data_id, 0))
+                data_init = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, 0))
 
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
@@ -129,7 +130,7 @@ def post_process_data(input_file_name):
 
                 for i in range(n_data_set): 
 
-                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(num_plot[num_data_set])
                     plt.figure(i)
 
                     plt.plot(data_exp[data_id].x,
@@ -517,26 +518,30 @@ def post_process_data(input_file_name):
         if inputFields["PosteriorPredictiveCheck"]["display"] == "yes":
 
             # By default, we have saved 100 function evaluations
-            n_fun_eval = 100
+            n_fun_eval = n_samples # 100
             delta_it = int(n_samples/n_fun_eval)
+            delta_it = 10
 
             start_val = int(inputFields["PosteriorPredictiveCheck"]["burnin"]*delta_it)
 
             # By default, the last function evaluation to be plotted is equal to the number of iterations
             end_val = int(n_samples)
 
+            # Num of fun eval after discarding burn in samples
+            n_fun_eval_est = int((n_samples - start_val)/delta_it)
             #for i in range(data_exp.n_data_set):
             for num_data_set, data_id in enumerate(data_exp.keys()):
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
  
                 for i in range(n_data_set): 
-                    #plt.figure(num_plot[num_data_set])
+                    plt.figure(num_plot[num_data_set])
                     plt.figure(i)
 
                     # Initialise bounds
-                    data_ij_max = -1e5*np.ones(n_x)
-                    data_ij_min = 1e5*np.ones(n_x)
+                    data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, 0))
+                    data_ij_max = data_ij
+                    data_ij_min = data_ij
                     data_ij_mean = np.zeros(n_x)
                     data_ij_var = np.zeros(n_x)
 
@@ -544,14 +549,13 @@ def post_process_data(input_file_name):
                     ind_2 =(i+1)*n_x
 
                     # Histogram 
-                    data_hist = np.zeros([n_fun_eval, n_x])
+                    data_hist = np.zeros([n_fun_eval_est, n_x])
 
                     for c_eval, j in enumerate(range(start_val+delta_it, end_val, delta_it)):
-
                         # Load current data
-                        data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
+                        data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, j))
                         data_set_n = data_ij[ind_1:ind_2]
-
+                        
                         # Update bounds
                         for k in range(n_x):
                             if data_ij_max[k] < data_set_n[k]:
@@ -568,19 +572,19 @@ def post_process_data(input_file_name):
                         # plt.plot(data_exp[data_id].x, data_set_n[:], alpha=0.5)
 
                     # Compute mean 
-                    data_ij_mean = data_ij_mean[:]/n_fun_eval
+                    data_ij_mean = data_ij_mean[:]/n_fun_eval_est
 
                     # Identical loop to compute the variance 
                     for j in range(start_val+delta_it, end_val, delta_it):
 
                         # Load current data
-                        data_ij = np.load("output/{}_fun_eval.{}.npy".format(data_id, j))
+                        data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, j))
                         data_set_n = data_ij[ind_1:ind_2]
 
                         # Compute variance
                         data_ij_var = data_ij_var[:] + (data_set_n[:] - data_ij_mean[:])**2
 
-                    data_ij_var = data_ij_var[:]/(n_fun_eval - 1) 
+                    data_ij_var = data_ij_var[:]/(n_fun_eval_est - 1) 
                 
                     # # Plot median and all results from propagation
                     # plt.plot(data_exp.x[ind_1:ind_2+1], (data_ij_min +
@@ -600,23 +604,25 @@ def post_process_data(input_file_name):
 
                     # Plot 95% credible interval
                     # ---------------------------
-                    low_cred_int = np.percentile(data_hist, 2.5, axis=0)
-                    high_cred_int = np.percentile(data_hist, 97.5, axis=0)
-                    plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3,  label="95\% cred. int.")
+                    if inputFields["PosteriorPredictiveCheck"]["cred_int"] == "yes":
+                        low_cred_int = np.percentile(data_hist, 2.5, axis=0)
+                        high_cred_int = np.percentile(data_hist, 97.5, axis=0)
+                        plt.fill_between(data_exp[data_id].x,  low_cred_int, high_cred_int, facecolor=lineColor[num_data_set][0], alpha=0.3,  label="95\% cred. int.")
                     
                     # Plot 95% prediction interval
                     # -----------------------------
                     # For the prediction interval, we add the std to the result
-                    reader = pd.read_csv('output/estimated_sigma.csv')
-                    estimated_sigma = reader['model_id'].values
+                    if inputFields["PosteriorPredictiveCheck"]["pred_int"] == "yes":
+                        reader = pd.read_csv('output/estimated_sigma.csv')
+                        estimated_sigma = reader['model_id'].values
 
-                    plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
-                                    high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
+                        plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
+                                        high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
 
-                    #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
-                    #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
+                        #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
+                        #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
 
-                    plt.legend() 
+                    plt.legend()
 
                     # Values are saved in csv format using Panda dataframe  
                     df = pd.DataFrame({"x": data_exp[data_id].x,
@@ -729,9 +735,10 @@ def post_process_data(input_file_name):
 def saveToTikz(nameTikzFile):
 
     plt.grid(True)
-    tikz_save(nameTikzFile, figureheight='\\figureheight', figurewidth='\\figurewidth',
+	#tikzplotlib.clean_figure()
+    tikz_save(nameTikzFile, axis_height='\\figureheight', axis_width='\\figurewidth',
               extra_axis_parameters=['/pgf/number format/.cd, 1000 sep={}', 'title=\\figuretitle', 'xlabel=\\figurexlabel', 'ylabel=\\figureylabel'])
-			  
+
 			  
 def error_bar (x_data, y_data, error, col, line_width=1): 
 

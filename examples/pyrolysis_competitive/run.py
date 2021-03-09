@@ -4,11 +4,12 @@ import competitive_reaction
 # Packages for stochastic inference
 import pybitup
 
-case_name = "pyrolysis_competitive"
-input_file_name = "{}.json".format(case_name) 
+input_file_name = "pyrolysis_competitive.json"
 
 pyrolysis_model = {}
-pyrolysis_model[case_name] = competitive_reaction.SetCompetitiveReaction()
+pyrolysis_model["pyrolysis_competitive_366_K_per_min"] = competitive_reaction.SetCompetitiveReaction()
+pyrolysis_model["pyrolysis_competitive_10_K_per_min"] = competitive_reaction.SetCompetitiveReaction()
+
 
 # Sampling 
 post_dist = pybitup.solve_problem.Sampling(input_file_name)

@@ -3,12 +3,13 @@ import random
 import scipy
 from scipy import linalg
 from scipy.linalg import polar
+from scipy.linalg import eigh
 import time
 from functools import wraps
 import pandas as pd 
 
 def time_it(func):
-    # decorator to time execution time of a function. simply use @time_it before the function
+    # decorator to time the execution time of a function. simply use @time_it before the function
     @wraps(func)
     def _time_it(*args, **kwargs):
         print("Start time {}" .format(time.asctime(time.localtime())))
@@ -23,16 +24,65 @@ def time_it(func):
     return _time_it
 
 class MetropolisHastings:
+    """
+    A generic class used to sample using Metroplis-Hastings algorithms. 
+    The idea is to have the basic method that is the random-walk Markov Chain method on which is built the others. 
+    
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr):
+    Attributes
+    ----------
+    IO_fileID : dict 
+        Contains the file objects to write output data. The keys are defined in solved problems. 
+    caseName : char 
+        Name of the case study. 
+    nIterations : int
+        Number of iterations in the MCMC loop.
+    param_init : numpy array
+        Initial values of the parameters.
+    V: numpy array
+        Covariance matrix used in the proposal function.
+    prob_distr: BayesianPosterior 
+        Contains the Bayesian posterior. It is a ProbabilityDistribution object. 
+
+
+    Methods
+    -------------
+    run_algorithm(self)
+        Contains the Metropolis-Hastings loop.
+    compute_new_val(self)
+        Computes the new value of the sample.
+    compute_acceptance_ratio(self)
+        Computes the acceptance ratio.
+    accept_reject(self)
+        Samples from a uniform distribution and decides whether the new sample is accepted or rejected. 
+    update_sigma(self)
+        Estimates the standard deviation and update it for the next step. In development. 
+    update_sigma_Gelman(self)
+        See "update_sigma". Uses the formula from Gelman. 
+    compute_covariance(self, n_iterations)
+        Computes the finale covariance. 
+    compute_multivariate_normal(self)
+        Samples from a multivariate normal distribution. Is used in compute_new_val 
+    terminate_loop(self)
+        Terminates the MCMC loop. It prints info about the result of the sampling and writes the outputs. 
+    compute_time(self, t1)
+        Computes the time elapsed since t1. Is used to estimate the computation time of the MCMC loop. 
+    write_fun_distr_val(self, current_it)
+        Write the value of the function evaluation at current_it. 
+    """
+
+    def __init__(self, IO_util, caseName, nIterations, param_init, V, prob_distr):
         self.caseName = caseName
         self.nIterations = nIterations
-        if self.nIterations < 100:
-            self.save_freq = 1
-        else:
-            self.save_freq = nIterations/100
 
-        self.save_freq = 1
+        # TODO: give the possibility to the user to provide the frequency 
+        # at which model evaluations are saved 
+        if self.nIterations < 100:
+            self.save_model_freq = 1
+        else:
+            self.save_model_freq = nIterations/100
+        # Here, it is set to one 
+        self.save_model_freq = 10
 
         self.V = V
         self.prob_distr = prob_distr 
@@ -73,18 +123,29 @@ class MetropolisHastings:
 
 
         # Outputs 
-        self.IO_fileID = IO_fileID
+        self.IO_util = IO_util
+        self.IO_fileID = IO_util["fileID"]
         # Ensure that we start the files at 0 (due to the double initialisation of DRAM)
         self.IO_fileID['MChains'].seek(0) 
         self.IO_fileID['MChains_reparam'].seek(0)
         self.IO_fileID['MChains_csv'].seek(0)
         self.IO_fileID['Distribution_values'].seek(0)
-        self.distr_output_file_name = "output/fun_eval."
 
         # Write initial values 
         self.prob_distr.save_sample(self.IO_fileID, self.current_val)
         self.prob_distr.update_eval()
         self.write_fun_distr_val(0)
+
+        # Write in output.dat parameters info and iteration number 
+        self.IO_fileID['out_data'].write("$RandomVarName$\n")
+        for i in range(self.n_param): 
+            #self.IO_fileID['out_data'].write("X{} ".format(i))
+            self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
+        self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
+
+        # Variables for estimating the MAP
+        self.arg_MAP = np.array(self.current_val[:]) 
+        self.MAP_val = self.distr_fun_current_val
 
         # Cholesky decomposition of V. Constant if MCMC is not adaptive
         self.V_0 = V 
@@ -111,6 +172,7 @@ class MetropolisHastings:
             self.compute_acceptance_ratio()
             self.accept_reject()
             #self.update_sigma() 
+            #self.update_sigma_constant()
             #self.update_sigma_Gelman()
 
             # We estimate time and monitor acceptance ratio 
@@ -160,6 +222,15 @@ class MetropolisHastings:
         u = random.random()  # Uniformly distributed number in the interval [0,1)
         if u < self.alpha:  # Accepted
             self.current_val[:] = self.new_val[:]
+
+            # Estimate the MAP here 
+            if self.distr_fun_new_val > self.MAP_val:
+                self.arg_MAP[:] = self.new_val[:]
+                self.MAP_val = self.distr_fun_new_val
+
+                print(self.arg_MAP[:])
+                print(self.MAP_val)
+
             self.distr_fun_current_val = self.distr_fun_new_val
             self.distr_grad_log_like_current_val = self.distr_grad_log_like_new_val
             self.prob_distr.update_eval()
@@ -184,6 +255,24 @@ class MetropolisHastings:
                 self.prob_distr.likelihood.data[model_id].std_y[n] = self.prob_distr.likelihood.data[model_id].n_runs * self.prob_distr.likelihood.data[model_id].std_y[n]
             #print(self.prob_distr.likelihood.data[model_id].std_y)
             self.prob_distr.likelihood.data[model_id].std_s += self.prob_distr.likelihood.data[model_id].std_y / self.prob_distr.likelihood.data[model_id].n_runs
+
+    def update_sigma_constant(self): 
+        """ Smith, (2013). Sigma is a constant with time """
+        ns = 0.01
+        self.prob_distr.likelihood.sum_of_square(self.current_val) #update SS_X 
+
+        for model_id in self.prob_distr.likelihood.data.keys():
+
+            #print(self.prob_distr.likelihood.data[model_id].std_y)
+            a = 0.5 * (ns + self.prob_distr.likelihood.data[model_id].num_points) 
+            b = 0.5 * (ns * self.prob_distr.likelihood.data[model_id].std_y[0]**2  + np.sum(self.prob_distr.likelihood.SS_X))
+
+            rv_sigma = np.sqrt(scipy.stats.invgamma.rvs(a, loc=0, scale=b))
+            for n in range(int(self.prob_distr.likelihood.data[model_id].num_points)):
+                self.prob_distr.likelihood.data[model_id].std_y[n] = rv_sigma
+
+
+
 
     def update_sigma_Gelman(self): 
         """ Gelman Bayesian Data Analysis, 3rd Edition.
@@ -222,6 +311,7 @@ class MetropolisHastings:
 
         # Compute sample covariance (to be written in output.dat)
         self.cov_c = np.cov(param_values, rowvar=False)
+        np.savetxt("cov.csv", self.cov_c, delimiter=",")
   
 
     def compute_multivariate_normal(self):
@@ -250,18 +340,22 @@ class MetropolisHastings:
             myfile = {'model_id': est_sigma} 
             df = pd.DataFrame(myfile, columns=['model_id'])
             df.to_csv(self.IO_fileID['estimated_sigma'])
-
-        self.IO_fileID['out_data'].write("$RandomVarName$\n")
-        for i in range(self.n_param): 
-            #self.IO_fileID['out_data'].write("X{} ".format(i))
-            self.IO_fileID['out_data'].write(self.prob_distr.name_random_var[i]+' ') 
-        self.IO_fileID['out_data'].write("\n$IterationNumber$\n{}\n".format(self.nIterations))
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
-        self.IO_fileID['out_data'].write("Maximum Likelihood Estimator (MLE) \n")
+
+        self.IO_fileID['out_data'].write("\nElapsed time: {} \n".format(time.strftime("%H:%M:%S",time.gmtime(time.perf_counter()-self.t1))))
+        
+        # TODO: Estimate MLE during MCMC iterations and save it
+        self.IO_fileID['out_data'].write("\nMaximum Likelihood Estimator (MLE) \n")
         #self.IO_fileID['out_data'].write("{} \n".format(self.arg_max_LL))
         self.IO_fileID['out_data'].write("Log-likelihood value \n")
         #self.IO_fileID['out_data'].write("{}".format(self.max_LL))
+        
+
+        # Write in a csv the estimation of the MAP and arg MAP 
+        np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
+        np.savetxt("output/MAP_estimation.csv", np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
+
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
     def compute_time(self, t1):
@@ -272,11 +366,35 @@ class MetropolisHastings:
 
 
     def write_fun_distr_val(self, current_it):
-        if current_it % (self.save_freq) == 0:
-            #self.prob_distr.save_value(self.distr_output_file_name+"{}".format(current_it))
-            self.prob_distr.save_value(current_it)
+        if current_it % (self.save_model_freq) == 0:
+            self.prob_distr.save_value(self.IO_util, current_it)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
+    """
+    A class used to sample using the adaptive random-walk Metroplis-Hastings algorithm (AMH). 
+    It is based on the MetropolisHastings class. 
+    
+
+    Attributes
+    ----------
+    starting_it : int 
+        Iteration at which the covariance adaptation starts 
+    updating_it : int
+        The frequency at which to update the covariance estimate 
+    eps_v : double
+        Correcting factor to ensure ergodic properties of the algorithm 
+
+
+    Methods
+    -------------
+    run_algorithm(self)
+        Contains the Metropolis-Hastings loop with the adaptation step.
+    adapt_covariance(self, i)
+        Computes a new estimation of the covariance matrix at the i-th iteration.  
+    update_covariance(self)
+        Updates the covariance value to be used at the the next iteration.   
+
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, 
             starting_it, updating_it, eps_v):
@@ -372,6 +490,26 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
 
 class DelayedRejectionMetropolisHastings(MetropolisHastings):
+    """
+    A class used to sample using the delayed-rejection Metroplis-Hastings algorithm (DR). 
+    It is based on the MetropolisHastings class. 
+    In this version of the DR algorithm, only one delayed-rejection is implemented. 
+    TODO: generalized to multiple delayed rejections. 
+    
+
+    Attributes
+    ----------
+    gamma : int 
+        Controls the size of the new jumps when the rejection of a sample has been delayed. 
+    
+    Methods
+    -------------
+    accept_reject(self):
+        Samples from a uniform distribution and decides whether the new sample is accepted or rejected.
+        If it is rejected, then the rejection is delayed and we go to the new delayed_rejection step. 
+    delayed_rejection(self): 
+        Computes the new acceptance probability and decides if the new proposed sample is accepted or rejected. 
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, gamma):
         MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
@@ -428,6 +566,20 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
 
 
 class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, DelayedRejectionMetropolisHastings):
+    """
+    A class used to sample using the delayed-rejection Metroplis-Hastings algorithm (DRAM). 
+    It is based on the AdaptiveMetropolisHastings and DelayedRejectionMetropolisHastings classes.  
+
+    Attributes
+    ----------    
+    No new attributes. 
+
+    Methods
+    -------------
+    update_covariance(self):
+        Update the value of the covariance and its inverse that is used in the delayed-rejection step. 
+  
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr,
             starting_it, updating_it, eps_v, gamma):
@@ -445,6 +597,27 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
 
 
 class GradientBasedMCMC(MetropolisHastings): 
+    """
+    A generic class for the gradient-based sampling methods. 
+    It is based on the MetropolisHastings. 
+
+    Attributes
+    ----------    
+    C_matrix: dict 
+        Contains the input for the covariance adaptation. 
+    gradient: str
+        Defines whether the gradient is computed numerically or if an analytical expression is provided. 
+
+    Methods
+    -------------
+    _set_algo_param(self, *args): 
+        Sets the algorithm free parameters.
+    adapt_covariance(self, i, *args):
+        Adapts the covariance matrix. 
+
+
+
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, C_matrix, gradient):
 
@@ -457,8 +630,15 @@ class GradientBasedMCMC(MetropolisHastings):
         self.X_av_i = np.array(self.param_init)
         self.S_d = 1.0 # 2.38**2/self.n_param
         self.eps_Id = 1e-10*np.eye(self.n_param)
-        self.starting_it = C_matrix['update_it']
-        self.update_it = C_matrix['starting_it']
+        self.starting_it = int(C_matrix['starting_it'])
+        self.update_it = int(C_matrix['update_it'])
+        # End of adaptation it not mandatory. Default is equal to the number of iterations
+        if (C_matrix.get("end_it") is not None): 
+            self.end_it = int(C_matrix['end_it'])
+        else: 
+            self.end_it = self.nIterations + 1
+
+
         #---------------
         # Hessian matrix
         # --------------
@@ -494,20 +674,41 @@ class GradientBasedMCMC(MetropolisHastings):
             C_approx_nonPD = linalg.inv(self.hess_mat)
             print(C_approx_nonPD)
             self.C_approx  = nearPD(C_approx_nonPD)
+        elif C_matrix_estimation == "Matrix": # THIS IS NOT WORKING YET
+            # TODO : all this should probably go in the inference_problem.py, 
+            # probably the same way as I did with covariance for RWMH, AMH, etc.   
+            print('Initial covariance matrix provided.')
+            self.C_approx = np.array(C_matrix['matrix_value']) 
+        elif C_matrix_estimation == "from_file": 
+            print('Reading cov.csv file.')
+            reader = pd.read_csv(self.IO_util['path']['cwd']+"/cov.csv", header=None)
+            self.C_approx = reader.values
+
+            # Generalized eigenval problem for Maarten
+            # print('Computing full Hessian for scaling and correlation.')
+            # self.hess_mat = computeHessianFD(self.log_like, self.param_init, eps=0.001, positive_diag=False)
+            print('Computing diagonal of Hessian for scaling and correlation.')
+            self.hess_mat = computeHessianFD(self.log_like, self.param_init, eps=0.001, compute_all_element=False, positive_diag=True)
+            M = linalg.inv(self.C_approx)
+            eigvals, eigvecs = eigh(M, -self.hess_mat, eigvals_only=False)
+            print("Engenvalues = {}".format(eigvals))
+            print("Eigenvectors = {}".format(eigvecs))
 
         else: 
             raise ValueError('Unknown matrix type "{}" for estimating the conditioning matrix G .'.format(C_matrix_estimation))
+        
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
-        print(self.C_approx)
-        self.L_c = linalg.cholesky(self.C_approx)
 
+      
         try: 
             self.L_c = linalg.cholesky(self.C_approx)
+            self.inv_L_c = linalg.inv(self.L_c)
             self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
         except: 
             print('Non positive defintie Hessian matrix. Set to identity matrix.')
             self.C_approx = np.identity(self.n_param)
             self.L_c = np.identity(self.n_param)
+            self.inv_L_c = np.identity(self.n_param)
             self.inv_L_c_T = np.identity(self.n_param)
 
         # self.L_c = linalg.cholesky(self.C_approx)
@@ -537,39 +738,71 @@ class GradientBasedMCMC(MetropolisHastings):
         """ Adapt covariance and algorithm parameters if asked. 
         args contain algorithm parameters. """ 
 
-        # initialise covariance computation from all previous iteraties 
-        if  self.it == self.starting_it:  
-            # Initialise sample mean and covariance estimation 
-            self.compute_covariance(self.it) # update self.mean_c and self.cov_c
-            self.X_av_i = self.mean_c
-            self.V_i = self.S_d*(self.cov_c + self.eps_Id)
+        if self.it >= self.starting_it and self.it <= self.end_it+1:
+        
+            if  self.it == self.starting_it:  
+                # initialise covariance computation from all previous iterations
+                self.compute_covariance(self.it) # update self.mean_c and self.cov_c
+                self.X_av_i = self.mean_c
+                self.V_i = self.S_d*(self.cov_c + self.eps_Id)
 
-        # Update covariance using recursion formula 
-        if self.it > self.starting_it and self.it < 1e5: 
-            X_i = self.current_val[:]
-            X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
-            V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
-            # Update mean and covariance
-            self.V_i = V_ip
-            self.X_av_i = X_av_ip
+                print("Iteration {}: starting covariance adaptation (freq. {} iterations).".format(self.it, self.update_it))
+                self.IO_fileID['out_data'].write("\nIteration {}: starting covariance adaptation (freq. {} iterations).".format(self.it, self.update_it)) 
 
-        # Effectively update the covariance in the MCMC algorithm 
-        if  self.it % self.update_it == 0 and self.it < 1e5: 
-            # Adapt time step 
-            if self.it == self.update_it: 
-                self._set_algo_param(*args)
-            
-            print("\n{}\n".format(self.V_i))
+            elif self.it <= self.end_it:
+                # Compute covariance using recursion formula 
+                X_i = self.current_val[:]
+                X_av_ip = X_i + (self.it)/(self.it + 1) * (self.X_av_i - X_i) 
+                V_ip = (self.it - 1)/self.it  * self.V_i + self.S_d/self.it  * (self.it *np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (self.it  + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
+                # Update mean and covariance
+                self.V_i = V_ip
+                self.X_av_i = X_av_ip
 
-            self.C_approx = self.V_i
-            self.L_c = linalg.cholesky(self.C_approx)
-            self.inv_L_c_T = linalg.inv(np.transpose(self.L_c))
+            elif self.it == self.end_it+1:  
+                # End of adaptation
+                print("Stopping covariance adaptation (iteration {}).".format(self.it-1))
+                self.IO_fileID['out_data'].write("\nIteration {}: stopping covariance adaptation.".format(self.it)) 
+                self.IO_fileID['out_data'].write("\nThe covariance matrix estimation at the end of the adaptation procedure is: \n{}".format(self.C_approx))
+
+            # Effectively update the covariance in the MCMC algorithm 
+            if  self.it % self.update_it == 0: 
+                # Adapt time step 
+                # if self.it == self.update_it: 
+                #     self._set_algo_param(*args)
+                
+                # print("\nNew cov:{}\n".format(self.V_i))
+
+                self.C_approx = self.V_i
+                self.L_c = linalg.cholesky(self.C_approx)
+                self.inv_L_c = linalg.inv(self.L_c)
+                self.inv_L_c_T = np.transpose(self.inv_L_c)
 
 class HamiltonianMonteCarlo(GradientBasedMCMC):
-    """ Hamiltonian Monte Carlo alrogithm. 
-    From Neal, R. M. (2010) MCMC using Hamiltonian dynamics. In Handbook of Markov Chain Monte Carlo (eds
+    """
+    A class used to sample using the Hamiltonian Monte Carlo (HMC) algorithm.  
+    It is based on the GradientBasedMCMC. 
+
+    Algorithm: From Neal, R. M. (2010) MCMC using Hamiltonian dynamics. In Handbook of Markov Chain Monte Carlo (eds
     S. Brooks, A. Gelman, G. Jones and X.-L Meng). Boca Raton: Chapman and Hall–CRC Press. 
-    Implementation: Joffrey Coheur 14-01-20.""" 
+    Implementation: Joffrey Coheur 14-01-20.
+    TODO: improvements such as the no U-turn sampler. 
+
+    Attributes
+    ----------    
+    step_size : double 
+        Time step in the Stormer-Verlet numerical scheme
+    num_steps : in 
+        Controls the damping parameter
+
+    Methods
+    -------------
+    _set_algo_param(self, *args): 
+        Sets the free parameters of the HMC algorithm. 
+    compute_new_val(self):
+        Computes the new value of the sample obtained after solving Hamiltonian dynamics. 
+    compute_acceptance_ratio(self):
+        Computes the acceptance ratio.
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, 
                  step_size, num_steps):
@@ -596,14 +829,18 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
 
         #Initialise 
         self.new_val[:] = self.current_val[:]
-        self.p = self.compute_multivariate_normal() # independent standard normal variates
+        self.p = self.compute_multivariate_normal()
         self.p = np.matmul(self.p, self.inv_L_c_T)
         self.current_p = self.p
+
         np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
+
         # Make a half step for momentum at the beginning
         self.p = self.p - self.epsilon * (-self.distr_grad_log_like_current_val) / 2
+
         np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.p, self.new_val[:]])), fmt="%f", delimiter=",")
         #self.IO_fileID['aux_variables'].write("{}\n".format(str([self.p, self.new_val[:]]).replace('\n', '')))
+
         # Alternate full steps for position and momentum 
         for i in range(self.L):
             # Make a full step for the position 
@@ -649,9 +886,29 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         self.alpha = min(1, self.r)
 
 class ito_SDE(GradientBasedMCMC):
-    """Ito-SDE Markov Chain Monte Carlo algorithm.  
-    From Soize, Arnst et al.).
-    Implementation: Joffrey Coheur 17-04-19."""
+    """
+    A class used to sample using the Ito stochastic differential equation (ISDE) Markov Chain Monte Carlo algorithm. 
+    It is based on the GradientBasedMCMC. Note that ISDE is not a Metropolis-Hastings type algorithm, but the 
+    implementation of the class GradientBasedMCMC is based itself on the class MetropolisHastings.  
+
+    Attributes
+    ----------    
+    h : double 
+        Time step in the Stormer-Verlet numerical scheme
+    f0 : double 
+        Controls the damping parameter
+
+    Methods
+    -------------
+    _set_algo_param(self, *args): 
+        Sets the free parameters of the ISDE algorithm. 
+    run_algorithm(self):
+        This function is totally re-written because there is not accept-reject step in ISDE. 
+  
+   
+    Algorithm: From Soize, Arnst et al.
+    Implementation: Joffrey Coheur 17-04-19.
+    """
 
     def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, h, f0):
 
@@ -701,7 +958,7 @@ class ito_SDE(GradientBasedMCMC):
 
             # Adapt covariance 
             self.current_val = self.xi_nm
-            self.adapt_covariance(self.it, 0.01, self.f0)
+            self.adapt_covariance(self.it, self.h, self.f0)
 
             # # Update covariance with recursion 
             # if  self.it == self.update_it:  
@@ -736,22 +993,35 @@ class ito_SDE(GradientBasedMCMC):
             xi_n = self.xi_nm + self.h/2*np.matmul(self.C_approx, self.P_nm)
 
             # Gradient Log-Likelihood
-            grad_LL = self.computeGrad(xi_n)
-            #print(computeGradientFD(self.log_like, xi_n, eps=0.00000001), grad_LL) # For comparing. "gradient" must be set to Analytical 
-            grad_phi = -grad_LL
+            grad_phi = -self.computeGrad(xi_n)
+            #print(computeGradientFD(self.log_like, xi_n, eps=0.00000001), grad_LL) # For comparing, "gradient" must be set to Analytical 
+            # grad_phi = -grad_LL
 
             P_np = self.hfm/self.hfp*self.P_nm + self.h/self.hfp * \
                 (-grad_phi) + np.sqrt(self.f0)/self.hfp * \
-                            np.matmul(linalg.inv(self.L_c),WP_np) 
+                            np.matmul(self.inv_L_c,WP_np) 
             xi_np = xi_n + self.h/2*np.matmul(self.C_approx, P_np)
 
             self.P_nm = P_np
             self.xi_nm = xi_np
 
-            # We estimate time and monitor acceptance ratio 
+            # We estimate time 
             self.mean_r = self.it
             if self.it % (self.nIterations/100) == 0:
                 self.compute_time(self.t1)
+
+            # Estimate the MAP  
+            # TODO : can improve computational cost of estimating 
+            # the MAP by only running one time the model (running 
+            # self.distr_fun(xi_np) call the model, while it was already computed at self.computeGrad(xi_n))
+            self.distr_fun_new_val = self.distr_fun(xi_np)
+            if self.distr_fun_new_val  > self.MAP_val:
+                self.arg_MAP[:] = xi_np[:]
+                self.MAP_val = self.distr_fun_new_val
+                np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
+
+                # print(self.arg_MAP[:])
+                print("It: {}, log MAP value: {}".format(self.it, self.MAP_val))
 
             # Update values 
             self.z_k=P_np 
@@ -772,15 +1042,27 @@ class ito_SDE(GradientBasedMCMC):
 
 
 def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
-    """ ComputeGradientFD
-    Compute the gradient of the model f_X with respect to its variables
-    around the values provided in var_model.
+    """ 
+    A function that computes the gradient of a model with respect to its variables around a given value.
 
-    f_X is a function with variables var_model
-    schemeType is optional. Default value is 'Forward' FD scheme
-    eps is optional. Default value is 1/100 of the variable. 
+    Parameters
+    ----------
+    f_X: 
+        Function handle 
+    var_model: numpy array 
+        Variables of the function f_X 
+    schemeType: (optional)
+        Default is 'Forward' FD scheme
+    eps: double (optional)
+        Default value is 1/100 of the variable. 
 
-    Joffrey Coheur 19-04-19"""
+    Returns
+    ---------
+    grad_FD: numpy array
+        Gradient of the function f_X with respect to the different variables at var_model
+
+    Joffrey Coheur 19-04-19
+    """
 
     nVar = var_model.size
     grad_FD = np.zeros(nVar)
@@ -831,13 +1113,28 @@ def computeGradientFD(f_X, var_model, schemeType='Forward', eps=0.01):
     return grad_FD
 
 
-def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
-    """Compute the hessian matrix of the model f_X with respect to its variables around the values provided in var_model
+def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True, positive_diag=True):
+    """ 
+    A function that computes the hessian of a model with respect to its variables around a given value.
 
-    f_x is a function handle of variables var_model
-    delta_p is optional. Default value of sqrt(eps) is used
+    Parameters
+    ----------
+    f_X: 
+        Function handle 
+    var_model: numpy array 
+        Variables of the function f_X 
+    eps: double (optional)
+        Default value is 1/100 of the variable. 
+    compute_all_element: bool 
+        If False, only diagonals elements are computed. Default is True. 
 
-    Joffrey Coheur 19-04-19"""
+    Returns
+    ---------
+    hess_FD: numpy 2d array
+        Gradient of the function f_X with respect to the different variables at var_model
+
+    Joffrey Coheur 19-04-19
+    """
 
     nVar = var_model.size
     hess_FD = np.zeros([nVar, nVar])
@@ -862,9 +1159,12 @@ def computeHessianFD(f_X, var_model, eps=0.01, compute_all_element=True):
         # Finite difference scheme for the diagonal terms
         num = f_X_pert_p - 2*f_X_init + f_X_pert_m
         hess_FD[i, i] = num/(delta_pi**2)
-        # We force the diag to be positive 
-        hess_FD[i, i] = -np.abs(num/(delta_pi**2))
-        #print(hess_FD[i, i])
+
+        if positive_diag: 
+            # We force the diag to be positive 
+            hess_FD[i, i] = -np.abs(num/(delta_pi**2))
+            #print(hess_FD[i, i])
+
     # 2) Off diagonal terms
     if compute_all_element: 
         for i in range(nVar):
@@ -952,6 +1252,7 @@ def computeCovMat(corrMat, sigma):
 
 
 def nearPD(A, nit=10):
+    """ A function to get the nearest positive definite matrix."""
 
     sigma = np.sqrt(np.abs(np.diag(A)))
     n = A.shape[0]
@@ -985,6 +1286,7 @@ def nearPD(A, nit=10):
 
 
 # def nearPD(A,epsilon=0):
+#   """ A function to get the nearest positive definite matrix."""
 
 #     sigma = np.sqrt(np.abs(np.diag(A)))
 #     A = computeCorrMat(A, sigma)
@@ -1005,6 +1307,7 @@ def nearPD(A, nit=10):
 
 
 # def nearPD(A):
+# """ A function to get the nearest positive definite matrix."""
 
 #     B = (np.transpose(A) + A)/ 2
 #     u, H = polar(B)

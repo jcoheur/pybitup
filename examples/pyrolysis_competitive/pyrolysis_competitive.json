@@ -20,14 +20,14 @@
             ],
             "Model": [
                 {
-                    "model_name": "competitive_pyrolysis", 
+                    "model_name": "pyrolysis_competitive_366_K_per_min", 
                     "input_file": "reaction_scheme.json", 
                     "param_names": ["tau"],
                     "param_values": [366],
                     "parametrization" : "no"
                 },
                 {
-                    "model_name": "competitive_pyrolysis", 
+                    "model_name": "pyrolysis_competitive_10_K_per_min", 
                     "input_file": "reaction_scheme.json", 
                     "param_names": ["tau"],
                     "param_values": [10],
@@ -89,7 +89,8 @@
         },
         "PosteriorPredictiveCheck": {
             "display": "yes",
-            "shaded_area": "yes",
+            "cred_int": "yes",
+            "pred_int": "no",
             "burnin": 0,
             "num_plot": 1
         }

@@ -1,7 +1,5 @@
 import numpy as np
-from scipy import linalg
-from scipy import stats
-#from scipy import special
+from scipy import linalg, stats, special
 from scipy.integrate import simps
 
 import matplotlib.pyplot as plt
@@ -40,6 +38,34 @@ def set_probability_dist(name_list, hyperparam, n_rand_var):
 
 
 class ProbabilityDistribution: 
+    """
+    A generic class for probability density functions. 
+    
+    Attributes
+    ----------
+    hyperparam : list
+        List that contains the different distribution hyperparameters. 
+    n_rand_var : char 
+        Number of random variable of the distribution. 
+   
+
+
+    Methods
+    -------------
+    compute_value(self, X)
+        Computes the value of the probability density at X. 
+    compute_log_value(self, X):
+        Computes the log-value of the probability density at X. 
+    compute_density(self, distr_support=[])
+        Computes the probability density along the support. 
+    save_sample(self, IO_fileID, value): 
+        Saves the sample value in a file. 
+    update_eval(self):
+        Updates function evaluation in Bayesian posterior dsitribution. 
+    save_value(self, name_file): 
+        Saves the value of the function evaluation in Bayesian posterior dsitribution. 
+   
+    """
 
     def __init__(self, hyperparam, n_rand_var):
         self.hyperparam = hyperparam 
@@ -58,7 +84,7 @@ class ProbabilityDistribution:
         return 0
 
     def compute_density(self, distr_support=[]):
-        """ Compute the probability density function of the associated distribution. 
+        """ Compute the probability density function of the associated distribution along the . 
         Only for one dimension and two dimensions. """
 
         if distr_support: 
@@ -72,7 +98,7 @@ class ProbabilityDistribution:
             f_post = np.zeros(vec_param_i.size)
             for i, param_i in np.ndenumerate(vec_param_i): 
                     c_param = np.array([param_i])
-                    f_post[i] = self.compute_value(c_param)  
+                    f_post[i] = self.compute_value_no_reparam(c_param)  
 
             #int_post = np.sum(f_post)*delta_param_i
             int_post = simps(f_post, vec_param_i)
@@ -85,51 +111,89 @@ class ProbabilityDistribution:
             plt.plot(x, stats.norm.pdf(x, loc=113000, scale=1000), 'r-', lw=2, alpha=1.0, label='norm pdf')
 
         elif self.dim == 2:
-            vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], 200)
+            n_points_1d = 400 # 200
+
+            # # The support is uniform in the reparameterized space 
+            vec_param_i = np.exp(np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d))
+            vec_param_j = np.exp(np.linspace(self.distr_support[1,0], self.distr_support[1,1], n_points_1d))
+
+            # The support is uniform in the original parameter space 
+            # vec_param_i = np.linspace(np.exp(self.distr_support[0,0]), np.exp(self.distr_support[0,1]), n_points_1d)
+            # vec_param_j = np.linspace(np.exp(self.distr_support[1,0]), np.exp(self.distr_support[1,1]), n_points_1d)
+
+            # Original support 
+            # vec_param_i = np.linspace(self.distr_support[0,0], self.distr_support[0,1], n_points_1d)
+            # vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], n_points_1d)
+
+
             delta_param_i = vec_param_i[1] - vec_param_i[0]
-            vec_param_j = np.linspace(self.distr_support[1,0], self.distr_support[1,1], 200)
             delta_param_j = vec_param_j[1] - vec_param_j[0]
             f_post = np.zeros([vec_param_i.size, vec_param_j.size])
             for i, param_i in np.ndenumerate(vec_param_i): 
                 for j, param_j in np.ndenumerate(vec_param_j): 
                     c_param = np.array([param_i, param_j])
-                    f_post[i,j] = self.compute_value(c_param) 
+                    f_post[i,j] = self.compute_value_no_reparam(c_param) 
 
-            marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
-            int_f_post  = np.sum(marginal_post_1*delta_param_i, axis=0)
-            norm_f_post = f_post / int_f_post
+            # marginal_post_1 = np.sum(f_post*delta_param_j, axis=1)
+            # int_f_post  = np.sum(marginal_post_1*delta_param_i, axis=0)
+            # norm_f_post = f_post / int_f_post
 
-            marginal_post_norm_1 = np.sum(norm_f_post*delta_param_j, axis=1)
-            marginal_post_norm_2 = np.sum(norm_f_post*delta_param_i, axis=0)
-            plt.figure(200)
-            plt.plot(vec_param_i, marginal_post_norm_1)
-            plt.figure(201)
-            plt.plot(vec_param_j, marginal_post_norm_2)
+            # marginal_post_norm_1 = np.sum(norm_f_post*delta_param_j, axis=1)
+            # marginal_post_norm_2 = np.sum(norm_f_post*delta_param_i, axis=0)
+            # plt.figure(200)
+            # plt.plot(vec_param_i, marginal_post_norm_1)
+            # plt.figure(201)
+            # plt.plot(vec_param_j, marginal_post_norm_2)
 
-        np.save("output/posterior_numerical_evaluation.npy", norm_f_post)
+        np.savez("output/posterior_numerical_evaluation", x=vec_param_i, y=vec_param_j, z=f_post)
 
         return f_post 
 
 
     def save_sample(self, IO_fileID, value): 
-        """ Save the sample vaue in a text file""" 
+        """ Save the sample vaue in a text file. """ 
 
         # Write the Markov chain file 
         IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
         np.savetxt(IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
         
+    def compute_value_no_reparam(self, X):
+        """ For Bayesian posterior, this function returns the
+        density evaluation with the initial parameterization.
+        This is used for the direct evaluation of the density (see 
+        compute_density in the same class). 
+
+        For other densities, this is the same as self.compute_value(X).
+        """
+
+        return self.compute_value(X) 
+
     def update_eval(self): 
-        """ For Bayesian posterior only """
+        """ For Bayesian posterior only. 
+        We need to define it in the master class for generality of the sampling methods."""
         pass
 
-    def save_value(self, name_file): 
-        """ For Bayesian posterior only """ 
+    def save_value(self, IO_util, current_it): 
+        """ For Bayesian posterior only.
+        We need to define it in the master class for generality of the sampling methods."""
         pass
 
 
 
 
 class Gaussian(ProbabilityDistribution): 
+    """
+    A class for computing the density of a Gaussian distribution function. 
+    
+    Attributes
+    ----------
+    No new attributes.    
+
+
+    Methods
+    -------------
+
+    """
 
     def __init__(self, hyperparam, n_rand_var): 
         ProbabilityDistribution.__init__(self, hyperparam, n_rand_var)
@@ -283,7 +347,7 @@ class Gamma(ProbabilityDistribution):
         coef[1] = (n+a-1)*n*b**2
         return coef
 
-    def invcdf(x):
+    def invcdf(self, x):
 
         [a,b] = [self.k,self.theta]
         return b*special.gammaincinv(a,np.array(x))
@@ -377,14 +441,11 @@ class Mixture(ProbabilityDistribution):
             self.distr_support[i,0] = c_mixt.distr_support[0]
             self.distr_support[i,1] = c_mixt.distr_support[1]
 
-
-   
     def compute_value(self, X): 
         """ compute_value compute the value of the joint pdf at X, where 
         X is a (1 x n_param) numpy array. We sample from known distribution"""
 
         Y = 1
-
         for i in range(self.n_components): 
             c_mixt = self.mixture_components[i]
             Y *= c_mixt.compute_value(X[i])
@@ -392,10 +453,29 @@ class Mixture(ProbabilityDistribution):
         return Y 
 
     def compute_log_value(self, X): 
+        """ Take the log of the density distribution of a mixture of other 
+        distribution. 
 
-        Y = self.compute_value(X)
+        !!!! BE CAREFUL WITH THIS !!!! 
+        We are tempted to implement :
 
-        return np.log(Y)
+            Y = self.compute_value(X)
+            return np.log(Y)
+        
+        Don't! With uniform distribution with large support,
+        the probability density is very low. The product can be then
+        assimilated to zero by python. That's why actually we use the log instead. But do not take simply the log of the function 
+        "compute_value"! In which case, you will take log(0.0). Thus, we need to reimplement the same function. The resulting log will be finite. 
+
+        """
+
+        Y = 0
+        for i in range(self.n_components): 
+            c_mixt = self.mixture_components[i]
+            # Log (ab) = log(a) + log(b) 
+            Y += np.log(c_mixt.compute_value(X[i]))
+
+        return Y
 
 
 

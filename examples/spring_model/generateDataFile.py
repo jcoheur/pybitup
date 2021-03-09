@@ -19,9 +19,7 @@ param = [1.5, 20.5]
 x = np.linspace(0.0, 5.0, 51)
 
 model_def = {}
-model_def[0] = spring_model.SpringModel()
-model_def[0].param = param
-model_def[0].x = x
+model_def[0] = spring_model.SpringModel(x, param)
 y_nom = model_def[0].fun_x()
 
 # Define standard deviation on parameters and data  

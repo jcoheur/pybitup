@@ -353,7 +353,7 @@ class MetropolisHastings:
         
 
         # Write in a csv the estimation of the MAP and arg MAP 
-        np.savetxt("output/arg_MAP_estimation.csv", np.array([self.arg_MAP[:]]),fmt="%f", delimiter=",")
+        np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
         np.savetxt("output/MAP_estimation.csv", np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
 
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
@@ -1018,9 +1018,10 @@ class ito_SDE(GradientBasedMCMC):
             if self.distr_fun_new_val  > self.MAP_val:
                 self.arg_MAP[:] = xi_np[:]
                 self.MAP_val = self.distr_fun_new_val
+                np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
 
-                print(self.arg_MAP[:])
-                print(self.MAP_val)
+                # print(self.arg_MAP[:])
+                print("It: {}, log MAP value: {}".format(self.it, self.MAP_val))
 
             # Update values 
             self.z_k=P_np 

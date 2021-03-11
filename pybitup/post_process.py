@@ -612,6 +612,7 @@ def post_process_data(input_file_name):
                     # Plot 95% prediction interval
                     # -----------------------------
                     # For the prediction interval, we add the std to the result
+                    # Thus, the value of the sigma in the likelihood must be present in a csv file 
                     if inputFields["PosteriorPredictiveCheck"]["pred_int"] == "yes":
                         reader = pd.read_csv('output/estimated_sigma.csv')
                         estimated_sigma = reader['model_id'].values

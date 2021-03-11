@@ -66,6 +66,11 @@ class Sampler:
             if self.algo['estimate_max_distr'] == "yes": 
                 self.opt_arg["estimate_max_distr"] = True 
              
+        # TODO: The sigma in the likelihood (for BayesianPosterior) is also unknown and we estimate his value with the MCMC algo 
+        self.opt_arg["estimate_sigma"] = False 
+        if self.algo.get("estimate_sigma") is not None:
+            if self.algo['estimate_sigma'] == "yes": 
+                self.opt_arg["estimate_sigma"] = True 
 
     def sample(self, sample_init):
         """ Sample the probability density function given in input of the class. 

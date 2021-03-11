@@ -75,6 +75,7 @@ class MetropolisHastings:
         self.nIterations = nIterations
         self.save_eval_freq = opt_arg["save_eval_freq"] 
         self.estimate_max_distr = opt_arg["estimate_max_distr"] 
+        self.bool_estimate_sigma = opt_arg["estimate_sigma"] # TODO: it is not yet estimated. Value of sigma is still fixed. 
 
         self.V = V
         self.prob_distr = prob_distr 
@@ -336,13 +337,14 @@ class MetropolisHastings:
 
         # TODO : write the estimation of sigma in a file. Only when there is 
         # a likelihood function. Put this in opt_arg 
-        # for model_id in self.prob_distr.likelihood.data.keys():
-        #     est_sigma = self.prob_distr.likelihood.data[model_id].std_y
-        #     #print("\n Experimental error std is {} %".format(est_sigma))
+        if self.bool_estimate_sigma is True: 
+            for model_id in self.prob_distr.likelihood.data.keys():
+                est_sigma = self.prob_distr.likelihood.data[model_id].std_y
+                #print("\n Experimental error std is {} %".format(est_sigma))
 
-        #     myfile = {'model_id': est_sigma} 
-        #     df = pd.DataFrame(myfile, columns=['model_id'])
-        #     df.to_csv(self.IO_fileID['estimated_sigma'])
+                myfile = {'model_id': est_sigma} 
+                df = pd.DataFrame(myfile, columns=['model_id'])
+                df.to_csv(self.IO_fileID['estimated_sigma'])
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
 

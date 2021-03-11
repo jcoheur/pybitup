@@ -65,7 +65,7 @@ class SensitivityAnalysis(sp.SolveProblem):
         print("Loading function evaluations for sensitivity analysis ...")
         fun_eval = {}
         for j in range(self.n_samples): 
-            fun_eval[j] = np.load("output/{}_fun_eval.{}.npy".format(self.model_id, j)) 
+            fun_eval[j] = np.load("output/model_eval/{}_fun_eval.{}.npy".format(self.model_id, j)) 
 
 
         # Initialise data variable for saving in a .csv later 
@@ -119,7 +119,7 @@ class SensitivityAnalysis(sp.SolveProblem):
                 data[data_name] = V_i
                  
         df = pd.DataFrame(data)
-        df.to_csv(self.IO_path['out_folder']+"/sensitivity_values.csv", header=True, index=False)
+        df.to_csv(self.IO_util['path']['out_folder']+"/sensitivity_values.csv", header=True, index=False)
   
 
 class BinMethod():

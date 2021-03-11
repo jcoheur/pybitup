@@ -131,7 +131,8 @@
         },
         "PosteriorPredictiveCheck": {
 		    "display": "yes",
-		    "shaded_area": "yes",
+            "cred_int": "yes",
+            "pred_int": "no",
 		    "burnin": 1,
 		    "num_plot": 1
 		}

@@ -72,7 +72,8 @@
 		},
 	    "Propagation": {
 		    "display": "yes",
-		    "shaded_area": "yes",
+            "cred_int": "yes",
+            "pred_int": "no",
 		    "burnin": 0,
 		    "num_plot": 1
 		}

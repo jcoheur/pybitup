@@ -16,6 +16,7 @@ class Sampler:
         self.prob_dist = prob_dist 
         self.algo = algo
         self.IO_fileID = IO_fileID
+        self.opt_arg = {}
         av_algo = {}
 
         # List of available algorithms 
@@ -50,44 +51,54 @@ class Sampler:
 
         # Number of iterations (must be an integer)
         self.n_iterations = int(self.algo['n_iterations']) 
+        
+        # Iterations at which the evaluations of the distribution are saved
+        # Default value is 10
+        if self.algo.get("save_eval_freq") is not None: 
+            self.opt_arg['save_eval_freq'] = int(self.algo['save_eval_freq']) 
+        else: # Default 
+            self.opt_arg['save_eval_freq'] = 10
+        
+        # Compute the maximum value of the distribution (useful in the case of finding the MAP, but not useful for sampling from know distribution)
+        # Default is false 
+        self.opt_arg["estimate_max_distr"] = False 
+        if self.algo.get("estimate_max_distr") is not None: 
+            if self.algo['estimate_max_distr'] == "yes": 
+                self.opt_arg["estimate_max_distr"] = True 
+             
 
     def sample(self, sample_init):
         """ Sample the probability density function given in input of the class. 
         We draw sequence of dependent samples from markov chains using iterative algorithms. """
 
         if self.algo_name == "RWMH": 
-            run_MCMCM = mha.MetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist)  
+            run_MCMCM = mha.MetropolisHastings(self.IO_fileID, self.n_iterations, sample_init, self.proposal_cov, self.prob_dist, self.opt_arg)  
         elif self.algo_name == "AMH": 
             starting_it = int(self.algo['AMH']['starting_it'])
             updating_it = int(self.algo['AMH']['updating_it'])
             eps_v = self.algo['AMH']['eps_v']
-            run_MCMCM = mha.AdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
-                                                        starting_it, updating_it, eps_v)
+            run_MCMCM = mha.AdaptiveMetropolisHastings(self.IO_fileID, self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,  starting_it, updating_it, eps_v, self.opt_arg)
         elif self.algo_name == "DR": 
             gamma = self.algo['DR']['gamma']
-            run_MCMCM = mha.DelayedRejectionMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
-                                                        gamma)
+            run_MCMCM = mha.DelayedRejectionMetropolisHastings(self.IO_fileID, self.n_iterations, sample_init, self.proposal_cov, self.prob_dist, gamma, self.opt_arg)
 
         elif self.algo_name == "DRAM": 
             starting_it = int(self.algo['DRAM']['starting_it'])
             updating_it = int(self.algo['DRAM']['updating_it'])
             eps_v = self.algo['DRAM']['eps_v']
             gamma = self.algo['DRAM']['gamma']
-            run_MCMCM = mha.DelayedRejectionAdaptiveMetropolisHastings(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.proposal_cov, self.prob_dist,
-                                                                        starting_it, updating_it, eps_v, gamma)
+            run_MCMCM = mha.DelayedRejectionAdaptiveMetropolisHastings(self.IO_fileID, self.n_iterations, sample_init, self.proposal_cov, self.prob_dist, starting_it, updating_it, eps_v, gamma, self.opt_arg)
         elif self.algo_name == "HMC": 
             C_matrix = self.algo['covariance']
             gradient = self.algo['gradient']
             step_size = self.algo['HMC']['step_size']
             num_steps = self.algo['HMC']['num_steps']
-            run_MCMCM = mha.HamiltonianMonteCarlo(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
-                                                C_matrix, gradient, step_size, num_steps)
+            run_MCMCM = mha.HamiltonianMonteCarlo(self.IO_fileID, self.n_iterations, sample_init, self.prob_dist, C_matrix, gradient, step_size, num_steps, self.opt_arg)
         elif self.algo_name == "ISDE": 
             C_matrix = self.algo['covariance']
             gradient = self.algo['gradient']
             h = self.algo['ISDE']['h']
             f0 = self.algo['ISDE']['f0']
-            run_MCMCM = mha.ito_SDE(self.IO_fileID, "sampling", self.n_iterations, sample_init, self.prob_dist,
-                                    C_matrix, gradient, h, f0)
+            run_MCMCM = mha.ito_SDE(self.IO_fileID, self.n_iterations,sample_init, self.prob_dist, C_matrix, gradient, h, f0, self.opt_arg)
         
         run_MCMCM.run_algorithm()

@@ -1,6 +1,7 @@
 import os
 import json
 from jsmin import jsmin
+import pathlib 
 import pandas as pd
 import pickle
 import time
@@ -287,11 +288,13 @@ class Sampling(SolveProblem):
             unpar_init_val = np.array(models[model_id].parametrization_forward(unpar_init_val))
             n_uncertain_param = len(unpar_init_val)
 
-            # Unpar init val from file 
-            reader = pd.read_csv(self.IO_util['path']['cwd']+"/mcmc_chain_init.csv", header=None)
-            param_value_raw = reader.values
-            unpar_init_val = np.array(models[model_id].parametrization_forward(np.float64(param_value_raw[0, :])))
-            print(np.float64(param_value_raw[0, :]))
+            # Unpar init val from file if there is a mcmc_chain_init.csv file 
+            init_mcm_file_path = pathlib.Path(self.IO_util['path']['cwd'], "/mcmc_chain_init.csv")
+            if init_mcm_file_path.exists():
+                reader = pd.read_csv(init_mcm_file_path.read_text(), header=None)
+                param_value_raw = reader.values
+                unpar_init_val = np.array(models[model_id].parametrization_forward(np.float64(param_value_raw[0, :])))
+                print(np.float64(param_value_raw[0, :]))
 
             # Prior 
             # ------ 

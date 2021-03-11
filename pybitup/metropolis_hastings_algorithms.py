@@ -71,18 +71,10 @@ class MetropolisHastings:
         Write the value of the function evaluation at current_it. 
     """
 
-    def __init__(self, IO_util, caseName, nIterations, param_init, V, prob_distr):
-        self.caseName = caseName
+    def __init__(self, IO_util, nIterations, param_init, V, prob_distr, opt_arg):
         self.nIterations = nIterations
-
-        # TODO: give the possibility to the user to provide the frequency 
-        # at which model evaluations are saved 
-        if self.nIterations < 100:
-            self.save_model_freq = 1
-        else:
-            self.save_model_freq = nIterations/100
-        # Here, it is set to one 
-        self.save_model_freq = 10
+        self.save_eval_freq = opt_arg["save_eval_freq"] 
+        self.estimate_max_distr = opt_arg["estimate_max_distr"] 
 
         self.V = V
         self.prob_distr = prob_distr 
@@ -224,18 +216,26 @@ class MetropolisHastings:
             self.current_val[:] = self.new_val[:]
 
             # Estimate the MAP here 
-            if self.distr_fun_new_val > self.MAP_val:
-                self.arg_MAP[:] = self.new_val[:]
-                self.MAP_val = self.distr_fun_new_val
-
-                print(self.arg_MAP[:])
-                print(self.MAP_val)
+            self.estimate_max()
 
             self.distr_fun_current_val = self.distr_fun_new_val
             self.distr_grad_log_like_current_val = self.distr_grad_log_like_new_val
             self.prob_distr.update_eval()
         else:  # Rejected, current val remains the same
             self.n_rejected += 1
+
+    def estimate_max(self): 
+        """ Estimate the maximum of the distribution and the arg max.
+        Useful in Bayesian inference context, where this will estimate the MAP 
+        in line with the MCMC iterations. """
+
+        if self.estimate_max_distr is True:
+            if self.distr_fun_new_val > self.MAP_val:
+                self.arg_MAP[:] = self.new_val[:]
+                self.MAP_val = self.distr_fun_new_val
+                print("\nNew MAP value {} found at iteration {}.".format(self.MAP_val, self.it))
+        else: 
+            return 
 
     def update_sigma(self): 
         """ Smith, (2013)."""
@@ -333,13 +333,16 @@ class MetropolisHastings:
         else: 
             rejection_rate = self.n_rejected/self.nIterations*100
             print("\nRejection rate is {} %".format(rejection_rate))
-        for model_id in self.prob_distr.likelihood.data.keys():
-            est_sigma = self.prob_distr.likelihood.data[model_id].std_y
-            #print("\n Experimental error std is {} %".format(est_sigma))
 
-            myfile = {'model_id': est_sigma} 
-            df = pd.DataFrame(myfile, columns=['model_id'])
-            df.to_csv(self.IO_fileID['estimated_sigma'])
+        # TODO : write the estimation of sigma in a file. Only when there is 
+        # a likelihood function. Put this in opt_arg 
+        # for model_id in self.prob_distr.likelihood.data.keys():
+        #     est_sigma = self.prob_distr.likelihood.data[model_id].std_y
+        #     #print("\n Experimental error std is {} %".format(est_sigma))
+
+        #     myfile = {'model_id': est_sigma} 
+        #     df = pd.DataFrame(myfile, columns=['model_id'])
+        #     df.to_csv(self.IO_fileID['estimated_sigma'])
         
         self.IO_fileID['out_data'].write("\nRejection rate is {} % \n".format(rejection_rate))
 
@@ -351,10 +354,10 @@ class MetropolisHastings:
         self.IO_fileID['out_data'].write("Log-likelihood value \n")
         #self.IO_fileID['out_data'].write("{}".format(self.max_LL))
         
-
         # Write in a csv the estimation of the MAP and arg MAP 
-        np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
-        np.savetxt("output/MAP_estimation.csv", np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
+        if self.estimate_max_distr is True: 
+            np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
+            np.savetxt("output/MAP_estimation.csv", np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
 
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
@@ -366,7 +369,7 @@ class MetropolisHastings:
 
 
     def write_fun_distr_val(self, current_it):
-        if current_it % (self.save_model_freq) == 0:
+        if current_it % (self.save_eval_freq) == 0:
             self.prob_distr.save_value(self.IO_util, current_it)
 
 class AdaptiveMetropolisHastings(MetropolisHastings):
@@ -396,9 +399,9 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, 
-            starting_it, updating_it, eps_v):
-        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
+    def __init__(self, IO_fileID, nIterations, param_init, V, prob_distr, 
+            starting_it, updating_it, eps_v, opt_arg):
+        MetropolisHastings.__init__(self, IO_fileID, nIterations, param_init, V, prob_distr, opt_arg)
         self.starting_it = starting_it
         self.updating_it = updating_it
         self.S_d = 2.38**2/self.n_param
@@ -511,8 +514,8 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
         Computes the new acceptance probability and decides if the new proposed sample is accepted or rejected. 
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, gamma):
-        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
+    def __init__(self, IO_fileID, nIterations, param_init, V, prob_distr, gamma, opt_arg):
+        MetropolisHastings.__init__(self, IO_fileID, nIterations, param_init, V, prob_distr, opt_arg)
         self.gamma = gamma
 
         # Compute inverse of covariance
@@ -525,6 +528,10 @@ class DelayedRejectionMetropolisHastings(MetropolisHastings):
         u = random.random()  # Uniformly distributed number in the interval [0,1)
         if u < self.alpha:  # Accepted
             self.current_val[:] = self.new_val[:]
+
+            # Estimate the MAP here 
+            self.estimate_max()
+
             self.distr_fun_current_val = self.distr_fun_new_val
             self.prob_distr.update_eval()
         else:  # Delayed rejection
@@ -581,13 +588,10 @@ class DelayedRejectionAdaptiveMetropolisHastings(AdaptiveMetropolisHastings, Del
   
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr,
-            starting_it, updating_it, eps_v, gamma):
+    def __init__(self, IO_fileID, nIterations, param_init, V, prob_distr, starting_it, updating_it, eps_v, gamma, opt_arg):
         # There is still a problem here as we initialize two times the mother class MetropolisHastings, while once is enough. Don't know yet how to do.
-        AdaptiveMetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr,
-                                            starting_it, updating_it, eps_v)
-        DelayedRejectionMetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, 
-                                                    gamma)
+        AdaptiveMetropolisHastings.__init__(self, IO_fileID, nIterations, param_init, V, prob_distr, starting_it, updating_it, eps_v, opt_arg)
+        DelayedRejectionMetropolisHastings.__init__(self, IO_fileID, nIterations, param_init, V, prob_distr, gamma, opt_arg)
 
     def update_covariance(self):
         self.R = linalg.cholesky(self.V_i)
@@ -619,9 +623,9 @@ class GradientBasedMCMC(MetropolisHastings):
 
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr, C_matrix, gradient):
+    def __init__(self, IO_fileID, nIterations, param_init, V, prob_distr, C_matrix, gradient, opt_arg):
 
-        MetropolisHastings.__init__(self, IO_fileID, caseName, nIterations, param_init, V, prob_distr)
+        MetropolisHastings.__init__(self, IO_fileID, nIterations, param_init, V, prob_distr, opt_arg)
 
         # Definition of the log-distribution function 
         self.log_like = self.distr_fun 
@@ -804,10 +808,9 @@ class HamiltonianMonteCarlo(GradientBasedMCMC):
         Computes the acceptance ratio.
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, 
-                 step_size, num_steps):
+    def __init__(self, IO_fileID, nIterations, param_init, prob_distr, C_matrix, gradient, step_size, num_steps, opt_arg):
 
-        GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
+        GradientBasedMCMC.__init__(self, IO_fileID, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient, opt_arg)
 
         # HMC tuning parameters 
         self._set_algo_param(step_size, num_steps)
@@ -910,9 +913,9 @@ class ito_SDE(GradientBasedMCMC):
     Implementation: Joffrey Coheur 17-04-19.
     """
 
-    def __init__(self, IO_fileID, caseName, nIterations, param_init, prob_distr, C_matrix, gradient, h, f0):
+    def __init__(self, IO_fileID, nIterations, param_init, prob_distr, C_matrix, gradient, h, f0, opt_arg):
 
-        GradientBasedMCMC.__init__(self, IO_fileID, caseName, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient)
+        GradientBasedMCMC.__init__(self, IO_fileID, nIterations, param_init, np.ones([1,1]), prob_distr, C_matrix, gradient, opt_arg)
 
         # Time step h and free parameter f0 for the ito-sde resolution
         self._set_algo_param(h, f0)
@@ -1011,17 +1014,19 @@ class ito_SDE(GradientBasedMCMC):
                 self.compute_time(self.t1)
 
             # Estimate the MAP  
-            # TODO : can improve computational cost of estimating 
-            # the MAP by only running one time the model (running 
-            # self.distr_fun(xi_np) call the model, while it was already computed at self.computeGrad(xi_n))
-            self.distr_fun_new_val = self.distr_fun(xi_np)
-            if self.distr_fun_new_val  > self.MAP_val:
-                self.arg_MAP[:] = xi_np[:]
-                self.MAP_val = self.distr_fun_new_val
-                np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
+            if self.estimate_max_distr is True: 
+                # TODO : can improve computational cost of estimating 
+                # the MAP by only running one time the model (running 
+                # self.distr_fun(xi_np) call the model, while it was already computed at self.computeGrad(xi_n))
+                # TODO: use the same function self.estimate_max()? 
+                self.distr_fun_new_val = self.distr_fun(xi_np)
+                if self.distr_fun_new_val  > self.MAP_val:
+                    self.arg_MAP[:] = xi_np[:]
+                    self.MAP_val = self.distr_fun_new_val
+                    np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
 
-                # print(self.arg_MAP[:])
-                print("It: {}, log MAP value: {}".format(self.it, self.MAP_val))
+                    # print(self.arg_MAP[:])
+                    print("It: {}, log MAP value: {}".format(self.it, self.MAP_val))
 
             # Update values 
             self.z_k=P_np 

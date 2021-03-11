@@ -19,9 +19,13 @@ for tmp_filename in tmp_files:
 # Remove all tex files 
 tmp_files = glob.glob('*.tex')
 
-# Remove all tmp_files 
+# Remove all tex 
 for tmp_filename in tmp_files: 
     os.remove(tmp_filename)
 
 try: os.remove("point.npz")
+except: pass
+
+# Remove covariance matrix
+try: os.remove("cov.csv")
 except: pass

@@ -11,16 +11,21 @@
             "name": "ISDE", 
             "ISDE" : {
                 "h" : 0.1, 
-                "f0" : 4,
-                "C_matrix": "Identity", 
-                "gradient": "Numerical"
+                "f0" : 4
             },
+            "covariance" : { 
+                "value": "Identity", 
+                "update_it": 1e6, 
+                "starting_it": 1e6 // No adaptation
+
+            },
+            "gradient": "Numerical", 
             "n_iterations": 400 
         }
     }, 
     "PostProcess": { 
 	    "MarkovChain": {
-		    "display": "no",
+		    "display": "yes",
 		    "thinning": 1
         },
         "Posterior": {

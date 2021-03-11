@@ -82,7 +82,7 @@ plt.ylabel("x_2")
 plt.xlim([-2.5, 2.5])
 plt.ylim([-2.5, 2.5])
 
-saveToTikz('2d_gauss_hmc.tex')
+# saveToTikz('2d_gauss_hmc.tex')
 
 # Ito-SDE Markov Chain Monte Carlo 
 # --------------------------------

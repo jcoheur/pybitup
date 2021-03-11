@@ -25,3 +25,7 @@ for tmp_filename in tmp_files:
 
 try: os.remove("point.npz")
 except: pass
+
+# Remove covariance matrix
+try: os.remove("cov.csv")
+except: pass

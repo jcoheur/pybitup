@@ -8,19 +8,22 @@
             "init_val" : [1.4, -0.75]
         }, 
         "Algorithm": {
-            "name": "RWMH", 
+            "name": "ISDE", 
             "ISDE" : {
                 "h" : 0.025, 
-                "f0" : 1.5, 
-                "C_matrix": "Identity", 
-                "gradient": "Numerical"
-            },
-            "HMC" : {
-                "step_size" : 0.1, 
-                "num_steps": 10, 
-                "C_matrix": "Identity", 
-                "gradient": "Numerical"
+                "f0" : 1.5
             }, 
+            "HMC" : {
+                "step_size" : 0.01, 
+                "num_steps": 10
+            }, 
+            "covariance" : { 
+                "value": "Identity", 
+                "update_it": 1e6, 
+                "starting_it": 1e6 // No adaptation
+
+            },
+            "gradient": "Numerical", 
             // Proposal is not read for Ito-SDE. We keep it for easily switching between the two for comparison
 		    "proposal": { 
 			    "name": "Gaussian",

@@ -29,7 +29,6 @@
             "Likelihood": {
                 "function": "Gaussian",
                 "distance": "L2", 
-                "parametric_uncertainty": "no" // yes
             }
         },
 	    "Algorithm": {
@@ -46,7 +45,8 @@
 				    "type": "diag", 
 				    "value": [0.0345, 0.7071]
 				}
-			}
+			},
+            "estimate_sigma": "yes" // Not implemented yet. It is fixed.
 		}
 	}, 
 	
@@ -71,7 +71,8 @@
 		},
 	    "PosteriorPredictiveCheck": {
 		    "display": "yes",
-		    "shaded_area": "yes",
+            "cred_int": "yes",
+            "pred_int": "yes",
 		    "burnin": 0,
 		    "num_plot": 1
 		}

@@ -8,8 +8,8 @@
             "init_val" : [113000]
         }, 
         "Algorithm": {
-            "name": "Ito-SDE", 
-            "Ito-SDE" : {
+            "name": "ISDE", 
+            "ISDE" : {
                 "h" : 50, 
                 "f0" : 1.4
             },

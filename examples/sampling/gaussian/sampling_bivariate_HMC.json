@@ -11,10 +11,15 @@
             "name": "HMC", 
             "HMC" : {
                 "step_size" : 0.18, 
-                "num_steps" : 20, 
-                "C_matrix": "Identity", 
-                "gradient": "Numerical"
+                "num_steps" : 20
             },
+            "covariance" : { 
+                "value": "Identity", 
+                "update_it": 1e6, 
+                "starting_it": 1e6 // No adaptation
+
+            },
+            "gradient": "Numerical",
             "n_iterations": 20
         }
     }, 

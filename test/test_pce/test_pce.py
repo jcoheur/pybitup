@@ -141,7 +141,7 @@ class TestPCE(unittest.TestCase):
         resp = []
         for i in range(len(point)):
             try:
-                resp.append(np.load("output/heat_conduction_1_fun_eval."+str(i)+".npy"))
+                resp.append(np.load("output/model_eval/heat_conduction_1_fun_eval."+str(i)+".npy"))
                 index.append(i)
             except: pass
         resp = np.array(resp)

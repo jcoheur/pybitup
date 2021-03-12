@@ -1,3 +1,4 @@
+import pathlib
 import numpy as np
 from scipy import linalg, stats, special
 from scipy.integrate import simps
@@ -145,17 +146,17 @@ class ProbabilityDistribution:
             # plt.figure(201)
             # plt.plot(vec_param_j, marginal_post_norm_2)
 
-        np.savez("output/posterior_numerical_evaluation", x=vec_param_i, y=vec_param_j, z=f_post)
+        post_num_eval_file_path = pathlib.Path("output", "posterior_numerical_evaluation.npz")
+        np.savez(post_num_eval_file_path, x=vec_param_i, y=vec_param_j, z=f_post)
 
         return f_post 
 
 
     def save_sample(self, IO_fileID, value): 
-        """ Save the sample vaue in a text file. """ 
-
+        """ Save the sample value in a csv file. """ 
+        
         # Write the Markov chain file 
-        IO_fileID['MChains'].write("{}\n".format(str(value).replace('\n', '')))
-        np.savetxt(IO_fileID['MChains_csv'], np.array([value]), fmt="%f", delimiter=",")
+        np.savetxt(IO_fileID['MChains'], np.array([value]), fmt="%f", delimiter=",")
         
     def compute_value_no_reparam(self, X):
         """ For Bayesian posterior, this function returns the

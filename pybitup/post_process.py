@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors 
 import pickle
 import pandas as pd 
+import pathlib
 import json
 from jsmin import jsmin
 import numpy as np
@@ -22,7 +23,7 @@ def post_process_data(input_file_name):
     # -------------------------
 
     # First, remove comments from the file with jsmin because json doesn't allow it
-    with open("{}".format(input_file_name)) as js_file:
+    with open(f"{input_file_name}") as js_file:
         minified = jsmin(js_file.read())
     user_inputs = json.loads(minified)
 
@@ -31,7 +32,11 @@ def post_process_data(input_file_name):
     else: 
         raise ValueError('Ask for post processing data but no inputs were provided')
 
-    with open('output/output.dat', 'r') as file_param:
+    out_folder = pathlib.Path("output")
+    out_data_file = pathlib.Path(out_folder, "output.txt")
+    model_eval_folder = pathlib.Path(out_folder, "model_eval") 
+
+    with open(out_data_file, 'r') as file_param:
 
         for ind, line in enumerate(file_param):
             if ind == 1:
@@ -80,7 +85,8 @@ def post_process_data(input_file_name):
 
     if (inputFields.get("Data") is not None):
         # Load experimental data
-        with open('output/data', 'rb') as file_data_exp:
+        data_file = pathlib.Path(out_folder, "data.bin")
+        with open(data_file, 'rb') as file_data_exp:
             pickler_data_exp = pickle.Unpickler(file_data_exp)
             data_exp = pickler_data_exp.load()
 
@@ -122,7 +128,8 @@ def post_process_data(input_file_name):
         if inputFields["InitialGuess"]["display"] == "yes":
 
             for num_data_set, data_id in enumerate(data_exp.keys()):
-                data_init = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, 0))
+                init_model_eval_file = pathlib.Path(model_eval_folder, f"{data_id}_fun_eval-{0}.npy") 
+                data_init = np.load(init_model_eval_file)
 
                 n_x = len(data_exp[data_id].x)
                 n_data_set = int(len(data_exp[data_id].y[0])/n_x)
@@ -539,7 +546,8 @@ def post_process_data(input_file_name):
                     plt.figure(i)
 
                     # Initialise bounds
-                    data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, 0))
+                    init_model_eval_file = pathlib.Path(model_eval_folder, f"{data_id}_fun_eval-{0}.npy") 
+                    data_ij = np.load(init_model_eval_file)
                     data_ij_max = data_ij
                     data_ij_min = data_ij
                     data_ij_mean = np.zeros(n_x)
@@ -553,7 +561,8 @@ def post_process_data(input_file_name):
 
                     for c_eval, j in enumerate(range(start_val+delta_it, end_val, delta_it)):
                         # Load current data
-                        data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, j))
+                        model_eval_j_file = pathlib.Path(model_eval_folder, f"{data_id}_fun_eval-{j}.npy") 
+                        data_ij = np.load(model_eval_j_file)
                         data_set_n = data_ij[ind_1:ind_2]
                         
                         # Update bounds
@@ -578,7 +587,8 @@ def post_process_data(input_file_name):
                     for j in range(start_val+delta_it, end_val, delta_it):
 
                         # Load current data
-                        data_ij = np.load("output/model_eval/{}_fun_eval.{}.npy".format(data_id, j))
+                        model_eval_j_file = pathlib.Path(model_eval_folder, f"{data_id}_fun_eval-{j}.npy") 
+                        data_ij = np.load(model_eval_j_file)
                         data_set_n = data_ij[ind_1:ind_2]
 
                         # Compute variance
@@ -614,11 +624,18 @@ def post_process_data(input_file_name):
                     # For the prediction interval, we add the std to the result
                     # Thus, the value of the sigma in the likelihood must be present in a csv file 
                     if inputFields["PosteriorPredictiveCheck"]["pred_int"] == "yes":
-                        reader = pd.read_csv('output/estimated_sigma.csv')
-                        estimated_sigma = reader['model_id'].values
 
-                        plt.fill_between(data_exp[data_id].x, low_cred_int-estimated_sigma, 
-                                        high_cred_int+estimated_sigma, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
+                        path_to_est_sigma = pathlib.Path(out_folder, "estimated_sigma.csv") 
+                        if path_to_est_sigma.exists(): # Sigma was estimated 
+                            print("Prediction interval computed using the estimated the standard deviations.")
+                            reader = pd.read_csv(path_to_est_sigma)
+                            sigma_values = reader['model_id'].values
+                        else: # Values from the data 
+                            print("Prediction interval computed using the standard deviations from the data.")
+                            sigma_values = data_exp[data_id].std_y[i*n_x:i*n_x+n_x]
+
+                        plt.fill_between(data_exp[data_id].x, low_cred_int-sigma_values, 
+                                        high_cred_int+sigma_values, facecolor=lineColor[num_data_set][0], alpha=0.1, label="95\% pred. int.")
 
                         #plt.fill_between(data_exp[data_id].x, low_cred_int-data_exp[data_id].std_y[ind_1:ind_2], 
                         #                high_cred_int+data_exp[data_id].std_y[ind_1:ind_2], facecolor=lineColor[num_data_set][0], alpha=0.1)
@@ -630,12 +647,14 @@ def post_process_data(input_file_name):
                                     "mean" : data_ij_mean, 
                                     "lower_bound": data_ij_min, 
                                     "upper_bound": data_ij_max})
-                    df.to_csv('output/'+data_id+"_posterior_pred_check_interval.csv", index=None)
+                    path_to_predCheckInt_file = pathlib.Path(out_folder, f"{data_id}_posterior_pred_check_interval.csv") 
+                    df.to_csv(path_to_predCheckInt_file, index=None)
 
                     df_CI = pd.DataFrame({"x": data_exp[data_id].x, 
                                           "CI_lb": low_cred_int, 
                                           "CI_ub": high_cred_int})
-                    df_CI.to_csv('output/'+data_id+"_posterior_pred_check_CI.csv", index=None) 
+                    path_to_predCheckCI_file = pathlib.Path(out_folder, f"{data_id}_posterior_pred_check_CI.csv") 
+                    df_CI.to_csv(path_to_predCheckCI_file, index=None) 
 
                     del data_ij_max, data_ij_min, data_set_n
 

@@ -1,3 +1,4 @@
+import pathlib
 import numpy as np
 from scipy import stats
 import random
@@ -130,13 +131,11 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
     def save_sample(self, IO_fileID, value):
 
         # Write the value in the sampling space 
-        IO_fileID['MChains_reparam'].write("{}\n".format(str(value).replace('\n', '')))
+        np.savetxt(IO_fileID['MChains_reparam'], np.array([value]), fmt="%f", delimiter=",")
 
-        # Write the value in the initial space 
+        # Write the value in the initial space (if there is any change of var)
         X = self.model.parametrization_backward(value)
-        IO_fileID['MChains'].write("{}\n".format(str(X).replace('\n', '')))
-
-        np.savetxt(IO_fileID['MChains_csv'], np.array([X]), fmt="%f", delimiter=",")
+        np.savetxt(IO_fileID['MChains'], np.array([X]), fmt="%f", delimiter=",")
 
 
 class Data:
@@ -451,7 +450,8 @@ class Likelihood:
         The name of the output file is fixed.""" 
 
         for model_id in self.models.keys(): 
-            np.save(IO_util['path']['fun_eval_folder']+'/'+model_id+'_fun_eval.'+str(num_it), self.model_eval[model_id]) 
+            p = pathlib.Path(IO_util['path']['fun_eval_folder'], f"{model_id}_fun_eval-{num_it}.npy")
+            np.save(p, self.model_eval[model_id]) 
 
             # n_x = len(self.data[model_id].x)
             # n_data_set = int(len(self.data[model_id].y)/n_x)

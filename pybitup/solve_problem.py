@@ -2,11 +2,12 @@ import os
 import json
 from jsmin import jsmin
 import pathlib 
+import shutil 
+
 import pandas as pd
 import pickle
 import time
 import sys
-import shutil 
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -41,41 +42,33 @@ class SolveProblem():
         # Define the Input-Output utilities 
         #----------------------------------
 
-        # Initialise
+        # Initialise path object and file IDs dict
         self.IO_util = {}
         self.IO_util['path'] = {}
         self.IO_util['fileID'] = {} 
-        
-        # Define the file names 
-        path = os.getcwd()
-        print("The current working directory is "+path)
-        self.IO_util['path']['cwd'] = path
-        self.IO_util['path']['out_folder'] = path+"/output"
-        self.IO_util['path']['out_data'] = self.IO_util['path']['out_folder']+"/output.dat"
-        
-        # Create the output folder
-        try:
-            os.mkdir(self.IO_util['path']['out_folder'])
-        except OSError:
-            print(self.IO_util['path']['out_folder']+" already exists.")
-        else:
-            print("Creating output directory "+self.IO_util['path']
-            ['out_folder'])
 
-        # Output file 
+        # Define paths and files 
+        p_cwd = pathlib.Path.cwd() 
+        print(f"The current working directory is {p_cwd}.")
+        self.IO_util['path']['cwd'] = p_cwd
+        self.IO_util['path']['out_folder'] = pathlib.Path(p_cwd, "output")
+
+        # Create the output folder if it does not exist
+        if self.IO_util['path']['out_folder'].exists():
+            print(f"{self.IO_util['path']['out_folder']} already exists.")
+        else: 
+            print(f"Creating output directory {self.IO_util['path']['out_folder']}")
+            self.IO_util['path']['out_folder'].mkdir()
+
+        # Output text file where we write info regarding the case 
+        self.IO_util['path']['out_data'] = pathlib.Path(self.IO_util['path']['out_folder'], "output.txt")
+
         # 'a+': append mode with creation if does not exists  
         self.IO_util['fileID']['out_data'] = open(self.IO_util['path']['out_data'], 'a+')
 
-         # Copy input file in the output folder to keep track of it 
-        print("Copying input file in output folder ... ")
+        # Copy input file in the output folder to keep track of it 
+        print(f"Copying {input_file_name} file into output folder ... ")
         shutil.copy(input_file_name, self.IO_util['path']['out_folder'])
-
-    def create_output_file(self, IO_path_keys):
-       
-        # Create and open output files  
-        for file_keys in IO_path_keys:
-            self.IO_util['fileID'][file_keys] = open(self.IO_util['fileID'].IO_path[file_keys], "w+")
-
 
     def __del__(self):
         """ The destructeur defined here is used to ensure that all outputs files are properly closed """ 
@@ -90,19 +83,40 @@ class Sampling(SolveProblem):
     def __init__(self, input_file_name): 
 
         SolveProblem.__init__(self, input_file_name)
-        new_file_keys = ['MChains', 'MChains_reparam', 'MChains_csv', 'Distribution_values', 'gp', 'aux_variables', 'estimated_sigma']
+        new_file_list = {'MChains': "mcmc_chain.csv", 
+                         'MChains_reparam': "mcmc_chain_reparam.csv"}
+
+        # Other outputs for sampling 
+        # TODO: maybe it would be better to build this list when we read the input files, and generate all fileID after reading all input file? 
+        if (self.user_inputs["Sampling"].get('Algorithm') is not None): 
+            self.algo_inputs = self.user_inputs["Sampling"].get('Algorithm')
+            # Estimation of sigma (optional)
+            if self.algo_inputs.get("estimate_sigma") is not None:
+                if self.algo_inputs['estimate_sigma'] == "yes": 
+                    new_file_list['estimated_sigma'] = "estimated_sigma.csv"
+
+            # Auxiliary variables for ISDE and HMC 
+            if (self.algo_inputs.get("ISDE") is not None) or (self.algo_inputs.get("HMC") is not None): 
+                    print("hello")
+                    new_file_list['aux_variables'] = "aux_variables.csv"
+
+            # Estimation of maximum distribution (MAP for Bayesian inference)
+            if self.algo_inputs.get("estimate_max_distr") is not None: 
+                if self.algo_inputs['estimate_max_distr'] == "yes": 
+                    new_file_list['estimate_arg_max_val_distr'] = "arg_MAP_estimation.csv"
+                    new_file_list['estimate_max_val_distr'] = "MAP_estimation.csv"
+
+        # Others optional output? 
+
         # Define output file for sampling 
-        self.IO_util['path'][new_file_keys[0]] = self.IO_util['path']['out_folder']+"/mcmc_chain.dat"
-        self.IO_util['path'][new_file_keys[1]] = self.IO_util['path']['out_folder']+"/mcmc_chain_reparam.dat"
-        self.IO_util['path'][new_file_keys[2]] = self.IO_util['path']['out_folder']+"/mcmc_chain.csv"
-        self.IO_util['path'][new_file_keys[3]] = self.IO_util['path']['out_folder']+"/distribution_values.csv"
-        self.IO_util['path'][new_file_keys[4]] = self.IO_util['path']['out_folder']+"/gp.dat" # Gaussian proposal 
-        self.IO_util['path'][new_file_keys[5]] = self.IO_util['path']['out_folder']+"/aux_variables.dat" # momentum variables in HMC and Ito 
-        self.IO_util['path'][new_file_keys[6]] = self.IO_util['path']['out_folder']+"/estimated_sigma.csv"
+        for key in new_file_list.keys():
+            self.IO_util['path'][str(key)] = pathlib.Path(self.IO_util['path']['out_folder'], new_file_list[key]) 
+            # If we do not use 'str(key), the Pathlib object is not a file. 
+            # print(self.IO_util['path'][str(key)].is_file())
 
         # Create and open files in read-write ('+') mode (w mode erase previous existing files) 
-        for file_keys in new_file_keys:
-            self.IO_util['fileID'][file_keys] = open(self.IO_util['path'][file_keys], "w+")
+        for key in new_file_list.keys():
+            self.IO_util['fileID'][str(key)] = open(self.IO_util['path'][str(key)], "w+")
 
     def sample(self, models={}): 
 
@@ -154,13 +168,13 @@ class Sampling(SolveProblem):
 
             # For Bayesian posterior, model evaluations will be saved in a 
             # folder. We create the folder here. 
-            self.IO_util['path']['fun_eval_folder'] = self.IO_util['path']['out_folder']+"/model_eval"
-            try:
-                os.mkdir(self.IO_util['path']['fun_eval_folder'])
-            except OSError:
-                print(self.IO_util['path']['fun_eval_folder']+" already exists.")
-            else:
-                print("Creating output directory "+self.IO_util['path']['fun_eval_folder'])
+            self.IO_util['path']['fun_eval_folder'] = pathlib.Path(self.IO_util['path']['out_folder'], "model_eval")
+            # Create the output folder if it does not exist
+            if self.IO_util['path']['fun_eval_folder'].exists():
+                print(f"{self.IO_util['path']['fun_eval_folder']} already exists.")
+            else: 
+                print(f"Creating output directory {self.IO_util['path']['fun_eval_folder']}")
+                self.IO_util['path']['fun_eval_folder'].mkdir()
 
             
             # Get the data sets from file or generate it from the model 
@@ -255,9 +269,14 @@ class Sampling(SolveProblem):
                 data[model_id] = pybitup.bayesian_inference.Data(dataName, x, y_tot, std_y)
 
 
-            # Write the data in output data file 
-            with open('output/data', 'wb') as file_data_exp: 
+
+            # Create data file in the output folder and write data in it with
+            # pickle
+            self.IO_util['path']['data'] = pathlib.Path(self.IO_util['path']['out_folder'], "data.bin")
+            with open(self.IO_util['path']['data'], 'wb') as file_data_exp: 
                 pickle.dump(data, file_data_exp)
+
+
 
             # ----------
             # Inference

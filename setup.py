@@ -9,5 +9,13 @@ setup(
     author='Joffrey Coheur',
     author_email='joffrey.coheur@uliege.be',
     description='Python Bayesian Inference Toolbox and Uncertainty Propagation',
-	install_requires=['matplotlib', 'numpy','tikzplotlib']
+	install_requires=['numpy',
+                      'scipy',
+                      'pandas',
+                      'seaborn',
+                      'jsmin',
+                      'mpi4py',
+                      'sobol_seq',
+                      'matplotlib',
+                      'tikzplotlib']
 )

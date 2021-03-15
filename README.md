@@ -25,33 +25,14 @@ Python Bayesian Inference Toolbox and Uncertainty Propagation
 
 
 ## Installation 
-from your terminal/powershell run
-python setup.py install 
+The code can be installed as a python package using the command: 
 
-
-#### Manual installation on Windows : 
-
-* Copy-past the folder in the site packages: 
-1. Create a pybitup directory. Example: in the site-packages folder of python 
 ```
-C:\Users\USER\AppData\Local\Programs\Python\Python37\Lib\site-packages
-```
-2. Copy-paste the following objects: 
-```
-__init__
-metropolis_hastings_algorithms
-post_process
-inference_problem
-bayesian_inference
-distributions
-sample_dist
+python -m pip install git+https://github.com/jcoheur/pybitup    
 ```
 
+Add @branch_name to install a particular branch from the git. 
 
-* Change the environment variable related to the python path 
 
-1. Add to you pythonpath the path to pybitup directory 
-(e.g. in French) 
-```
-Propriétés système > Variables d'environnement > PYTHONPATH 
-```
+## Getting started 
+See examples in the [pybitup-example repository](https://github.com/jcoheur/pybitup-examples). 

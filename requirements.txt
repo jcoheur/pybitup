@@ -1,0 +1,10 @@
+# These are the requirements for installing pybitup.
+numpy
+scipy
+pandas
+seaborn
+jsmin
+mpi4py
+sobol_seq
+matplotlib
+tikzplotlib

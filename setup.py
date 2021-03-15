@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='pybitup',
     version='1.0',
-    packages=['pybitup'],
+    packages=['pybitup', 'pybitup.pce'],
     url='https://github.com/jcoheur/pybitup/',
     license='',
     author='Joffrey Coheur',

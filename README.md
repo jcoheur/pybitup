@@ -35,4 +35,4 @@ Add @branch_name to install a particular branch from the git.
 
 
 ## Getting started 
-See examples in the [pybitup-example repository](https://github.com/jcoheur/pybitup-examples)
+See examples in the [pybitup-example repository](https://github.com/jcoheur/pybitup-examples). 

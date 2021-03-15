@@ -25,7 +25,14 @@ Python Bayesian Inference Toolbox and Uncertainty Propagation
 
 
 ## Installation 
-Run the following command: 
-python -m pip install git+https://github.com/jcoheur/pybitup    
+The code can be installed as a python package using the command: 
 
-Add @branch_name to install a branch from the git. 
+```
+python -m pip install git+https://github.com/jcoheur/pybitup    
+```
+
+Add @branch_name to install a particular branch from the git. 
+
+
+## Getting started 
+See examples in the [pybitup-example repository](https://github.com/jcoheur/pybitup-examples)

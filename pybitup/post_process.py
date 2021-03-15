@@ -694,7 +694,7 @@ def post_process_data(input_file_name):
             num_plot = inputFields["SensitivityAnalysis"]["num_plot"]
 
             # There should be data corresponding to "function evaluations" for the abscissa
-            with open('output/data', 'rb') as file_data_exp:
+            with open(data_file, 'rb') as file_data_exp:
                 pickler_data_exp = pickle.Unpickler(file_data_exp)
                 data_exp = pickler_data_exp.load()
 

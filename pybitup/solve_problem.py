@@ -60,6 +60,10 @@ class SolveProblem():
             print(f"Creating output directory {self.IO_util['path']['out_folder']}")
             self.IO_util['path']['out_folder'].mkdir()
 
+        # Path to model evaluations forlder (for Bayesian inference, SA 
+        # and propagation):
+        self.IO_util['path']['fun_eval_folder'] = pathlib.Path(self.IO_util['path']['out_folder'], "model_eval") 
+
         # Output text file where we write info regarding the case 
         self.IO_util['path']['out_data'] = pathlib.Path(self.IO_util['path']['out_folder'], "output.txt")
 
@@ -167,9 +171,7 @@ class Sampling(SolveProblem):
             # We need to define data and models used for sampling the posterior 
 
             # For Bayesian posterior, model evaluations will be saved in a 
-            # folder. We create the folder here. 
-            self.IO_util['path']['fun_eval_folder'] = pathlib.Path(self.IO_util['path']['out_folder'], "model_eval")
-            # Create the output folder if it does not exist
+            # folder. Create the output folder if it does not exist
             if self.IO_util['path']['fun_eval_folder'].exists():
                 print(f"{self.IO_util['path']['fun_eval_folder']} already exists.")
             else: 
@@ -308,7 +310,7 @@ class Sampling(SolveProblem):
             n_uncertain_param = len(unpar_init_val)
 
             # Unpar init val from file if there is a mcmc_chain_init.csv file 
-            init_mcm_file_path = pathlib.Path(self.IO_util['path']['cwd'], "/mcmc_chain_init.csv")
+            init_mcm_file_path = pathlib.Path(self.IO_util['path']['cwd'], "mcmc_chain_init.csv")
             if init_mcm_file_path.exists():
                 reader = pd.read_csv(init_mcm_file_path.read_text(), header=None)
                 param_value_raw = reader.values
@@ -360,15 +362,15 @@ class Propagation(SolveProblem):
 
     def __init__(self, input_file_name): 
         SolveProblem.__init__(self, input_file_name)
-        self.IO_util['path']['out_folder_prop'] = self.IO_util['path']['out_folder']+'/propagation' 
 
-        # Create the output folder for propagation results
-        try:
-            os.mkdir(self.IO_util['path']['out_folder_prop'])
-        except OSError:
-            print(self.IO_util['path']['out_folder_prop']+" already exists.")
-        else:
-            print("Creating output directory "+self.IO_util['path']['out_folder_prop'])
+        self.IO_util['path']['out_folder_prop'] = pathlib.Path(self.IO_util['path']['out_folder'], "propagation")
+
+        # Create the output folder if it does not exist
+        if self.IO_util['path']['out_folder_prop'].exists():
+            print(f"{self.IO_util['path']['out_folder_prop']} already exists.")
+        else: 
+            print(f"Creating output directory {self.IO_util['path']['out_folder_prop']}")
+            self.IO_util['path']['out_folder_prop'].mkdir()
 
 
     def propagate(self, models=[]): 
@@ -454,10 +456,12 @@ class Propagation(SolveProblem):
                     poly,coef,model = pce.compute_pce(models[model_id])
 
                     # Save the pce model in output
-                    pce.save_pickle(model, self.IO_util['path']
-                    ['out_folder_prop']+"/pce_model"+"_"+model_id)
-                    pce.save_pickle(poly, self.IO_util['path']
-                    ['out_folder_prop']+"/pce_poly"+"_"+model_id)
+                    pce_model_path_file = pathlib.Path(self.IO_util['path']
+                    ['out_folder_prop'], f"pce_model_{model_id}.bin") 
+                    pce_poly_path_file = pathlib.Path(self.IO_util['path']
+                    ['out_folder_prop'], f"pce_poly_{model_id}.bin") 
+                    pce.save_pickle(model, pce_model_path_file)
+                    pce.save_pickle(poly, pce_poly_path_file)
 
 
             if self.user_inputs["Propagation"]["Model"][0]["emulator"]=="None": 
@@ -481,7 +485,8 @@ class Propagation(SolveProblem):
                     # Initialize output files 
                     output_file_model_eval = {}
                     for model_id in models.keys(): 
-                        output_file_model_eval[model_id]=open('output/'+model_id+'_eval.csv','ab')
+                        init_model_eval_file = pathlib.Path(self.IO_util['path']['fun_eval_folder'], f"{model_id}_fun_eval-{0}.npy") 
+                        output_file_model_eval[model_id]=open(init_model_eval_file,'ab')
 
                     # Print current time and start clock count
                     print("Start time {}" .format(time.asctime(time.localtime())))
@@ -631,12 +636,15 @@ class Propagation(SolveProblem):
                                         "mean" : data_ij_mean[model_id][:], 
                                         "lower_bound": data_ij_min[model_id][:], 
                                         "upper_bound": data_ij_max[model_id][:]})
-                        df.to_csv('output/'+model_id+"_interval.csv", index=None)
+
+                        path_to_interv_file = pathlib.Path(self.IO_util['path']['out_folder'], f"{model_id}_interval.csv") 
+                        df.to_csv(path_to_interv_file, index=None)
 
                         df_CI = pd.DataFrame({"x" : models[model_id].x,
                                             "CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
                                             "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
-                        df_CI.to_csv('output/'+model_id+"_CI.csv", index=None) 
+                        path_to_CI_file = pathlib.Path(self.IO_util['path']['out_folder'], f"{model_id}_CI.csv") 
+                        df_CI.to_csv(path_to_CI_file, index=None) 
 
 
 

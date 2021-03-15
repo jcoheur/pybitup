@@ -3,13 +3,13 @@ import math
 
 from pybitup import bayesian_inference as bi
 
-class HeatConduction(bi.Model): 
-    """ 1D Heat conduction model """	
+class HeatConduction(bi.Model):
+    """ 1D Heat conduction model. """
 
-    def __init__(self, x=[], param=[]): 
+    def __init__(self, x=[], param=[]):
 
         # Initialize parent object ModelInference
-        bi.Model.__init__(self)	
+        bi.Model.__init__(self)
         
     def set_param_values(self):
 
@@ -26,10 +26,10 @@ class HeatConduction(bi.Model):
         self.L  = 70
 
     def fun_x(self):
-        """ Compute the temperature""" 
+        """ Compute the temperature"""
 
         # Get the parameters
-        self.set_param_values() 
+        self.set_param_values()
         
         # Compute analytical solution
         gamma = math.sqrt(2 * (self.a + self.b) * self.h / (self.a * self.b * self.k))
@@ -38,6 +38,3 @@ class HeatConduction(bi.Model):
         c2 = self.phi / (self.k * gamma) + c1
 
         return c1 * np.exp(-gamma * self.x) + c2 * np.exp(gamma * self.x) + self.T_amb
-
-
-

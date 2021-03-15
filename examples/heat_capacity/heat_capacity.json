@@ -71,7 +71,7 @@
         "PosteriorPredictiveCheck": {
 		    "display": "yes",
             "cred_int": "yes",
-            "pred_int": "no",
+            "pred_int": "yes",
 		    "burnin": 0,
 		    "num_plot": 1
 		}

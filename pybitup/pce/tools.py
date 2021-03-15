@@ -6,7 +6,7 @@ import sys
 def save(item,name):
     """Saves a python object into a picke file"""
 
-    file = open(name+'.pickle','wb')
+    file = open(name,'wb')
     dump(item,file)
     file.close()
 

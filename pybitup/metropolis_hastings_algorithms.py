@@ -121,8 +121,6 @@ class MetropolisHastings:
         # Ensure that we start the files at 0 (due to the double initialisation of DRAM)
         self.IO_fileID['MChains'].seek(0) 
         self.IO_fileID['MChains_reparam'].seek(0)
-        self.IO_fileID['MChains_csv'].seek(0)
-        self.IO_fileID['Distribution_values'].seek(0)
 
         # Write initial values 
         self.prob_distr.save_sample(self.IO_fileID, self.current_val)
@@ -234,7 +232,7 @@ class MetropolisHastings:
             if self.distr_fun_new_val > self.MAP_val:
                 self.arg_MAP[:] = self.new_val[:]
                 self.MAP_val = self.distr_fun_new_val
-                print("\nNew MAP value {} found at iteration {}.".format(self.MAP_val, self.it))
+                print("\nNew max. distr. value {} (in log) found at iteration {}.".format(self.MAP_val, self.it))
         else: 
             return 
 
@@ -358,8 +356,9 @@ class MetropolisHastings:
         
         # Write in a csv the estimation of the MAP and arg MAP 
         if self.estimate_max_distr is True: 
-            np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
-            np.savetxt("output/MAP_estimation.csv", np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
+            
+            np.savetxt(self.IO_fileID['estimate_arg_max_val_distr'], np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
+            np.savetxt(self.IO_fileID['estimate_max_val_distr'], np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
 
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
@@ -1009,7 +1008,6 @@ class ito_SDE(GradientBasedMCMC):
 
             self.P_nm = P_np
             self.xi_nm = xi_np
-
             # We estimate time 
             self.mean_r = self.it
             if self.it % (self.nIterations/100) == 0:
@@ -1036,7 +1034,7 @@ class ito_SDE(GradientBasedMCMC):
 
             # Write the sample values and function evaluation in a file 
             #self.prob_distr.save_log_post(self.IO_fileID)
-            self.prob_distr.save_sample(self.IO_fileID, xi_n)
+            self.prob_distr.save_sample(self.IO_fileID, xi_np)
             np.savetxt(self.IO_fileID['aux_variables'], np.transpose(np.array([self.P_nm, self.xi_nm])), fmt="%f", delimiter=",")
             #self.IO_fileID['aux_variables'].write("{}\n".format(str(self.P_nm).replace('\n', '')))
             self.write_fun_distr_val(self.it)

@@ -1,4 +1,4 @@
-import os
+import pathlib
 import json
 from jsmin import jsmin
 import pandas as pd
@@ -62,11 +62,11 @@ class SensitivityAnalysis(sp.SolveProblem):
                 self.n_samples = len(unpar_value)
         
         # Load function evaluation and sort them in a dictionnary 
-        print("Loading function evaluations for sensitivity analysis ...")
+        print("Loading function evaluations for sensitivity analysis...")
         fun_eval = {}
         for j in range(self.n_samples): 
-            fun_eval[j] = np.load("output/model_eval/{}_fun_eval.{}.npy".format(self.model_id, j)) 
-
+            model_eval_j_file = pathlib.Path(self.IO_util['path']['fun_eval_folder'], f"{model_id}_fun_eval-{j}.npy") 
+            fun_eval[j] = np.load(model_eval_j_file) 
 
         # Initialise data variable for saving in a .csv later 
         data = {}
@@ -119,8 +119,8 @@ class SensitivityAnalysis(sp.SolveProblem):
                 data[data_name] = V_i
                  
         df = pd.DataFrame(data)
-        df.to_csv(self.IO_util['path']['out_folder']+"/sensitivity_values.csv", header=True, index=False)
-  
+        p_sa = pathlib.Path(self.IO_util['path']['out_folder'], "sensitivity_values.csv")
+        df.to_csv(p_sa, header=True, index=False)
 
 class BinMethod():
         """ Get the mcmc chain in bins and sort them. Then compute the conditional expectations and variances.

@@ -36,27 +36,27 @@ def post_process_data(input_file_name):
     out_data_file = pathlib.Path(out_folder, "output.txt")
     model_eval_folder = pathlib.Path(out_folder, "model_eval") 
 
-    with open(out_data_file, 'r') as file_param:
+    # with open(out_data_file, 'r') as file_param:
 
-        for ind, line in enumerate(file_param):
-            if ind == 1:
-                # Get random variable names 
-                c_chain = line.strip()
-                unpar_name=c_chain.split()
+    #     for ind, line in enumerate(file_param):
+    #         if ind == 1:
+    #             # Get random variable names 
+    #             c_chain = line.strip()
+    #             unpar_name=c_chain.split()
 
-            elif ind == 3: 
-                 # Get number of iterations 
-                c_chain = line.strip()
-                n_iterations = int(c_chain)
+    #         elif ind == 3: 
+    #              # Get number of iterations 
+    #             c_chain = line.strip()
+    #             n_iterations = int(c_chain)
 
-        n_unpar = len(unpar_name)
-        n_samples = n_iterations + 1
+    #     n_unpar = len(unpar_name)
+    #     n_samples = n_iterations + 1
 
-        unpar_name_list = {}
-        for i, name_param in enumerate(unpar_name):
-            unpar_name_list[name_param] = i
+    #     unpar_name_list = {}
+    #     for i, name_param in enumerate(unpar_name):
+    #         unpar_name_list[name_param] = i
 
-        num_fig = 0
+    #     num_fig = 0
 
     # -------------------------------------------
     # --------- Plot experimental data ----------
@@ -668,12 +668,14 @@ def post_process_data(input_file_name):
     if (inputFields.get("Propagation") is not None):
         if inputFields["Propagation"]["display"] == "yes":
 
+            out_folder_prop = pathlib.Path(out_folder, "propagation")
+
             num_plot = inputFields["Propagation"]["num_plot"]
 
-            for num_model_id, model_id in enumerate(inputFields["Propagation"]["model_id"]):
+            for i, model_id in enumerate(inputFields["Propagation"]["model_id"]):
 
-                results_prop_CI = pd.read_csv('output/'+model_id+'_CI.csv') 
-                results_prop_intervals = pd.read_csv('output/'+model_id+'_interval.csv') 
+                results_prop_CI = pd.read_csv(pathlib.Path(out_folder_prop, f"{model_id}_CI.csv")) 
+                results_prop_intervals = pd.read_csv(pathlib.Path(out_folder_prop, f"{model_id}_interval.csv"))
 
                 # Plot graphs
                 plt.figure(num_plot)

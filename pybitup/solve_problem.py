@@ -60,7 +60,7 @@ class SolveProblem():
             print(f"Creating output directory {self.IO_util['path']['out_folder']}")
             self.IO_util['path']['out_folder'].mkdir()
 
-        # Path to model evaluations forlder (for Bayesian inference, SA 
+        # Path to model evaluations folder (for Bayesian inference, SA 
         # and propagation):
         self.IO_util['path']['fun_eval_folder'] = pathlib.Path(self.IO_util['path']['out_folder'], "model_eval") 
 
@@ -403,7 +403,7 @@ class Propagation(SolveProblem):
                        
                 else: # Get the parameter values from the file 
                     reader = pd.read_csv(c_unpar_input["filename"]) 
-                    unpar_value = reader.values[:,c_unpar_input["field"]]
+                    unpar_value = reader[c_unpar_input["field"]].values[:]
 
                     unpar[name] = unpar_value
 
@@ -469,6 +469,14 @@ class Propagation(SolveProblem):
                 if (self.user_inputs["Propagation"]["Model_evaluation"].get("Sample_number") is not None):
                     # Number of sample is provided in the input file 
                     n_sample_param = self.user_inputs["Propagation"]["Model_evaluation"]["Sample_number"]
+
+                    for name in unpar_inputs.keys():
+                        delta_sample = int(len(unpar[name][:])/(n_sample_param-1))
+                        # for delta_sample, we divide by n-1 in order to have n 
+                        # intervals of  equal length
+                        unpar[name] = unpar[name][::delta_sample]
+
+                    
                 else:
                     # Default number of sample to propagate
                     n_sample_param = len(unpar[name])
@@ -485,8 +493,8 @@ class Propagation(SolveProblem):
                     # Initialize output files 
                     output_file_model_eval = {}
                     for model_id in models.keys(): 
-                        init_model_eval_file = pathlib.Path(self.IO_util['path']['fun_eval_folder'], f"{model_id}_fun_eval-{0}.npy") 
-                        output_file_model_eval[model_id]=open(init_model_eval_file,'ab')
+                        init_model_eval_file = pathlib.Path(self.IO_util['path']['out_folder_prop'], f"{model_id}_fun_evals.npy") 
+                        output_file_model_eval[model_id] = open(init_model_eval_file,'ab')
 
                     # Print current time and start clock count
                     print("Start time {}" .format(time.asctime(time.localtime())))
@@ -498,7 +506,7 @@ class Propagation(SolveProblem):
                     mce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["model_concurrency_evaluation"]
                     sce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["sample_concurrency_evaluation"]
                     if mce*sce > size: 
-                        raise ValueError('Ask for {} model concurrency and {} sample concurrency evaluations but only {} processor(s) were provided'.format(mce, sce, size))
+                        raise ValueError(f"Ask for {mce} model concurrency and {sce} sample concurrency evaluations but only {size} processor(s) were provided")
                 else: 
                     mce = sce = 1
 
@@ -556,7 +564,7 @@ class Propagation(SolveProblem):
                         c_param[j] = unpar[name][sample_num]
 
                     # Each proc evaluates the models attributed
-                    #model_list_per_rank 
+                    # model_list_per_rank 
                     for model_id in model_rank_list[rank]:                 
                         model_num = model_id_to_num[model_id]
 
@@ -611,7 +619,7 @@ class Propagation(SolveProblem):
                             np.savetxt(output_file_model_eval[model_id], np.array([fun_eval[model_id][i,:]]), fmt="%f", delimiter=",")
 
                             c_eval = fun_eval[model_id][i,:]
-                                # Update bounds
+                            # Update bounds
                             for k in range(n_points[model_id]):
                                 if data_ij_max[model_id][k] < c_eval[k]:
                                     data_ij_max[model_id][k] = c_eval[k]
@@ -637,13 +645,13 @@ class Propagation(SolveProblem):
                                         "lower_bound": data_ij_min[model_id][:], 
                                         "upper_bound": data_ij_max[model_id][:]})
 
-                        path_to_interv_file = pathlib.Path(self.IO_util['path']['out_folder'], f"{model_id}_interval.csv") 
+                        path_to_interv_file = pathlib.Path(self.IO_util['path']['out_folder_prop'], f"{model_id}_interval.csv") 
                         df.to_csv(path_to_interv_file, index=None)
 
                         df_CI = pd.DataFrame({"x" : models[model_id].x,
                                             "CI_lb" : np.percentile(data_hist[model_id], 2.5, axis=0), 
                                             "CI_ub": np.percentile(data_hist[model_id], 97.5, axis=0)})
-                        path_to_CI_file = pathlib.Path(self.IO_util['path']['out_folder'], f"{model_id}_CI.csv") 
+                        path_to_CI_file = pathlib.Path(self.IO_util['path']['out_folder_prop'], f"{model_id}_CI.csv") 
                         df_CI.to_csv(path_to_CI_file, index=None) 
 
 

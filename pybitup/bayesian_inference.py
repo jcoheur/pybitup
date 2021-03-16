@@ -725,16 +725,20 @@ def generate_synthetic_data(my_model, std_param, std_y):
 
 def write_tmp_input_file(input_file_name, name_param, value_param): 
 
+    path_to_inputFile = pathlib.Path(input_file_name)
+    path_to_inputFile_folder = pathlib.Path(path_to_inputFile.parent)
+    name_input_file = path_to_inputFile.name
+
     # Check inputs
     n_param = len(name_param)
     if n_param is not len(value_param):
         raise ValueError("Parameter names and values must be of the same length") 
 
     # Open the input file from which we read the data 
-    with open(input_file_name) as json_file:
+    with open(path_to_inputFile) as json_file:
 
         # Create the new file where we replace the uncertain variables by their values
-        with open("tmp_proc_"+str(rank)+'_' + input_file_name, "w") as new_input_file: 
+        with open(pathlib.Path(path_to_inputFile_folder, f"tmp_proc_{rank}_{ name_input_file}"), "w") as new_input_file: 
         
             # Read json file line by line
             for num_line, line in enumerate(json_file.readlines()):
@@ -745,7 +749,7 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
                 
                     ind_2 = ind_1 + line[ind_1+1:l_line].find("$") + 1
                     if ind_2 - ind_1 <= 1: 
-                        raise ValueError("No parameter name specified in {} line {} \n{}".format(input_file_name, num_line, line))
+                        raise ValueError(f"No parameter name specified in {path_to_inputFile} line {num_line} \n{line}")
                         
                     file_param_name = line[ind_1:ind_2+1]
 
@@ -797,4 +801,4 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
                     
     # Check that all params have been found in the input file 
     if len(name_param) > 0:
-        raise ValueError("Parameter(s) {} not found in {}".format(name_param, input_file_name)) 
+        raise ValueError("Parameter(s) {} not found in {}".format(name_param, path_to_inputFile)) 

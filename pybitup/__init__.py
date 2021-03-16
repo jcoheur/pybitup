@@ -1,3 +1,7 @@
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
+
 import pybitup.metropolis_hastings_algorithms
 import pybitup.post_process
 import pybitup.inference_problem

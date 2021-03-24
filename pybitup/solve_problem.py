@@ -558,7 +558,7 @@ class Propagation(SolveProblem):
 
                     if rank==0: 
                         # We estimate time after a hundred iterations
-                        # TODO: do this earlier
+                        # TODO: do this earlier than 100 .. 
                         if i == 100:
                             print("Estimated time: {}".format(time.strftime("%H:%M:%S",
                                                             time.gmtime((time.perf_counter()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
@@ -576,7 +576,7 @@ class Propagation(SolveProblem):
 
                         # HERE SHOULD BE UPDATED IF EMULATOR WAS ASKED
                         # Update model evaluation 
-                        print(f"Proc {rank}: param {c_param}")
+                        # print(f"Proc {rank}: param {c_param}")
                         models[model_id].run_model(c_param)
                         # response = model.eval(point)
                         
@@ -590,10 +590,11 @@ class Propagation(SolveProblem):
                         c_eval = fun_eval[model_id][i, :]
                         data_hist[model_id][i, :] = c_eval 
 
+                # Other procs send fun_eval and data_hist 
                 if rank != 0:
                     comm.send(fun_eval, dest=0, tag=10)
                     comm.send(data_hist, dest=0, tag=11)
-
+                # proc 0 receive data 
                 if rank==0: 
                     for rank_rcv in range(1, size):   
                         fun_eval_other_proc = comm.recv(source=rank_rcv, tag=10)
@@ -620,10 +621,25 @@ class Propagation(SolveProblem):
                         data_ij_var[model_id] = np.zeros(n_points[model_id])
 
                     # Iterate over the propagated sample to compute statistics 
+                    # TODO: put this in the init 
+                    self.IO_util['path']['out_folder_model_eval_prop'] = pathlib.Path(self.IO_util['path']['out_folder_prop'], "model_eval")
+                    if self.IO_util['path']['out_folder_model_eval_prop'].exists():
+                        pass
+                    else: 
+                        self.IO_util['path']['out_folder_model_eval_prop'].mkdir()
+                    # File extension
+                    me_suffix = "npy" #"csv"
                     for i in range(n_sample_param):
                         for model_id in models.keys(): 
                             # Write the csv for the function evaluation 
                             np.savetxt(output_file_model_eval[model_id], np.array([fun_eval[model_id][i,:]]), fmt="%f", delimiter=",")
+                            
+                            path_to_me = pathlib.Path(self.IO_util['path']['out_folder_model_eval_prop'], f"{model_id}_fun_eval-{i}.{me_suffix}")
+                            if me_suffix == "npy":
+                                np.save(path_to_me, fun_eval[model_id][i,:])
+                            else:
+                                df = pd.DataFrame({"y": fun_eval[model_id][i,:]})
+                                df.to_csv(path_to_me, index=False, header=None) 
 
                             c_eval = fun_eval[model_id][i,:]
                             # Update bounds

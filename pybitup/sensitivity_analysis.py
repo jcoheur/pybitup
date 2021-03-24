@@ -4,8 +4,8 @@ from jsmin import jsmin
 import pandas as pd
 import pickle
 import time
-import sys
 import shutil 
+import pathlib
 
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -31,6 +31,7 @@ class SensitivityAnalysis(sp.SolveProblem):
     def __init__(self, input_file_name, model_id): 
         sp.SolveProblem.__init__(self, input_file_name)
 
+        print("Running sensitivity analysis ...")
 
         SA_input = self.user_inputs["SensitivityAnalysis"]
         self.model_id = model_id
@@ -61,11 +62,21 @@ class SensitivityAnalysis(sp.SolveProblem):
                 self.unpar[name] = unpar_value
                 self.n_samples = len(unpar_value)
         
-        # Load function evaluation and sort them in a dictionnary 
-        print("Loading function evaluations for sensitivity analysis...")
+        # Model evaluations 
+        # --------------------
+        # Get the folder where there are. 
+        if SA_input.get("Model_eval_folder") is not None: 
+            # We take from the folder provided in input
+            model_eval_folder = pathlib.Path(SA_input["Model_eval_folder"]) 
+            print(f"Loading function evaluations from folder {model_eval_folder}")
+        else: 
+            # We use the default folder that is in the IO_util dict
+            model_eval_folder = pathlib.Path(self.IO_util['path']['fun_eval_folder'])
+            print(f"Loading function evaluations from default folder {model_eval_folder}.")
+        # Load function evaluation and store them in a dictionnary 
         fun_eval = {}
         for j in range(self.n_samples): 
-            model_eval_j_file = pathlib.Path(self.IO_util['path']['fun_eval_folder'], f"{model_id}_fun_eval-{j}.npy") 
+            model_eval_j_file = pathlib.Path(model_eval_folder, f"{model_id}_fun_eval-{j}.npy") 
             fun_eval[j] = np.load(model_eval_j_file) 
 
         # Initialise data variable for saving in a .csv later 

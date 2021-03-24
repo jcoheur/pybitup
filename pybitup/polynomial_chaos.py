@@ -3,8 +3,8 @@ import pybitup.pce as pce
 from jsmin import jsmin
 from json import loads
 import numpy as np
-import os.path
-import sys
+import pathlib 
+import pandas as pd 
 
 # %% Polynomial Chaos Expansion Wrapper
 
@@ -70,27 +70,27 @@ class PCE:
 
     def compute_quadrature(self,point,poly):
 
+        method = self.input_pce["quadrature"]["method"]
+        
         # Monte Carlo
-
-        if self.input_pce["quadrature"]["method"]=="monte_carlo": weight = None
-
+        if self.input_pce["quadrature"]["method"]=="monte_carlo": 
+            weight = None
         # Recurrence coefficients
-
         elif self.input_pce["quadrature"]["method"]=="recurrence":
-
             order = self.input_pce["quadrature"]["order_quadrature"]
             point,weight = pce.tensquad(order,self.dist)
-            
         # Weakly admissible mesh
-
-        else:
-            method = self.input_pce["quadrature"]["method"]
-        
-            if method=="fekete": index,weight = pce.fekquad(point,poly)
-            elif method=="simplex": index,weight = pce.simquad(point,poly)
-            elif method=="positive_nullspace": index,weight = pce.nulquad(point,poly)
-            elif method=="positive_newton": index,weight = pce.newquad(point,poly)
-            else: raise Exception("compute_quadrature: unknown method")
+        else:        
+            if method=="fekete": 
+                index,weight = pce.fekquad(point,poly)
+            elif method=="simplex": 
+                index,weight = pce.simquad(point,poly)
+            elif method=="positive_nullspace": 
+                index,weight = pce.nulquad(point,poly)
+            elif method=="positive_newton": 
+                index,weight = pce.newquad(point,poly)
+            else: 
+                raise Exception("compute_quadrature: unknown method")
 
             poly.trunc(self.input_pce["quadrature"]["order_truncation"])
             point = point[index]
@@ -110,34 +110,56 @@ class PCE:
             function.run_model(point[i])
             resp.append(function.model_eval)
 
+            # TODO: add this choice in the input file
+            save_model_eval = False
+            me_suffix = "npy"
+            if save_model_eval:
+                # Save the model evaluation
+                path_to_me = pathlib.Path("output", "propagation", "model_eval", f"fun_eval-{i}.{me_suffix}")
+
+                if me_suffix == "npy":
+                    np.save(path_to_me, function.model_eval)
+                else:
+                    df = pd.DataFrame({"y": function.model_eval})
+                    df.to_csv(path_to_me, index=False, header=None) 
+
+
         return np.array(resp)
 
     # %% Computes the polynomial chaos expansion
 
     def compute_pce(self,function):
-
         # Stores the points and eventual weights
 
-        try:
-            pointFile = self.input_pce["polynomials"]["point_coordinates"]
-            if pointFile=="None": point = None
-            elif os.path.splitext(pointFile)[1]==".npy": point = np.load(pointFile)
-            elif os.path.splitext(pointFile)[1]==".csv": point = np.loadtxt(pointFile,delimiter=",")
-            else: raise Exception("point_coordinates file not found")
-            
-        except: point = None
+        if self.input_pce["polynomials"].get("point_coordinates") is not None: 
+            # An input is provided for the points
+            pointFile = pathlib.Path(self.input_pce["polynomials"]["point_coordinates"])
+            if pointFile.name=="None":
+                point = None
+            elif pointFile.suffix == ".npy":
+                point = np.load(pointFile)
+            elif pointFile.suffix == ".csv":
+                point = np.loadtxt(pointFile,delimiter=",")
+            else:
+                raise Exception("point_coordinates file not found")
+        else: 
+            point = None
 
-        try:
-            weightFile = self.input_pce["polynomials"]["point_weights"]
-            if weightFile=="None": weight = None
-            if os.path.splitext(weightFile)[1]==".npy": weight = np.load(weightFile)
-            elif os.path.splitext(weightFile)[1]==".csv": weight = np.loadtxt(weightFile,delimiter=",")
-            else: raise Exception("point_weights file not found")
-            
-        except: weight = None
+        if self.input_pce["polynomials"].get("point_weights") is not None: 
+            # An input is provided for the weights
+            weightFile = pathlib.Path(self.input_pce["polynomials"]["point_weights"])
+            if weightFile.name == "None":
+                weight = None
+            elif weightFile.suffix == ".npy":
+                weight = np.load(weightFile)
+            elif weightFile.suffix == ".csv":
+                weight = np.loadtxt(weightFile,delimiter=",")
+            else:
+                raise Exception("point_weights file not found")
+        else:
+            weight = None
 
         # Computes the pce elements
-
         poly = self.compute_polynomials(point,weight)
         point,weight = self.compute_quadrature(point,poly)
         resp = self.function_evaluator(function,point)
@@ -151,6 +173,5 @@ class PCE:
             coef = coef[index]
 
         # Computes the pce model
-
         model = pce.Expansion(coef,poly)
         return poly,coef,model

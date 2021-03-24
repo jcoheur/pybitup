@@ -450,6 +450,7 @@ class Likelihood:
         The name of the output file is fixed.""" 
 
         for model_id in self.models.keys(): 
+            # TODO: should this be in the Model class? 
             p = pathlib.Path(IO_util['path']['fun_eval_folder'], f"{model_id}_fun_eval-{num_it}.npy")
             np.save(p, self.model_eval[model_id]) 
 

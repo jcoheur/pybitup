@@ -32,31 +32,37 @@ def post_process_data(input_file_name):
     else: 
         raise ValueError('Ask for post processing data but no inputs were provided')
 
-    out_folder = pathlib.Path("output")
+    out_folder = pathlib.Path(pathlib.Path.cwd(), "output")
     out_data_file = pathlib.Path(out_folder, "output.txt")
     model_eval_folder = pathlib.Path(out_folder, "model_eval") 
 
-    # with open(out_data_file, 'r') as file_param:
+    try: 
+        # TODO: remove the try except statement. For propagation, 
+        # the output.txt is not yet implemented so the following lines 
+        # may crash the code if not handled. 
+        with open(out_data_file, 'r') as file_param:
 
-    #     for ind, line in enumerate(file_param):
-    #         if ind == 1:
-    #             # Get random variable names 
-    #             c_chain = line.strip()
-    #             unpar_name=c_chain.split()
+            for ind, line in enumerate(file_param):
+                if ind == 1:
+                    # Get random variable names 
+                    c_chain = line.strip()
+                    unpar_name=c_chain.split()
 
-    #         elif ind == 3: 
-    #              # Get number of iterations 
-    #             c_chain = line.strip()
-    #             n_iterations = int(c_chain)
+                elif ind == 3: 
+                    # Get number of iterations 
+                    c_chain = line.strip()
+                    n_iterations = int(c_chain)
 
-    #     n_unpar = len(unpar_name)
-    #     n_samples = n_iterations + 1
+            n_unpar = len(unpar_name)
+            n_samples = n_iterations + 1
 
-    #     unpar_name_list = {}
-    #     for i, name_param in enumerate(unpar_name):
-    #         unpar_name_list[name_param] = i
+            unpar_name_list = {}
+            for i, name_param in enumerate(unpar_name):
+                unpar_name_list[name_param] = i
 
-    #     num_fig = 0
+            num_fig = 0
+    except: 
+        pass
 
     # -------------------------------------------
     # --------- Plot experimental data ----------
@@ -145,7 +151,7 @@ def post_process_data(input_file_name):
 
                     plt.legend()
 
-    if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None) or  (inputFields.get("Propagation") is not None):
+    if (inputFields.get("MarkovChain") is not None) or (inputFields.get("Posterior") is not None):
 
 
         reader = pd.read_csv('output/mcmc_chain.csv', header=None)
@@ -681,7 +687,9 @@ def post_process_data(input_file_name):
                 plt.figure(num_plot)
 
                 plt.plot(results_prop_intervals["x"], results_prop_intervals['mean'], color=lineColor[i][0], alpha=0.5)
+                print(len(results_prop_intervals["x"]))
                 plt.fill_between(results_prop_intervals["x"], results_prop_CI["CI_lb"], results_prop_CI["CI_ub"], facecolor=lineColor[i][0], alpha=0.1)
+                plt.fill_between(results_prop_intervals["x"], results_prop_intervals["lower_bound"], results_prop_intervals["upper_bound"], facecolor=lineColor[i][0], alpha=0.1)
 
                 # Prediction interval 
                 #plt.fill_between(data_exp[data_id].x, (results_prop_CI["CI_lb"]-data_exp['std_rho']), (results_prop_CI["CI_ub"]+data_exp['std_rho']), facecolor=lineColor[i][0], alpha=0.1)

@@ -402,9 +402,17 @@ class Propagation(SolveProblem):
                     unpar[name] = unpar_dist[name] 
                        
                 else: # Get the parameter values from the file 
-                    reader = pd.read_csv(c_unpar_input["filename"]) 
-                    unpar_value = reader[c_unpar_input["field"]].values[:]
+                    if c_unpar_input["field"] is str: 
+                        # The field is a str and we read it 
+                        reader = pd.read_csv(c_unpar_input["filename"]) 
+                        unpar_value = reader[c_unpar_input["field"]].values[:]
+                    else: 
+                        # We provide a int number so there is no header in the 
+                        # mcmc file
+                        reader = pd.read_csv(c_unpar_input["filename"], header=None) 
+                        unpar_value = reader[c_unpar_input["field"]].values[:]
 
+        
                     unpar[name] = unpar_value
 
 
@@ -497,10 +505,8 @@ class Propagation(SolveProblem):
                         output_file_model_eval[model_id] = open(init_model_eval_file,'ab')
 
                     # Print current time and start clock count
-                    print("Start time {}" .format(time.asctime(time.localtime())))
-                    sys.stdout.flush()
+                    print(f"Start time {time.asctime(time.localtime())}", flush=True)
                     self.t1 = time.perf_counter()
-
 
                 if (self.user_inputs["Propagation"]["Model_evaluation"].get("Parallel_evaluation") is not None):
                     mce = self.user_inputs["Propagation"]["Model_evaluation"]["Parallel_evaluation"]["model_concurrency_evaluation"]
@@ -538,8 +544,7 @@ class Propagation(SolveProblem):
 
                 if rank == 0: 
                     for n in model_rank_list.keys(): 
-                        print("Proc {} model evaluations: {}; for {} samples in range [{}:{}]".format(n, model_rank_list[n], n_sample_per_rank[n], rank_sample_list[n][0], rank_sample_list[n][-1]))
-                        sys.stdout.flush()             
+                        print(f"Proc {n} model evaluations: {model_rank_list[n]}; for {n_sample_per_rank[n]} samples in range [{rank_sample_list[n][0]}:{rank_sample_list[n][-1]}]", flush = True)
 
                 fun_eval = {}
                 data_hist = {}
@@ -553,6 +558,7 @@ class Propagation(SolveProblem):
 
                     if rank==0: 
                         # We estimate time after a hundred iterations
+                        # TODO: do this earlier
                         if i == 100:
                             print("Estimated time: {}".format(time.strftime("%H:%M:%S",
                                                             time.gmtime((time.perf_counter()-self.t1) / 100.0 * n_sample_per_rank[rank]))))
@@ -570,6 +576,7 @@ class Propagation(SolveProblem):
 
                         # HERE SHOULD BE UPDATED IF EMULATOR WAS ASKED
                         # Update model evaluation 
+                        print(f"Proc {rank}: param {c_param}")
                         models[model_id].run_model(c_param)
                         # response = model.eval(point)
                         

@@ -402,7 +402,7 @@ class Propagation(SolveProblem):
                     unpar[name] = unpar_dist[name] 
                        
                 else: # Get the parameter values from the file 
-                    if c_unpar_input["field"] is str: 
+                    if type(c_unpar_input["field"]) is str: 
                         # The field is a str and we read it 
                         reader = pd.read_csv(c_unpar_input["filename"]) 
                         unpar_value = reader[c_unpar_input["field"]].values[:]

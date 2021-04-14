@@ -724,7 +724,7 @@ def generate_synthetic_data(my_model, std_param, std_y):
 
     return y_noisy
 
-def write_tmp_input_file(input_file_name, name_param, value_param): 
+def write_tmp_input_file(input_file_name, name_param, value_param, num_tmp_file=rank): 
 
     path_to_inputFile = pathlib.Path(input_file_name)
     path_to_inputFile_folder = pathlib.Path(path_to_inputFile.parent)
@@ -739,7 +739,7 @@ def write_tmp_input_file(input_file_name, name_param, value_param):
     with open(path_to_inputFile) as json_file:
 
         # Create the new file where we replace the uncertain variables by their values
-        with open(pathlib.Path(path_to_inputFile_folder, f"tmp_proc_{rank}_{ name_input_file}"), "w") as new_input_file: 
+        with open(pathlib.Path(path_to_inputFile_folder, f"tmp_proc_{num_tmp_file}_{ name_input_file}"), "w") as new_input_file: 
         
             # Read json file line by line
             for num_line, line in enumerate(json_file.readlines()):

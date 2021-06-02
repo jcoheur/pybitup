@@ -688,7 +688,13 @@ class GradientBasedMCMC(MetropolisHastings):
         elif C_matrix_estimation == "from_file": 
             print('Reading cov_init.csv file.')
             reader = pd.read_csv(pathlib.Path(self.IO_util['path']['cwd'],"cov_init.csv"), header=None)
-            self.C_approx = reader.values
+            if C_matrix['type'] is not None:
+                if C_matrix['type'] == "diag":  
+                    self.C_approx = np.diag(np.diag(reader.values))
+                else: 
+                    raise ValueError('No know type selected for'.format(C_matrix_estimation))
+            else:
+                self.C_approx = reader.values
 
             # Generalized eigenval problem for Maarten
             # print('Computing full Hessian for scaling and correlation.')

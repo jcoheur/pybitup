@@ -475,7 +475,6 @@ class Mixture(ProbabilityDistribution):
             c_mixt = self.mixture_components[i]
             # Log (ab) = log(a) + log(b) 
             Y += np.log(c_mixt.compute_value(X[i]))
-
         return Y
 
 

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd 
 import pybitup.metropolis_hastings_algorithms as mha
+import pathlib 
 
 
 class Sampler: 
@@ -45,6 +46,12 @@ class Sampler:
                     self.proposal_cov = np.diag(self.algo['proposal']['covariance']['value'])
             elif self.algo['proposal']['covariance']['type'] == "full":
                 self.proposal_cov = np.array(self.algo['proposal']['covariance']['value']) 
+            elif self.algo['proposal']['covariance']['type'] == "from_file": 
+                print('Reading cov_init.csv file.')
+                reader = pd.read_csv(pathlib.Path(self.IO_fileID['path']['cwd'],"cov_init.csv"), header=None)
+                n_param = len(reader.values[0,:])
+                self.proposal_cov = np.diag(2.38**2/n_param/10*np.diag(reader.values))
+
             else: 
                 print("Invalid InferenceAlgorithmProposalConvarianceType name {}".format(self.algo['proposal']['covariance']['type']))
 

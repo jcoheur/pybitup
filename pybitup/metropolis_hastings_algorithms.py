@@ -1,3 +1,4 @@
+import pathlib 
 import numpy as np
 import random
 import scipy
@@ -191,7 +192,7 @@ class MetropolisHastings:
 
         # Compute new value 
         self.new_val[:] = self.current_val[:] + np.transpose(np.matmul(self.R, np.transpose(self.z_k)))
-
+        
     def compute_acceptance_ratio(self):
 
         self.distr_fun_new_val = self.distr_fun(self.new_val[:])
@@ -685,8 +686,8 @@ class GradientBasedMCMC(MetropolisHastings):
             print('Initial covariance matrix provided.')
             self.C_approx = np.array(C_matrix['matrix_value']) 
         elif C_matrix_estimation == "from_file": 
-            print('Reading cov.csv file.')
-            reader = pd.read_csv(self.IO_util['path']['cwd']+"/cov.csv", header=None)
+            print('Reading cov_init.csv file.')
+            reader = pd.read_csv(pathlib.Path(self.IO_util['path']['cwd'],"cov_init.csv"), header=None)
             self.C_approx = reader.values
 
             # Generalized eigenval problem for Maarten

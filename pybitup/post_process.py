@@ -649,18 +649,19 @@ def post_process_data(input_file_name):
                     plt.legend()
 
                     # Values are saved in csv format using Panda dataframe  
-                    df = pd.DataFrame({"x": data_exp[data_id].x,
-                                    "mean" : data_ij_mean, 
-                                    "lower_bound": data_ij_min, 
-                                    "upper_bound": data_ij_max})
-                    path_to_predCheckInt_file = pathlib.Path(out_folder, f"{data_id}_posterior_pred_check_interval.csv") 
-                    df.to_csv(path_to_predCheckInt_file, index=None)
+                    if inputFields["PosteriorPredictiveCheck"]["save_result"] =="yes":
+                        df = pd.DataFrame({"x": data_exp[data_id].x,
+                                        "mean" : data_ij_mean, 
+                                        "lower_bound": data_ij_min, 
+                                        "upper_bound": data_ij_max})
+                        path_to_predCheckInt_file = pathlib.Path(out_folder, f"{data_id}_posterior_pred_check_interval.csv") 
+                        df.to_csv(path_to_predCheckInt_file, index=None)
 
-                    df_CI = pd.DataFrame({"x": data_exp[data_id].x, 
-                                          "CI_lb": low_cred_int, 
-                                          "CI_ub": high_cred_int})
-                    path_to_predCheckCI_file = pathlib.Path(out_folder, f"{data_id}_posterior_pred_check_CI.csv") 
-                    df_CI.to_csv(path_to_predCheckCI_file, index=None) 
+                        df_CI = pd.DataFrame({"x": data_exp[data_id].x, 
+                                            "CI_lb": low_cred_int, 
+                                            "CI_ub": high_cred_int})
+                        path_to_predCheckCI_file = pathlib.Path(out_folder, f"{data_id}_posterior_pred_check_CI.csv") 
+                        df_CI.to_csv(path_to_predCheckCI_file, index=None) 
 
                     del data_ij_max, data_ij_min, data_set_n
 

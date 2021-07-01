@@ -41,6 +41,27 @@ class BayesianPosterior(pybitup.distributions.ProbabilityDistribution):
 
         return bayes_post 
 
+    def get_log_value(self, Y): 
+        """ See compute_log_value. 
+        It is the same function except that it uses the value actually stored
+        in the self.likelihood. It is used for instance for gradient algorithm, where the model is evaluated during the gradient evaluation. 
+        # TODO : try to simplify this and avoid repeting the same function """
+        X = self.model.parametrization_backward(Y) 
+
+        prior_log_value = self.prior.compute_log_value(X)
+        if prior_log_value == -np.inf:
+            # Avoid computation of likelihood if prior is zero
+            log_bayes_post = -np.inf
+        else: 
+            log_like_val = self.likelihood.log_like_val
+            if log_like_val == np.nan: 
+                log_bayes_post = -np.inf
+            else: 
+                log_bayes_post = prior_log_value - np.log(self.model.parametrization_det_jac(X)) + log_like_val
+                # log(1/det_jac) = - log(det_jac)
+
+        return log_bayes_post
+
     def compute_log_value(self, Y): 
         """ Compute the value of the logarithm of the distribution. 
         In the Bayesian framework, this is the posterior distribution, which takes into accout 
@@ -405,6 +426,7 @@ class Likelihood:
         self.SS_X = 0 # sum of square 
         self.arg_LL = 0 # Arg of the likelihood function 
         self.gamma = gamma
+        self.log_like_val = 0 
 
         # self.model_eval[model_id] is the value that is updated and saved
         # We initialise it here as a list  
@@ -430,9 +452,9 @@ class Likelihood:
         # log_like_val = self.sum_of_square(self.data, self.model_eval_X)
         
         self.arg_gauss_likelihood(X)
-        log_like_val = - (1/2) * self.arg_LL 
-
-        return log_like_val
+        self.log_like_val = - (1/2) * self.arg_LL 
+        
+        return self.log_like_val
 
     def update_eval(self): 
         """ Update the value of the model evaluation. """ 
@@ -599,8 +621,10 @@ class Likelihood:
         grad = np.zeros(len(X))
         for model_id in self.models.keys(): 
 
+            # Compute the model value (compute_log_value(X) run_model 
+            # that updated the model_eval)
+            self.compute_log_value(X)
             # Compute gradient of the model 
-            self.models[model_id].run_model(X)
             self.models[model_id].get_gradient_model(X)
             inv_jac = self.models[model_id].parametrization_inv_jac(X)
 

@@ -359,7 +359,7 @@ class MetropolisHastings:
         if self.estimate_max_distr is True: 
             
             np.savetxt(self.IO_fileID['estimate_arg_max_val_distr'], np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
-            np.savetxt(self.IO_fileID['estimate_max_val_distr'], np.array([np.exp(self.MAP_val)]),fmt="%f", delimiter=",")
+            np.savetxt(self.IO_fileID['estimate_max_val_distr'], np.array([self.MAP_val]),fmt="%f", delimiter=",")
 
         self.IO_fileID['out_data'].write("\nCovariance Matrix is \n{}".format(self.cov_c))
 
@@ -438,57 +438,57 @@ class AdaptiveMetropolisHastings(MetropolisHastings):
 
     def adapt_covariance(self, i):
         
-        # if i >= self.starting_it:
-        #     # Initialisation
-        #     if i == self.starting_it:
-        #         # Load all the previous iterations
-        #         param_values = np.zeros((self.starting_it, self.n_param))
-        #         j = 0
-        #         self.IO_fileID['MChains'].seek(0)
-        #         for line in self.IO_fileID['MChains']:
-        #             c_chain = line.strip()
-        #             param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
-        #             j += 1
+        if i >= self.starting_it:
+            # Initialisation
+            if i == self.starting_it:
+                # Load all the previous iterations
+                param_values = np.zeros((self.starting_it, self.n_param))
+                j = 0
+                self.IO_fileID['MChains'].seek(0)
+                for line in self.IO_fileID['MChains']:
+                    c_chain = line.strip()
+                    param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
+                    j += 1
 
-        #         # Compute current sample mean and covariance
-        #         self.X_av_i = np.mean(param_values, axis=0)
-        #         self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
+                # Compute current sample mean and covariance
+                self.X_av_i = np.mean(param_values, axis=0)
+                self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
 
-        X_i = self.current_val
+            X_i = self.current_val
 
-        # Recursion formula to compute the mean based on previous value
-        # X_av_ip = (1/(i+2))*((i+1)*self.X_av_i + X_i)
-        # Formula from smith 
-        X_av_ip = X_i + (i)/(i+1) * (self.X_av_i - X_i) 
-        # # Mine 
-        # X_av_ip = 1/(i+1) * (X_i + self.X_av_i * i)
+            # Recursion formula to compute the mean based on previous value
+            # X_av_ip = (1/(i+2))*((i+1)*self.X_av_i + X_i)
+            # Formula from smith 
+            X_av_ip = X_i + (i)/(i+1) * (self.X_av_i - X_i) 
+            # # Mine 
+            # X_av_ip = 1/(i+1) * (X_i + self.X_av_i * i)
 
-        # Recursion formula to compute the covariance V (Haario, Saksman, Tamminen, 2001)
-        #V_ip = (i/(i+1))*self.V_i + (self.S_d/(i+1))*(self.eps_Id + (i+1)*(np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)) -
-              #                              (i+2)*(np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)) + np.tensordot(np.transpose(X_i), X_i, axes=0))
-        # Formula from smith 
-        V_ip = (i - 1)/i * self.V_i + self.S_d/i * (i*np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (i + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
+            # Recursion formula to compute the covariance V (Haario, Saksman, Tamminen, 2001)
+            #V_ip = (i/(i+1))*self.V_i + (self.S_d/(i+1))*(self.eps_Id + (i+1)*(np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)) -
+                #                              (i+2)*(np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)) + np.tensordot(np.transpose(X_i), X_i, axes=0))
+            # Formula from smith 
+            V_ip = (i - 1)/i * self.V_i + self.S_d/i * (i*np.tensordot(np.transpose(self.X_av_i), self.X_av_i, axes=0)- (i + 1) * np.tensordot(np.transpose(X_av_ip), X_av_ip, axes=0)+ np.tensordot(np.transpose(X_i), X_i, axes=0) + self.eps_Id)
 
-        # Update mean and covariance
-        self.V_i = V_ip
-        self.X_av_i = X_av_ip
+            # Update mean and covariance
+            self.V_i = V_ip
+            self.X_av_i = X_av_ip
 
-        # The new value for the covariance is updated only every updating_it iterations
-        if i % (self.updating_it) == 0:
-        #Load all the previous iterations
-            # param_values = np.zeros((i, self.n_param))
-            # j = 0
-            # self.IO_fileID['MChains'].seek(0)
-            # for line in self.IO_fileID['MChains']:
-            #     c_chain = line.strip()
-            #     param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
-            #     j += 1
+            # The new value for the covariance is updated only every updating_it iterations
+            if i % (self.updating_it) == 0:
+            #Load all the previous iterations
+                # param_values = np.zeros((i, self.n_param))
+                # j = 0
+                # self.IO_fileID['MChains'].seek(0)
+                # for line in self.IO_fileID['MChains']:
+                #     c_chain = line.strip()
+                #     param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
+                #     j += 1
 
-            # Compute current sample mean and covariance
-            # self.X_av_i = np.mean(param_values, axis=0)
-            # self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
+                # Compute current sample mean and covariance
+                # self.X_av_i = np.mean(param_values, axis=0)
+                # self.V_i = self.S_d*(np.cov(param_values, rowvar=False) + self.eps_Id)
 
-            self.update_covariance()
+                self.update_covariance()
 
     def update_covariance(self):
         self.R = linalg.cholesky(self.V_i)
@@ -711,7 +711,7 @@ class GradientBasedMCMC(MetropolisHastings):
         
         print("Inverse hessian determinant = {}".format(np.linalg.det(self.C_approx)))
 
-      
+        
         try: 
             self.L_c = linalg.cholesky(self.C_approx)
             self.inv_L_c = linalg.inv(self.L_c)
@@ -1022,16 +1022,14 @@ class ito_SDE(GradientBasedMCMC):
 
             # Estimate the MAP  
             if self.estimate_max_distr is True: 
-                # TODO : can improve computational cost of estimating 
-                # the MAP by only running one time the model (running 
-                # self.distr_fun(xi_np) call the model, while it was already computed at self.computeGrad(xi_n))
                 # TODO: use the same function self.estimate_max()? 
-                self.distr_fun_new_val = self.distr_fun(xi_np)
+                # self.distr_fun_new_val = self.distr_fun(xi_np)
+                self.distr_fun_new_val = self.prob_distr.get_log_value(xi_np)
                 if self.distr_fun_new_val  > self.MAP_val:
                     self.arg_MAP[:] = xi_np[:]
                     self.MAP_val = self.distr_fun_new_val
-                    np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
-
+                    # np.savetxt("output/arg_MAP_estimation.csv", np.array([self.prob_distr.model.parametrization_backward(self.arg_MAP[:])]),fmt="%f", delimiter=",")
+                    # np.savetxt(self.IO_fileID['estimate_max_val_distr'], np.array([self.MAP_val]),fmt="%f", delimiter=",")
                     # print(self.arg_MAP[:])
                     print("It: {}, log MAP value: {}".format(self.it, self.MAP_val))
 

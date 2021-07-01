@@ -107,7 +107,7 @@ class Sampling(SolveProblem):
             if self.algo_inputs.get("estimate_max_distr") is not None: 
                 if self.algo_inputs['estimate_max_distr'] == "yes": 
                     new_file_list['estimate_arg_max_val_distr'] = "arg_MAP_estimation.csv"
-                    new_file_list['estimate_max_val_distr'] = "MAP_estimation.csv"
+                    new_file_list['estimate_max_val_distr'] = "log_MAP_estimation.csv"
 
         # Others optional output? 
 

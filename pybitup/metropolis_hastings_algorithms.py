@@ -295,22 +295,16 @@ class MetropolisHastings:
 
     def compute_covariance(self, n_iterations):
 
-        file_path = self.IO_fileID['MChains_reparam'] # MChains, MChains_reparam
+    
 
-        # Load all the previous iterations
-        param_values = np.zeros((n_iterations, self.n_param))
-        j = 0
-        file_path.seek(0) 
-        for line in file_path:
-            c_chain = line.strip()
-            param_values[j, :] = np.fromstring(c_chain[1:len(c_chain)-1], sep=' ')
-            j += 1
+        # Read the file that contains the samples
+        reader = pd.read_csv(self.IO_util['path']['MChains_reparam'], header=None)
 
         # Compute sample mean 
-        self.mean_c = np.mean(param_values, axis=0)
+        self.mean_c = np.mean(reader.values, axis=0)
 
         # Compute sample covariance (to be written in output.dat)
-        self.cov_c = np.cov(param_values, rowvar=False)
+        self.cov_c = np.cov(reader.values, rowvar=False)
         np.savetxt("cov.csv", self.cov_c, delimiter=",")
   
 
